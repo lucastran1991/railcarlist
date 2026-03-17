@@ -8,6 +8,10 @@
 *.so
 *.dylib
 
+# Railcarlist server binary (built from backend)
+/server
+/backend/server
+
 # Test binary, built with `go test -c`
 *.test
 
@@ -27,6 +31,14 @@ go.work.sum
 # env file
 .env
 
+# Local config and logs
+config.json
+out.log
+
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Base sources
+Savana/
+docs/

@@ -1,0 +1,142 @@
+# Railcarlist – Product Requirements Document (PRD)
+
+> Independent utils module supporting a production system. Optimized for Cursor and codebase alignment.
+
+---
+
+## 1. Overview
+
+- **Product name:** Railcarlist  
+- **Role:** Standalone utility that supports one of our production systems.  
+- **Scope:** Backend (Go + local DB + REST API) and frontend (Next.js 13 + Chakra UI) for managing **railcars** (list, create, import from XLSX).
+
+---
+
+## 2. Goals and Non-Goals
+
+**Goals**
+
+- Provide a small, self-contained service with local persistence and REST API.  
+- Let users view a railcar list, create a single railcar, and import a railcar list from an XLSX file.  
+- Keep the module independent so it can be deployed and run alongside or in support of the main production system.
+
+**Non-Goals (out of scope for this PRD)**
+
+- Replacing or deeply integrating with the production system’s core data store.  
+- Authentication/authorization (can be added later).  
+- Real-time sync or advanced reporting; focus is CRUD + XLSX import.
+
+---
+
+## 3. Tech Stack
+
+| Layer    | Choice              | Location / Notes                                      |
+| -------- | ------------------- | ----------------------------------------------------- |
+| Backend  | Go (Golang)          | [backend/](backend/)                                   |
+| Storage  | Local DB (SQLite)   | Single file; path configurable (e.g. `config.json`)  |
+| API      | REST                | JSON request/response                                 |
+| Frontend | Next.js 13          | [frontend/](frontend/)                                 |
+| UI       | Chakra UI           | Components and theming                                |
+| Import   | XLSX                | Backend parses XLSX; frontend uploads file           |
+
+---
+
+## 4. Data Model: Railcar
+
+**Core entity: Railcar**
+
+- **id** – Unique identifier (e.g. UUID or auto-increment; define one source of truth in backend).  
+- **name** – Display name of the railcar.  
+- **startTime** – Start time (ISO 8601 or Unix ms; consistent format across API and DB).  
+- **endTime** – End time (same format as `startTime`).
+
+**Persistence**
+
+- Stored in local DB (e.g. table `railcars` or equivalent).  
+- Backend owns schema and migrations; frontend only consumes API.
+
+**Example (JSON)**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "RC-101",
+  "startTime": "2025-12-01T08:00:00Z",
+  "endTime": "2025-12-15T18:00:00Z"
+}
+```
+
+---
+
+## 5. Backend (Go) – High-Level Contract
+
+**Location:** [backend/](backend/)
+
+- **Entry:** [backend/cmd/server/main.go](backend/cmd/server/main.go) (or equivalent).  
+- **Structure:** Prefer `internal/` for handlers, services, models, database, config.  
+- **Config:** e.g. `config.json` for DB path, server port, host.
+
+**REST API (to be implemented to match this PRD)**
+
+- **List railcars** – `GET /api/railcars` → 200, JSON array of railcars (with pagination if needed).  
+- **Get one railcar** – `GET /api/railcars/:id` → 200 single railcar or 404.  
+- **Create railcar** – `POST /api/railcars` body: `{ "name", "startTime", "endTime" }` → 201 + created railcar (id assigned by backend).  
+- **Update railcar** – `PUT /api/railcars/:id` or `PATCH /api/railcars/:id` body: partial/full railcar → 200 updated railcar or 404.  
+- **Delete railcar** – `DELETE /api/railcars/:id` → 204 or 404.  
+- **Import from XLSX** – `POST /api/railcars/import` body: multipart form with file (e.g. `file`); backend parses XLSX and creates/updates railcars → 200/201 with summary (e.g. created count, errors if any).
+
+**DB**
+
+- Local SQLite; table(s) for railcars; migrations in code (e.g. in [backend/internal/database/](backend/internal/database/)).
+
+---
+
+## 6. Frontend (Next.js 13 + Chakra UI) – Pages
+
+**Location:** [frontend/](frontend/) (App Router under `src/app/`).
+
+**Three pages**
+
+1. **Railcar list page**  
+   - Route: e.g. `/railcars` or `/` (list as default).  
+   - Shows list of railcars (table or cards); columns/cards: id, name, startTime, endTime.  
+   - Actions: link to “Create new”, link to “Import XLSX”; optional row actions (edit, delete) calling backend API.
+
+2. **Create new railcar page**  
+   - Route: e.g. `/railcars/new`.  
+   - Form: name, startTime, endTime (no id; backend assigns).  
+   - Submit → `POST /api/railcars` then redirect to list or detail.
+
+3. **Import railcar list from XLSX page**  
+   - Route: e.g. `/railcars/import`.  
+   - Upload control (single XLSX file); optional instructions (expected columns: e.g. name, startTime, endTime).  
+   - Submit → `POST /api/railcars/import` with file; show result (success count, errors if any).
+
+**Shared**
+
+- Use Chakra UI for layout, forms, buttons, tables, alerts.  
+- Consume backend base URL from env (e.g. `NEXT_PUBLIC_API_URL`); all data via REST above.
+
+---
+
+## 7. XLSX Import – Expected Shape
+
+- Backend and frontend must agree on column semantics (e.g. name, startTime, endTime).  
+- Suggested columns: `name`, `start_time` or `startTime`, `end_time` or `endTime` (backend normalizes).  
+- PRD does not fix exact column names; document the chosen convention in backend API or a small “import format” doc and reference it here later.
+
+---
+
+## 8. File and Folder Hints (for Cursor)
+
+- Backend: add/adapt models in [backend/internal/models/](backend/internal/models/) (e.g. `railcar.go`), handlers under [backend/internal/handlers/](backend/internal/handlers/), services under [backend/internal/services/](backend/internal/services/), DB access in [backend/internal/database/](backend/internal/database/).  
+- Frontend: add pages under `frontend/src/app/` (e.g. `railcars/page.tsx`, `railcars/new/page.tsx`, `railcars/import/page.tsx`); shared API client in e.g. `frontend/src/lib/api.ts` or similar.  
+- Config: [config.json](config.json) / [config.json.example](config.json.example) for backend; `.env.example` for frontend API URL.
+
+---
+
+## 9. Success Criteria
+
+- Backend builds and runs with local SQLite; all railcar CRUD endpoints and import endpoint behave as above.  
+- Frontend has three pages (list, create, import) using Chakra UI and calling the backend REST API.  
+- User can create a railcar, see it in the list, and import multiple railcars from an XLSX file with results visible in the UI.
