@@ -57,16 +57,16 @@ function formatYAxisValue(value: number): string {
   return value.toFixed(1);
 }
 
-// Chakra UI palette (hex) for consistent chart colors
-const CHART_COLORS = [
-  '#3182CE', // blue.500
-  '#38A169', // green.500
-  '#DD6B20', // orange.400
-  '#E53E3E', // red.500
-  '#805AD5', // purple.500
-  '#319795', // teal.500
-  '#D53F8C', // pink.500
-  '#00B5D8', // cyan.500
+// Fallback hex palette when theme tokens are unavailable
+const CHART_COLORS_FALLBACK = [
+  '#3182CE',
+  '#38A169',
+  '#DD6B20',
+  '#E53E3E',
+  '#805AD5',
+  '#319795',
+  '#D53F8C',
+  '#00B5D8',
 ];
 
 function formatTooltipLabel(label: string): string {
@@ -104,7 +104,24 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
 export default function TimeseriesChart({ data, disableAnimation = false, aggregateMode }: TimeseriesChartProps) {
   const gridColor = useToken('colors', 'gray.200');
   const textColor = useToken('colors', 'gray.600');
-  const colors = CHART_COLORS;
+  const brand500 = useToken('colors', 'brand.500');
+  const green500 = useToken('colors', 'green.500');
+  const orange400 = useToken('colors', 'orange.400');
+  const red500 = useToken('colors', 'red.500');
+  const purple500 = useToken('colors', 'purple.500');
+  const teal500 = useToken('colors', 'teal.500');
+  const pink500 = useToken('colors', 'pink.500');
+  const cyan500 = useToken('colors', 'cyan.500');
+  const colors = [
+    brand500 ?? CHART_COLORS_FALLBACK[0],
+    green500 ?? CHART_COLORS_FALLBACK[1],
+    orange400 ?? CHART_COLORS_FALLBACK[2],
+    red500 ?? CHART_COLORS_FALLBACK[3],
+    purple500 ?? CHART_COLORS_FALLBACK[4],
+    teal500 ?? CHART_COLORS_FALLBACK[5],
+    pink500 ?? CHART_COLORS_FALLBACK[6],
+    cyan500 ?? CHART_COLORS_FALLBACK[7],
+  ];
 
   // Memoize data transformation for performance
   const { chartData, isSampled, originalCount } = useMemo(() => {

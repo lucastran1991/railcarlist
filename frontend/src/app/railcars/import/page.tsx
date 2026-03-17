@@ -22,7 +22,7 @@ import {
   Input,
 } from '@chakra-ui/react';
 import Link from 'next/link';
-import { FiAlertCircle, FiUploadCloud, FiFileSpreadsheet } from 'react-icons/fi';
+import { FiAlertCircle, FiUploadCloud, FiFile } from 'react-icons/fi';
 import { importRailcarsXLSX } from '@/lib/api';
 
 export default function ImportRailcarsPage() {
@@ -86,10 +86,11 @@ export default function ImportRailcarsPage() {
   };
 
   return (
-    <Container maxW="container.md" py={8}>
-      <Heading size="lg" mb={2}>
-        Import railcar list
-      </Heading>
+    <Box bg="gray.50" minH="calc(100vh - 64px)">
+      <Container maxW="container.md" py={8}>
+        <Heading size="lg" mb={2} color="gray.800">
+          Import railcar list
+        </Heading>
       <Text mb={6} color="gray.600" fontSize="sm">
         Upload a spreadsheet with columns: <strong>name</strong>, <strong>startTime</strong> (or start_time), <strong>endTime</strong> (or end_time). First row is the header.
       </Text>
@@ -113,10 +114,10 @@ export default function ImportRailcarsPage() {
               minH="200px"
               px={6}
               py={8}
-              bg={dragActive ? 'blue.50' : 'gray.50'}
+              bg={dragActive ? 'brand.50' : 'gray.50'}
               borderWidth="2px"
               borderStyle="dashed"
-              borderColor={dragActive ? 'blue.400' : 'gray.200'}
+              borderColor={dragActive ? 'brand.400' : 'gray.200'}
               borderRadius="lg"
               mx={4}
               mt={4}
@@ -137,7 +138,7 @@ export default function ImportRailcarsPage() {
               />
               {file ? (
                 <VStack spacing={2}>
-                  <Icon as={FiFileSpreadsheet} boxSize={10} color="green.500" />
+                  <Icon as={FiFile} boxSize={10} color="green.500" />
                   <Text fontWeight="medium" color="gray.700">
                     {file.name}
                   </Text>
@@ -160,7 +161,7 @@ export default function ImportRailcarsPage() {
             <Flex gap={3} px={4} pb={4} justify="flex-start" flexWrap="wrap">
               <Button
                 type="submit"
-                colorScheme="blue"
+                colorScheme="brand"
                 isLoading={loading}
                 isDisabled={!file}
                 size="md"
@@ -207,6 +208,7 @@ export default function ImportRailcarsPage() {
           )}
         </VStack>
       )}
-    </Container>
+      </Container>
+    </Box>
   );
 }

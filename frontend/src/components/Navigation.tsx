@@ -1,20 +1,11 @@
 'use client';
 
-import {
-  Box,
-  Flex,
-  Link,
-  Heading,
-  Container,
-  useColorModeValue,
-} from '@chakra-ui/react';
+import { Box, Flex, Link, Heading, Container } from '@chakra-ui/react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export default function Navigation() {
   const pathname = usePathname();
-  const bg = useColorModeValue('gray.100', 'gray.900');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   const navItems = [
     { href: '/railcars', label: 'Railcars' },
@@ -23,23 +14,36 @@ export default function Navigation() {
   ];
 
   return (
-    <Box bg={bg} borderBottom="1px" borderColor={borderColor} py={4}>
+    <Box bg="nav.bg" borderBottom="1px" borderColor="nav.border" py={3}>
       <Container maxW="container.xl">
         <Flex align="center" justify="space-between">
-          <Heading size="md" color="blue.500">
-            Railcarlist
-          </Heading>
+          <Link
+            as={NextLink}
+            href="/"
+            _hover={{ opacity: 0.9 }}
+          >
+            <Heading size="md" color="nav.linkActive" fontWeight={600} as="span">
+              Railcar Schedule
+            </Heading>
+          </Link>
           <Flex gap={6}>
             {navItems.map((item) => {
-              const isActive = pathname === item.href || (item.href === '/railcars' && pathname.startsWith('/railcars'));
+              const isActive = pathname === item.href;
               return (
                 <Link
                   as={NextLink}
                   href={item.href}
                   key={item.href}
-                  fontWeight={isActive ? 'bold' : 'normal'}
-                  color={isActive ? 'blue.500' : 'gray.600'}
-                  _hover={{ color: 'blue.600' }}
+                  fontWeight={isActive ? 600 : 400}
+                  color={isActive ? 'nav.linkActive' : 'nav.link'}
+                  _hover={{ color: 'nav.linkHover' }}
+                  px={3}
+                  py={2}
+                  borderRadius="md"
+                  borderBottomWidth={isActive ? '2px' : 0}
+                  borderBottomStyle="solid"
+                  borderBottomColor={isActive ? 'brand.500' : 'transparent'}
+                  bg={isActive ? 'whiteAlpha.200' : 'transparent'}
                 >
                   {item.label}
                 </Link>

@@ -68,10 +68,11 @@ export default function NewRailcarPage() {
   };
 
   return (
-    <Container maxW="container.md" py={6}>
-      <Heading size="lg" mb={6}>
-        Create new railcar
-      </Heading>
+    <Box bg="gray.50" minH="calc(100vh - 64px)">
+      <Container maxW="container.md" py={6}>
+        <Heading size="lg" mb={6} color="gray.800">
+          Create new railcar
+        </Heading>
       <form onSubmit={handleSubmit}>
         <VStack spacing={4} align="stretch">
           <FormControl isRequired>
@@ -123,7 +124,7 @@ export default function NewRailcarPage() {
             />
           </FormControl>
           <Box pt={2}>
-            <Button type="submit" colorScheme="blue" isLoading={loading} mr={3}>
+            <Button type="submit" colorScheme="brand" isLoading={loading} mr={3}>
               Create
             </Button>
             <Button as={Link} href="/railcars" variant="outline">
@@ -132,6 +133,7 @@ export default function NewRailcarPage() {
           </Box>
         </VStack>
       </form>
-    </Container>
+      </Container>
+    </Box>
   );
 }

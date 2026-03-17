@@ -40,7 +40,7 @@ export default function DateRangePicker({
   return (
     <HStack spacing={4} align="end">
       <FormControl>
-        <FormLabel>From</FormLabel>
+        <FormLabel color="gray.700">From</FormLabel>
         <Input
           type="datetime-local"
           value={formatForInput(fromDate)}
@@ -48,7 +48,7 @@ export default function DateRangePicker({
         />
       </FormControl>
       <FormControl>
-        <FormLabel>To</FormLabel>
+        <FormLabel color="gray.700">To</FormLabel>
         <Input
           type="datetime-local"
           value={formatForInput(toDate)}

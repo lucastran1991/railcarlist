@@ -24,6 +24,8 @@ export default function TimeModeSelector({
       value={value}
       onChange={(e) => onChange(e.target.value as TimeMode)}
       width="100%"
+      size="md"
+      variant="outline"
     >
       <option value="today">Today</option>
       <option value="weekToDate">Week to date</option>

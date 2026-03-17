@@ -138,11 +138,12 @@ export default function RailcarsListPage() {
   };
 
   return (
-    <Container maxW="container.xl" py={6}>
-      <Box mb={6} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={4}>
-        <Heading size="lg">Railcar list</Heading>
-        <Box>
-          <Button as={NextLink} href="/railcars/new" leftIcon={<FiPlus />} colorScheme="blue" mr={3}>
+    <Box bg="gray.50" minH="calc(100vh - 64px)">
+      <Container maxW="container.xl" py={6}>
+        <Box mb={6} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={4}>
+          <Heading size="lg" color="gray.800">Railcar list</Heading>
+          <Box>
+            <Button as={NextLink} href="/railcars/new" leftIcon={<FiPlus />} colorScheme="brand" mr={3}>
             Create new
           </Button>
           <Button as={NextLink} href="/railcars/import" leftIcon={<FiUpload />} variant="outline" mr={3}>
@@ -176,7 +177,6 @@ export default function RailcarsListPage() {
             <Thead>
               <Tr>
                 <Th>Name</Th>
-                <Th>ID</Th>
                 <Th>Start time</Th>
                 <Th>End time</Th>
                 <Th>Spot</Th>
@@ -188,7 +188,7 @@ export default function RailcarsListPage() {
             <Tbody>
               {railcars.length === 0 ? (
                 <Tr>
-                  <Td colSpan={8} textAlign="center" color="gray.500">
+                  <Td colSpan={7} textAlign="center" color="gray.500">
                     No railcars yet. Create one or import from XLSX.
                   </Td>
                 </Tr>
@@ -196,9 +196,6 @@ export default function RailcarsListPage() {
                 railcars.map((rc) => (
                   <Tr key={rc.id}>
                     <Td fontWeight="medium">{rc.name}</Td>
-                    <Td fontFamily="mono" fontSize="sm">
-                      {rc.id}
-                    </Td>
                     <Td>{formatTime(rc.startTime)}</Td>
                     <Td>{formatTime(rc.endTime)}</Td>
                     <Td>{rc.spot ?? '—'}</Td>
@@ -303,6 +300,7 @@ export default function RailcarsListPage() {
           </AlertDialogContent>
         </AlertDialogOverlay>
       </AlertDialog>
-    </Container>
+      </Container>
+    </Box>
   );
 }
