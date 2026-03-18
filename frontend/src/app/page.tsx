@@ -6,14 +6,25 @@ import { FiList, FiPlus, FiUpload } from 'react-icons/fi';
 
 export default function HomePage() {
   return (
-    <Box bg="gray.50" minH="calc(100vh - 64px)">
+    <Box position="relative" minH="calc(100vh - 64px)" overflow="hidden">
       <Container maxW="container.xl" py={16}>
         <VStack spacing={12} align="stretch">
-          <VStack spacing={4} textAlign="center" py={8}>
+          <VStack
+            spacing={4}
+            textAlign="center"
+            py={8}
+            px={4}
+            borderRadius="xl"
+            bg="rgba(255,255,255,0.9)"
+            backdropFilter="blur(12px)"
+            boxShadow="lg"
+            borderWidth="1px"
+            borderColor="whiteAlpha.600"
+          >
             <Heading size="2xl" color="gray.800" fontWeight={600}>
               Manage your railcar schedule
             </Heading>
-            <Text fontSize="lg" color="gray.600" maxW="xl">
+            <Text fontSize="lg" color="gray.600" maxW="xl" mx="auto">
               View, create, and import railcar data. Built for terminal operations and scheduling.
             </Text>
             <Button as={NextLink} href="/railcars" colorScheme="brand" size="lg" mt={2}>

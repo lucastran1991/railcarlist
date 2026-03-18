@@ -2,7 +2,8 @@
 // Can be overridden by environment variable NEXT_PUBLIC_API_URL
 // When unset in the browser: use same host as the page with BACKEND_PORT (fixes Private Network Access when frontend is served from a remote host)
 
-const BACKEND_PORT = process.env.NEXT_PUBLIC_API_PORT || '8898';
+// Must match backend server.port (see config.json); override with NEXT_PUBLIC_API_PORT if needed
+const BACKEND_PORT = process.env.NEXT_PUBLIC_API_PORT || '8888';
 
 function getDefaultApiBaseUrl(): string {
   if (typeof window !== 'undefined' && window.location) {
