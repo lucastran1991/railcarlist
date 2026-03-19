@@ -14,8 +14,20 @@ import {
   ButtonGroup,
   Switch,
   HStack,
+  IconButton,
 } from '@chakra-ui/react';
-import type { SnowThiccLevel, WindMode } from '@/lib/three/homeScene';
+import {
+  FiZoomIn,
+  FiZoomOut,
+  FiRotateCcw,
+  FiRotateCw,
+  FiRefreshCw,
+} from 'react-icons/fi';
+import type {
+  HomeSceneCameraApi,
+  SnowThiccLevel,
+  WindMode,
+} from '@/lib/three/homeScene';
 
 const SNOW_LABELS: Record<SnowThiccLevel, string> = {
   1: 'Light',
@@ -32,6 +44,7 @@ export type HomeSceneControlsProps = {
   onNightModeChange: (night: boolean) => void;
   windMode: WindMode;
   onWindModeChange: (mode: WindMode) => void;
+  cameraApi: HomeSceneCameraApi | null;
 };
 
 export default function HomeSceneControls({
@@ -43,6 +56,7 @@ export default function HomeSceneControls({
   onNightModeChange,
   windMode,
   onWindModeChange,
+  cameraApi,
 }: HomeSceneControlsProps) {
   const windOptions: { mode: WindMode; label: string }[] = [
     { mode: 'off', label: 'Off' },
@@ -131,6 +145,64 @@ export default function HomeSceneControls({
               </Button>
             ))}
           </ButtonGroup>
+        </FormControl>
+
+        <FormControl>
+          <FormLabel fontSize="sm" mb={1} color={isNight ? 'gray.200' : 'gray.700'}>
+            Camera
+          </FormLabel>
+          <HStack spacing={1} flexWrap="wrap" gap={1}>
+            <IconButton
+              aria-label="Zoom in"
+              icon={<FiZoomIn />}
+              size="sm"
+              variant="outline"
+              colorScheme="brand"
+              isDisabled={!cameraApi}
+              onClick={() => cameraApi?.cameraZoomIn()}
+              borderColor={isNight ? 'whiteAlpha.300' : undefined}
+            />
+            <IconButton
+              aria-label="Zoom out"
+              icon={<FiZoomOut />}
+              size="sm"
+              variant="outline"
+              colorScheme="brand"
+              isDisabled={!cameraApi}
+              onClick={() => cameraApi?.cameraZoomOut()}
+              borderColor={isNight ? 'whiteAlpha.300' : undefined}
+            />
+            <IconButton
+              aria-label="Rotate camera left"
+              icon={<FiRotateCcw />}
+              size="sm"
+              variant="outline"
+              colorScheme="brand"
+              isDisabled={!cameraApi}
+              onClick={() => cameraApi?.cameraRotateLeft()}
+              borderColor={isNight ? 'whiteAlpha.300' : undefined}
+            />
+            <IconButton
+              aria-label="Rotate camera right"
+              icon={<FiRotateCw />}
+              size="sm"
+              variant="outline"
+              colorScheme="brand"
+              isDisabled={!cameraApi}
+              onClick={() => cameraApi?.cameraRotateRight()}
+              borderColor={isNight ? 'whiteAlpha.300' : undefined}
+            />
+            <IconButton
+              aria-label="Reset camera view"
+              icon={<FiRefreshCw />}
+              size="sm"
+              variant="outline"
+              colorScheme="brand"
+              isDisabled={!cameraApi}
+              onClick={() => cameraApi?.cameraReset()}
+              borderColor={isNight ? 'whiteAlpha.300' : undefined}
+            />
+          </HStack>
         </FormControl>
 
         <FormControl>

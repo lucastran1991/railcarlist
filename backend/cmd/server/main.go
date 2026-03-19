@@ -77,7 +77,7 @@ func main() {
 	loadHandler := handlers.NewLoadHandler(loader, cfg.Data.RawDataFolder)
 	queryHandler := handlers.NewQueryHandler(queryService)
 	generatorHandler := handlers.NewGeneratorHandler(generator, minValue, maxValue, useSequential, startTime, endTime)
-	configHandler := handlers.NewConfigHandler(minValue, maxValue)
+	configHandler := handlers.NewConfigHandler(minValue, maxValue, cfg.Server.Port, cfg.Frontend.ApiBaseURL)
 	uploadHandler := handlers.NewUploadHandler(uploadService)
 	tagsHandler := handlers.NewTagsHandler(tagsService)
 	railcarHandler := handlers.NewRailcarHandler(railcarService)

@@ -17,19 +17,27 @@ if [ -f "$CONFIG_FILE" ]; then
     if command -v jq &> /dev/null; then
         DB_PATH="${DB_PATH:-$(jq -r '.database.path // "railcarlist.db"' "$CONFIG_FILE")}"
         PORT="${PORT:-$(jq -r '.server.port // "8888"' "$CONFIG_FILE")}"
+        FRONTEND_PORT="${FRONTEND_PORT:-$(jq -r '.frontend.port // "8086"' "$CONFIG_FILE")}"
+        API_BASE_URL="${API_BASE_URL:-$(jq -r '.frontend.api_base_url // ""' "$CONFIG_FILE")}"
     # Fallback to grep/sed if jq not available
     elif command -v python3 &> /dev/null; then
         DB_PATH="${DB_PATH:-$(python3 -c "import json; f=open('$CONFIG_FILE'); d=json.load(f); print(d.get('database', {}).get('path', 'railcarlist.db'))" 2>/dev/null || echo "railcarlist.db")}"
         PORT="${PORT:-$(python3 -c "import json; f=open('$CONFIG_FILE'); d=json.load(f); print(d.get('server', {}).get('port', '8888'))" 2>/dev/null || echo "8888")}"
+        FRONTEND_PORT="${FRONTEND_PORT:-$(python3 -c "import json; f=open('$CONFIG_FILE'); d=json.load(f); print(d.get('frontend', {}).get('port', '8086'))" 2>/dev/null || echo "8086")}"
+        API_BASE_URL="${API_BASE_URL:-$(python3 -c "import json; f=open('$CONFIG_FILE'); d=json.load(f); print(d.get('frontend', {}).get('api_base_url', ''))" 2>/dev/null || echo "")}"
     else
         # Simple grep fallback (less reliable)
         DB_PATH="${DB_PATH:-$(grep -o '"path"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" | head -1 | sed 's/.*"path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || echo "railcarlist.db")}"
         PORT="${PORT:-$(grep -o '"port"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" | head -1 | sed 's/.*"port"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || echo "8888")}"
+        FRONTEND_PORT="${FRONTEND_PORT:-8086}"
+        API_BASE_URL="${API_BASE_URL:-}"
     fi
 else
     # Defaults if config file doesn't exist
     DB_PATH="${DB_PATH:-railcarlist.db}"
     PORT="${PORT:-8888}"
+    FRONTEND_PORT="${FRONTEND_PORT:-8086}"
+    API_BASE_URL="${API_BASE_URL:-}"
 fi
 
 # Colors for output
@@ -384,8 +392,7 @@ if command -v fuser &> /dev/null; then
     fi
 fi
 
-# Check for frontend process on port 8086 (default Next.js port)
-FRONTEND_PORT=8086
+# Check for frontend process on port from config
 if command -v lsof &> /dev/null; then
     FRONTEND_PIDS=$(lsof -Pi :$FRONTEND_PORT -sTCP:LISTEN -t 2>/dev/null) || true
     if [ -n "$FRONTEND_PIDS" ]; then
@@ -480,28 +487,37 @@ if [ "$FRONTEND_AVAILABLE" = true ] && [ -d "frontend" ]; then
     
     FRONTEND_DIR="$WORK_DIR/frontend"
     
+    export NEXT_PUBLIC_API_PORT="$PORT"
+    [ -n "$API_BASE_URL" ] && export NEXT_PUBLIC_API_URL="$API_BASE_URL" || true
+
     if [ "$PROD_MODE" = true ]; then
         log_info "Production mode: building frontend..."
         if ! (cd "$FRONTEND_DIR" && npm run build); then
             log_error "Frontend build failed"
             exit 1
         fi
-        FRONTEND_SCRIPT="start"
-        log_info "Starting frontend ($FRONTEND_PM2_NAME) in production (next start)..."
+        log_info "Starting frontend ($FRONTEND_PM2_NAME) in production (next start -p $FRONTEND_PORT)..."
+        pm2 start npx \
+            --name "$FRONTEND_PM2_NAME" \
+            --cwd "$FRONTEND_DIR" \
+            --log "$WORK_DIR/out.log" \
+            --error "$WORK_DIR/out.log" \
+            --output "$WORK_DIR/out.log" \
+            --merge-logs \
+            --time \
+            -- next start -p "$FRONTEND_PORT"
     else
-        FRONTEND_SCRIPT="dev"
-        log_info "Starting frontend ($FRONTEND_PM2_NAME) in dev mode (next dev)..."
+        log_info "Starting frontend ($FRONTEND_PM2_NAME) in dev mode (next dev -p $FRONTEND_PORT)..."
+        pm2 start npx \
+            --name "$FRONTEND_PM2_NAME" \
+            --cwd "$FRONTEND_DIR" \
+            --log "$WORK_DIR/out.log" \
+            --error "$WORK_DIR/out.log" \
+            --output "$WORK_DIR/out.log" \
+            --merge-logs \
+            --time \
+            -- next dev -p "$FRONTEND_PORT"
     fi
-    
-    pm2 start npm \
-        --name "$FRONTEND_PM2_NAME" \
-        --cwd "$FRONTEND_DIR" \
-        --log "$WORK_DIR/out.log" \
-        --error "$WORK_DIR/out.log" \
-        --output "$WORK_DIR/out.log" \
-        --merge-logs \
-        --time \
-        -- run "$FRONTEND_SCRIPT"
     
     log_info "Frontend started successfully!"
 else

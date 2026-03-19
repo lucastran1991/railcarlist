@@ -5,6 +5,7 @@ import { Box } from '@chakra-ui/react';
 import {
   initHomeThree,
   type HomeThreeHandle,
+  type HomeSceneCameraApi,
   type SnowThiccLevel,
   type WindMode,
 } from '@/lib/three/homeScene';
@@ -14,6 +15,7 @@ export type HomeThreeBackgroundProps = {
   snowThicc: SnowThiccLevel;
   isNight: boolean;
   windMode: WindMode;
+  onCameraApiReady?: (api: HomeSceneCameraApi | null) => void;
 };
 
 export default function HomeThreeBackground({
@@ -21,6 +23,7 @@ export default function HomeThreeBackground({
   snowThicc,
   isNight,
   windMode,
+  onCameraApiReady,
 }: HomeThreeBackgroundProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HomeThreeHandle | null>(null);
@@ -29,13 +32,26 @@ export default function HomeThreeBackground({
     const el = containerRef.current;
     if (!el) return;
 
-    handleRef.current = initHomeThree(el, {
+    const h = initHomeThree(el, {
       treeCount,
       snowThicc,
       isNight,
       windMode,
     });
+    handleRef.current = h;
+    if (h) {
+      onCameraApiReady?.({
+        cameraZoomIn: () => h.cameraZoomIn(),
+        cameraZoomOut: () => h.cameraZoomOut(),
+        cameraRotateLeft: () => h.cameraRotateLeft(),
+        cameraRotateRight: () => h.cameraRotateRight(),
+        cameraReset: () => h.cameraReset(),
+      });
+    } else {
+      onCameraApiReady?.(null);
+    }
     return () => {
+      onCameraApiReady?.(null);
       handleRef.current?.dispose();
       handleRef.current = null;
     };

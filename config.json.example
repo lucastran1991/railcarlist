@@ -3,6 +3,10 @@
     "port": "8888",
     "host": "0.0.0.0"
   },
+  "frontend": {
+    "port": "8086",
+    "api_base_url": ""
+  },
   "database": {
     "path": "railcarlist.db"
   },

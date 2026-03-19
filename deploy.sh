@@ -13,8 +13,7 @@ APP_NAME="railcarlist"
 APP_DIR="/opt/railcarlist"
 ECOSYSTEM_FILE="ecosystem.config.js"
 DB_PATH="/opt/railcarlist/data/railcarlist.db"
-PORT="${PORT:-8888}"
-FRONTEND_PORT="${FRONTEND_PORT:-8086}"
+CONFIG_FILE="${CONFIG_FILE:-config.json}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -106,6 +105,27 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Load PORT, FRONTEND_PORT, API_BASE_URL from config.json if not set by env/args
+if [ -f "$CONFIG_FILE" ]; then
+    if command -v jq &> /dev/null; then
+        PORT="${PORT:-$(jq -r '.server.port // "8888"' "$CONFIG_FILE")}"
+        FRONTEND_PORT="${FRONTEND_PORT:-$(jq -r '.frontend.port // "8086"' "$CONFIG_FILE")}"
+        API_BASE_URL="${API_BASE_URL:-$(jq -r '.frontend.api_base_url // ""' "$CONFIG_FILE")}"
+    elif command -v python3 &> /dev/null; then
+        PORT="${PORT:-$(python3 -c "import json; f=open('$CONFIG_FILE'); d=json.load(f); print(d.get('server', {}).get('port', '8888'))" 2>/dev/null || echo "8888")}"
+        FRONTEND_PORT="${FRONTEND_PORT:-$(python3 -c "import json; f=open('$CONFIG_FILE'); d=json.load(f); print(d.get('frontend', {}).get('port', '8086'))" 2>/dev/null || echo "8086")}"
+        API_BASE_URL="${API_BASE_URL:-$(python3 -c "import json; f=open('$CONFIG_FILE'); d=json.load(f); print(d.get('frontend', {}).get('api_base_url', ''))" 2>/dev/null || echo "")}"
+    else
+        PORT="${PORT:-8888}"
+        FRONTEND_PORT="${FRONTEND_PORT:-8086}"
+        API_BASE_URL="${API_BASE_URL:-}"
+    fi
+else
+    PORT="${PORT:-8888}"
+    FRONTEND_PORT="${FRONTEND_PORT:-8086}"
+    API_BASE_URL="${API_BASE_URL:-}"
+fi
+
 # Validate required parameters
 if [ -z "$EC2_HOST" ]; then
     log_error "EC2_HOST is required. Set it via -h/--host option or EC2_HOST environment variable."
@@ -150,6 +170,8 @@ if [ "$SKIP_BUILD" = false ]; then
             log_info "Installing frontend dependencies..."
             (cd frontend && npm install)
             log_info "Building frontend..."
+            export NEXT_PUBLIC_API_PORT="$PORT"
+            [ -n "$API_BASE_URL" ] && export NEXT_PUBLIC_API_URL="$API_BASE_URL" || true
             if ! (cd frontend && npm run build); then
                 log_error "Failed to build frontend"
                 exit 1
@@ -188,6 +210,9 @@ if [ -d "frontend" ]; then
     cp frontend/next.config.js "$TEMP_DIR/frontend/" 2>/dev/null || true
 fi
 
+# API URL for frontend: from config or same-host backend
+API_URL_FOR_ECOSYSTEM="${API_BASE_URL:-http://localhost:$PORT}"
+
 # Create Ecosystem file for PM2
 cat > "$TEMP_DIR/$ECOSYSTEM_FILE" << EOF
 module.exports = {
@@ -207,12 +232,13 @@ module.exports = {
     },
     {
       name: '${APP_NAME}-frontend',
-      script: 'npm',
-      args: 'start',
+      script: 'npx',
+      args: 'next start -p ${FRONTEND_PORT}',
       cwd: '${APP_DIR}/frontend',
       env: {
         PORT: '${FRONTEND_PORT}',
-        NEXT_PUBLIC_API_URL: 'http://localhost:${PORT}'
+        NEXT_PUBLIC_API_PORT: '${PORT}',
+        NEXT_PUBLIC_API_URL: '${API_URL_FOR_ECOSYSTEM}'
       },
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       error_file: '${APP_DIR}/logs/frontend-error.log',

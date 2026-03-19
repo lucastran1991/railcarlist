@@ -1,7 +1,23 @@
 #!/bin/bash
-# Test all backend APIs. Start server first: ./server -port 8899 -db /tmp/railcarlist_test.db
+# Test all backend APIs. Start server first, or use ./start.sh (backend port from config.json).
+# BASE_URL overrides; otherwise uses config.json server.port (default 8888).
 set -e
-BASE="${BASE_URL:-http://localhost:8899}"
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CONFIG_FILE="${CONFIG_FILE:-$PROJECT_ROOT/config.json}"
+if [ -n "$BASE_URL" ]; then
+  BASE="$BASE_URL"
+elif [ -f "$CONFIG_FILE" ]; then
+  if command -v jq &> /dev/null; then
+    BACKEND_PORT=$(jq -r '.server.port // "8888"' "$CONFIG_FILE")
+  elif command -v python3 &> /dev/null; then
+    BACKEND_PORT=$(python3 -c "import json; f=open('$CONFIG_FILE'); d=json.load(f); print(d.get('server', {}).get('port', '8888'))" 2>/dev/null || echo "8888")
+  else
+    BACKEND_PORT="8888"
+  fi
+  BASE="http://localhost:$BACKEND_PORT"
+else
+  BASE="http://localhost:8888"
+fi
 echo "Testing APIs at $BASE"
 
 # Health

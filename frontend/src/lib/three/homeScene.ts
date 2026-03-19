@@ -18,7 +18,7 @@ const PROC_PLACEMENTS: { x: number; z: number; s: number; ry: number }[] = [
   { x: -7.0, z: -10.2, s: 1.15, ry: 0.4 },
   { x: -5.2, z: -11.5, s: 1.35, ry: -0.15 },
   { x: -2.8, z: -13.0, s: 1.05, ry: 0.25 },
-  { x: -0.5, z: -12.0, s: 1.45, ry: -0.35 },
+  { x: -0.5, z: -12.0, s: 1.45, ry: -0.35 }, 
   { x: 1.8, z: -12.8, s: 1.2, ry: 0.1 },
   { x: 4.2, z: -11.6, s: 1.3, ry: -0.5 },
   { x: 6.5, z: -10.8, s: 1.1, ry: 0.55 },
@@ -43,7 +43,15 @@ export type HomeSceneSettings = {
   windMode?: WindMode;
 };
 
-export type HomeThreeHandle = {
+export type HomeSceneCameraApi = {
+  cameraZoomIn: () => void;
+  cameraZoomOut: () => void;
+  cameraRotateLeft: () => void;
+  cameraRotateRight: () => void;
+  cameraReset: () => void;
+};
+
+export type HomeThreeHandle = HomeSceneCameraApi & {
   dispose: () => void;
   setTreeCount: (n: number) => void;
   setSnowThicc: (level: SnowThiccLevel) => void;
@@ -79,6 +87,103 @@ function disposeGroupSharedResources(root: THREE.Object3D): void {
   });
   geometries.forEach((g) => g.dispose());
   materials.forEach((m) => m.dispose());
+}
+
+type MedievalVillageAssets = {
+  group: THREE.Group;
+  windowMat: THREE.MeshStandardMaterial;
+  sharedMats: THREE.MeshStandardMaterial[];
+};
+
+/** Cozy medieval cottages between camera and treeline */
+function createMedievalVillage(): MedievalVillageAssets {
+  const village = new THREE.Group();
+  const stone = new THREE.MeshStandardMaterial({ color: 0x6b6560, roughness: 0.96, metalness: 0 });
+  const plaster = new THREE.MeshStandardMaterial({ color: 0xc9b8a8, roughness: 0.92, metalness: 0 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x4a3f38, roughness: 0.88, metalness: 0 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 1, metalness: 0 });
+  const windowWarm = new THREE.MeshStandardMaterial({
+    color: 0x1a1510,
+    emissive: 0xffc873,
+    emissiveIntensity: 0.5,
+    roughness: 1,
+  });
+
+  const sharedMats = [stone, plaster, roofMat, wood, windowWarm];
+
+  function house(scale: number): THREE.Group {
+    const g = new THREE.Group();
+    const w = 0.42 * scale;
+    const d = 0.36 * scale;
+    const wallH = 0.5 * scale;
+
+    const base = new THREE.Mesh(new THREE.BoxGeometry(w + 0.08 * scale, 0.1 * scale, d + 0.08 * scale), stone);
+    base.position.y = 0.05 * scale;
+    g.add(base);
+
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(w, wallH, d), plaster);
+    walls.position.y = 0.1 * scale + wallH / 2;
+    g.add(walls);
+
+    const roofPanel = new THREE.BoxGeometry(w * 1.22, 0.06 * scale, d * 1.35);
+    const r1 = new THREE.Mesh(roofPanel, roofMat);
+    r1.rotation.x = Math.PI * 0.26;
+    r1.position.set(0, 0.1 * scale + wallH + 0.06 * scale, -d * 0.08);
+    const r2 = new THREE.Mesh(roofPanel.clone(), roofMat);
+    r2.rotation.x = -Math.PI * 0.26;
+    r2.position.set(0, 0.1 * scale + wallH + 0.06 * scale, d * 0.08);
+    g.add(r1, r2);
+
+    const chimney = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1 * scale, 0.22 * scale, 0.1 * scale),
+      stone
+    );
+    chimney.position.set(w * 0.28, 0.1 * scale + wallH + 0.18 * scale, -d * 0.15);
+    g.add(chimney);
+
+    const door = new THREE.Mesh(new THREE.PlaneGeometry(0.14 * scale, 0.22 * scale), wood);
+    door.position.set(0, 0.1 * scale + 0.12 * scale, d / 2 + 0.01);
+    g.add(door);
+
+    const winGeo = new THREE.PlaneGeometry(0.1 * scale, 0.08 * scale);
+    const winL = new THREE.Mesh(winGeo, windowWarm);
+    winL.position.set(-w * 0.22, 0.1 * scale + wallH * 0.62, d / 2 + 0.01);
+    const winR = new THREE.Mesh(winGeo, windowWarm);
+    winR.position.set(w * 0.22, 0.1 * scale + wallH * 0.55, d / 2 + 0.01);
+    g.add(winL, winR);
+
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(w * 1.02, 0.04 * scale, 0.05 * scale), wood);
+    beam.position.set(0, 0.1 * scale + wallH * 0.88, d / 2 + 0.015);
+    g.add(beam);
+
+    return g;
+  }
+
+  const spots: { x: number; z: number; ry: number; s: number }[] = [
+    { x: -4.1, z: -7.5, ry: 0.3, s: 1.05 },
+    { x: 3.9, z: -7.9, ry: -0.4, s: 0.98 },
+    { x: 0.4, z: -6.95, ry: 0.08, s: 0.88 },
+    { x: -1.5, z: -8.5, ry: 0.55, s: 0.82 },
+    { x: 5.2, z: -8.3, ry: -0.2, s: 0.75 },
+  ];
+
+  for (const p of spots) {
+    const h = house(p.s);
+    h.position.set(p.x, -4.0, p.z);
+    h.rotation.y = p.ry;
+    village.add(h);
+  }
+
+  return { group: village, windowMat: windowWarm, sharedMats };
+}
+
+function disposeMedievalVillage(assets: MedievalVillageAssets): void {
+  assets.group.traverse((obj) => {
+    if (obj instanceof THREE.Mesh) {
+      obj.geometry?.dispose();
+    }
+  });
+  assets.sharedMats.forEach((m) => m.dispose());
 }
 
 function createProceduralForest(count: number): THREE.Group {
@@ -129,13 +234,16 @@ function createSnowSystem(
     3: { count: 5200, size: 0.068, opacity: 0.98 },
   } as const;
   const { count, size, opacity } = presets[thicc];
+  const xBound = 14;
+  const zMin = -22;
+  const zMax = 4;
   const positions = new Float32Array(count * 3);
   const fallSpeed = new Float32Array(count);
   for (let i = 0; i < count; i++) {
     const i3 = i * 3;
-    positions[i3] = (Math.random() - 0.5) * 26;
+    positions[i3] = (Math.random() - 0.5) * (xBound * 2);
     positions[i3 + 1] = Math.random() * 22 - 6;
-    positions[i3 + 2] = -22 + Math.random() * 28;
+    positions[i3 + 2] = zMin + Math.random() * (zMax - zMin);
     fallSpeed[i] = 3.2 + Math.random() * (thicc * 2.5);
   }
   const geometry = new THREE.BufferGeometry();
@@ -155,6 +263,18 @@ function createSnowSystem(
   const yTop = 16;
   const yBottom = -10;
 
+  const respawnAbove = (i3: number, biasX: 'center' | 'fromLeft' | 'fromRight') => {
+    positions[i3 + 1] = yTop + Math.random() * 5;
+    if (biasX === 'fromLeft') {
+      positions[i3] = -xBound + Math.random() * 5;
+    } else if (biasX === 'fromRight') {
+      positions[i3] = xBound - Math.random() * 5;
+    } else {
+      positions[i3] = (Math.random() - 0.5) * 24;
+    }
+    positions[i3 + 2] = zMin + Math.random() * (zMax - zMin);
+  };
+
   /** windXPerSec: horizontal drift from gusts (world units/s, signed). */
   const update = (windXPerSec: number) => {
     const now = performance.now();
@@ -165,11 +285,15 @@ function createSnowSystem(
       const i3 = i * 3;
       positions[i3 + 1] -= fallSpeed[i] * dt;
       positions[i3] += (Math.sin(t * 0.8 + i * 0.07) * 0.35 + windXPerSec) * dt;
-      positions[i3 + 2] += Math.cos(t * 0.6 + i * 0.03) * 0.25 * dt;
+      positions[i3 + 2] += Math.cos(t * 0.6 + i * 0.03) * 0.22 * dt;
       if (positions[i3 + 1] < yBottom) {
-        positions[i3 + 1] = yTop + Math.random() * 4;
-        positions[i3] = (Math.random() - 0.5) * 26;
-        positions[i3 + 2] = -22 + Math.random() * 28;
+        respawnAbove(i3, 'center');
+      } else if (positions[i3] > xBound) {
+        respawnAbove(i3, windXPerSec >= 0 ? 'fromLeft' : 'fromRight');
+      } else if (positions[i3] < -xBound) {
+        respawnAbove(i3, windXPerSec <= 0 ? 'fromRight' : 'fromLeft');
+      } else if (positions[i3 + 2] < zMin || positions[i3 + 2] > zMax) {
+        respawnAbove(i3, 'center');
       }
     }
     geometry.attributes.position.needsUpdate = true;
@@ -198,13 +322,24 @@ function placeGlbTrees(template: THREE.Object3D, treeCount: number): THREE.Group
   return group;
 }
 
+function applyFloorGridColors(grid: THREE.GridHelper, night: boolean): void {
+  const mats = grid.material;
+  const arr = Array.isArray(mats) ? mats : [mats];
+  const c0 = arr[0] as THREE.LineBasicMaterial;
+  const c1 = arr[1] as THREE.LineBasicMaterial;
+  if (c0?.color) c0.color.setHex(night ? 0x3d5268 : 0x8fa8bc);
+  if (c1?.color) c1.color.setHex(night ? 0x283442 : 0x6d8498);
+}
+
 function applyNightMode(
   scene: THREE.Scene,
   renderer: THREE.WebGLRenderer,
   hemi: THREE.HemisphereLight,
   sunMoon: THREE.DirectionalLight,
   snowMat: THREE.PointsMaterial,
-  night: boolean
+  night: boolean,
+  cottageWindowMat: THREE.MeshStandardMaterial | null,
+  floorGrid: THREE.GridHelper | null
 ): void {
   if (night) {
     renderer.setClearColor(NIGHT_SKY, 1);
@@ -216,6 +351,7 @@ function applyNightMode(
     sunMoon.intensity = 0.45;
     sunMoon.position.set(-8, 14, 6);
     snowMat.color.setHex(0xe8f2ff);
+    if (cottageWindowMat) cottageWindowMat.emissiveIntensity = 0.52;
   } else {
     renderer.setClearColor(DAY_SKY, 1);
     scene.fog = new THREE.Fog(DAY_FOG, 22, 72);
@@ -226,7 +362,9 @@ function applyNightMode(
     sunMoon.intensity = 0.95;
     sunMoon.position.set(10, 18, 8);
     snowMat.color.setHex(0xffffff);
+    if (cottageWindowMat) cottageWindowMat.emissiveIntensity = 0.06;
   }
+  if (floorGrid) applyFloorGridColors(floorGrid, night);
 }
 
 export function initHomeThree(
@@ -313,12 +451,58 @@ export function initHomeThree(
   scene.add(sunMoon);
 
   const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 120);
-  camera.position.set(0, 3.4, 17);
-  camera.lookAt(0, 0.5, -6);
+  const CAMERA_TARGET = new THREE.Vector3(0, 0.5, -6);
+  const CAM_R_MIN = 10;
+  const CAM_R_MAX = 32;
+  const CAM_PHI_MIN = 0.28;
+  const CAM_PHI_MAX = 1.45;
+  const CAM_ROT_STEP = (5 * Math.PI) / 180;
+  const CAM_ZOOM_IN = 0.92;
+  const CAM_ZOOM_OUT = 1.08;
+
+  const camOffset = new THREE.Vector3().subVectors(
+    new THREE.Vector3(0, 3.4, 17),
+    CAMERA_TARGET
+  );
+  const camSph = new THREE.Spherical().setFromVector3(camOffset);
+  let camRadius = camSph.radius;
+  let camTheta = camSph.theta;
+  let camPhi = camSph.phi;
+  const initialCamRadius = camRadius;
+  const initialCamTheta = camTheta;
+  const initialCamPhi = camPhi;
+
+  const applyCameraFromSpherical = () => {
+    camRadius = THREE.MathUtils.clamp(camRadius, CAM_R_MIN, CAM_R_MAX);
+    camPhi = THREE.MathUtils.clamp(camPhi, CAM_PHI_MIN, CAM_PHI_MAX);
+    const sp = new THREE.Spherical(camRadius, camPhi, camTheta);
+    const o = new THREE.Vector3().setFromSpherical(sp);
+    camera.position.copy(CAMERA_TARGET).add(o);
+    camera.lookAt(CAMERA_TARGET);
+  };
+  applyCameraFromSpherical();
 
   let snow = createSnowSystem(snowThicc);
   scene.add(snow.points);
-  applyNightMode(scene, renderer, hemi, sunMoon, snow.material, isNight);
+  const medieval = createMedievalVillage();
+  const villageGroup = medieval.group;
+  scene.add(villageGroup);
+
+  /** Floor layout grid (XZ), slightly below house bases (~y -4). */
+  const floorGrid = new THREE.GridHelper(52, 26, 0x6d8498, 0x4a5f72);
+  floorGrid.position.set(0, -4.07, -8.5);
+  scene.add(floorGrid);
+
+  applyNightMode(
+    scene,
+    renderer,
+    hemi,
+    sunMoon,
+    snow.material,
+    isNight,
+    medieval.windowMat,
+    floorGrid
+  );
 
   let treeGroup: THREE.Group = createProceduralForest(treeCount);
   let treeGroupUsesGlb = false;
@@ -352,7 +536,16 @@ export function initHomeThree(
     snow.material.dispose();
     snow = createSnowSystem(snowThicc);
     scene.add(snow.points);
-    applyNightMode(scene, renderer, hemi, sunMoon, snow.material, isNight);
+    applyNightMode(
+      scene,
+      renderer,
+      hemi,
+      sunMoon,
+      snow.material,
+      isNight,
+      medieval.windowMat,
+      floorGrid
+    );
   };
 
   const swapToGlb = (gltfScene: THREE.Object3D) => {
@@ -411,9 +604,7 @@ export function initHomeThree(
     }
     const now = performance.now();
     snow.update(computeWindXPerSec(now));
-    const t = now;
-    camera.position.x = Math.sin(t * 0.00008) * 0.25;
-    camera.lookAt(0, 0.5, -6);
+    applyCameraFromSpherical();
     renderer.render(scene, camera);
     animationId = requestAnimationFrame(loop);
   };
@@ -421,6 +612,23 @@ export function initHomeThree(
   loop();
 
   return {
+    cameraZoomIn: () => {
+      camRadius *= CAM_ZOOM_IN;
+    },
+    cameraZoomOut: () => {
+      camRadius *= CAM_ZOOM_OUT;
+    },
+    cameraRotateLeft: () => {
+      camTheta += CAM_ROT_STEP;
+    },
+    cameraRotateRight: () => {
+      camTheta -= CAM_ROT_STEP;
+    },
+    cameraReset: () => {
+      camRadius = initialCamRadius;
+      camTheta = initialCamTheta;
+      camPhi = initialCamPhi;
+    },
     dispose: () => {
       disposed = true;
       document.removeEventListener('visibilitychange', onVisibility);
@@ -437,6 +645,12 @@ export function initHomeThree(
         disposeGroupSharedResources(glbTemplate);
         glbTemplate = null;
       }
+      scene.remove(villageGroup);
+      disposeMedievalVillage(medieval);
+      scene.remove(floorGrid);
+      floorGrid.geometry.dispose();
+      const gm = floorGrid.material;
+      (Array.isArray(gm) ? gm : [gm]).forEach((m) => m.dispose());
       if (renderer.domElement.parentNode === container) {
         container.removeChild(renderer.domElement);
       }
@@ -452,7 +666,16 @@ export function initHomeThree(
     },
     setNightMode: (night: boolean) => {
       isNight = night;
-      applyNightMode(scene, renderer, hemi, sunMoon, snow.material, isNight);
+      applyNightMode(
+        scene,
+        renderer,
+        hemi,
+        sunMoon,
+        snow.material,
+        isNight,
+        medieval.windowMat,
+        floorGrid
+      );
     },
     setWindMode: (mode: WindMode) => {
       windMode = mode;

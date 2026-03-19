@@ -9,8 +9,15 @@ import (
 // Config represents the application configuration
 type Config struct {
 	Server   ServerConfig   `json:"server"`
+	Frontend FrontendConfig `json:"frontend"`
 	Database DatabaseConfig `json:"database"`
 	Data     DataConfig     `json:"data"`
+}
+
+// FrontendConfig holds frontend/deployment settings (port, API URL for scripts).
+type FrontendConfig struct {
+	Port       string `json:"port"`
+	ApiBaseURL string `json:"api_base_url"`
 }
 
 // ServerConfig represents server configuration
@@ -66,6 +73,9 @@ func LoadConfig(configPath string) (*Config, error) {
 	if config.Server.Host == "" {
 		config.Server.Host = "0.0.0.0"
 	}
+	if config.Frontend.Port == "" {
+		config.Frontend.Port = "8086"
+	}
 	if config.Database.Path == "" {
 		config.Database.Path = "railcarlist.db"
 	}
@@ -111,6 +121,10 @@ func LoadConfigWithDefaults(configPath string) (*Config, error) {
 				Server: ServerConfig{
 					Port: "8888",
 					Host: "0.0.0.0",
+				},
+				Frontend: FrontendConfig{
+					Port:       "8086",
+					ApiBaseURL: "",
 				},
 				Database: DatabaseConfig{
 					Path: "railcarlist.db",

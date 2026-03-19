@@ -1,8 +1,8 @@
-// Backend API configuration
-// Can be overridden by environment variable NEXT_PUBLIC_API_URL
-// When unset in the browser: use same host as the page with BACKEND_PORT (fixes Private Network Access when frontend is served from a remote host)
-
-// Must match backend server.port (see config.json); override with NEXT_PUBLIC_API_PORT if needed
+// Backend API configuration.
+// Single source of truth: root config.json (server.port, frontend.api_base_url).
+// start.sh and deploy.sh set NEXT_PUBLIC_API_PORT / NEXT_PUBLIC_API_URL from config when starting the app.
+// Override via env: NEXT_PUBLIC_API_URL (full URL) or NEXT_PUBLIC_API_PORT (port only).
+// When unset in the browser: use same host as the page with BACKEND_PORT (fixes Private Network Access when frontend is served from a remote host).
 const BACKEND_PORT = process.env.NEXT_PUBLIC_API_PORT || '8888';
 
 function getDefaultApiBaseUrl(): string {
