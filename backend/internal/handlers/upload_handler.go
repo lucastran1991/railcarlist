@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
+	"railcarlist/internal/httputil"
 	"railcarlist/internal/services"
 )
 
@@ -38,9 +38,7 @@ func (h *UploadHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(UploadResponse{
+		httputil.WriteJSON(w, http.StatusBadRequest, UploadResponse{
 			Success: false,
 			Message: "missing or invalid file: " + err.Error(),
 		})
@@ -50,9 +48,7 @@ func (h *UploadHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	modeStr := strings.TrimSpace(strings.ToLower(r.FormValue("mode")))
 	if modeStr == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(UploadResponse{
+		httputil.WriteJSON(w, http.StatusBadRequest, UploadResponse{
 			Success: false,
 			Message: "missing mode (required: override or replace)",
 		})
@@ -65,9 +61,7 @@ func (h *UploadHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	case "replace":
 		mode = services.ImportModeReplace
 	default:
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(UploadResponse{
+		httputil.WriteJSON(w, http.StatusBadRequest, UploadResponse{
 			Success: false,
 			Message: "invalid mode (must be override or replace)",
 		})
@@ -76,18 +70,14 @@ func (h *UploadHandler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.uploadService.ImportFromCSV(file, mode)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(UploadResponse{
+		httputil.WriteJSON(w, http.StatusBadRequest, UploadResponse{
 			Success: false,
 			Message: err.Error(),
 		})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(UploadResponse{
+	httputil.WriteJSON(w, http.StatusOK, UploadResponse{
 		Success:      true,
 		Message:      "CSV imported successfully",
 		Count:        result.Count,

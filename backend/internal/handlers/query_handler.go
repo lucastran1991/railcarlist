@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
+	"railcarlist/internal/httputil"
 	"railcarlist/internal/services"
 )
 
@@ -81,14 +81,9 @@ func (h *QueryHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	// Query the data
 	result, err := h.queryService.QueryTimeseriesData(startTime, endTime, tags, aggregate)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": err.Error(),
-		})
+		httputil.WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
+	httputil.WriteJSON(w, http.StatusOK, result)
 }

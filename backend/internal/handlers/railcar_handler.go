@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"railcarlist/internal/httputil"
 	"railcarlist/internal/models"
 	"railcarlist/internal/services"
 )
@@ -46,31 +47,25 @@ func (h *RailcarHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 		}
 		list, total, err := h.svc.ListPaginated(page, limit, sortStr)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			httputil.WriteJSONError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		if list == nil {
 			list = []models.Railcar{}
 		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"items": list, "total": total})
+		httputil.WriteJSON(w, http.StatusOK, map[string]interface{}{"items": list, "total": total})
 		return
 	}
 	// Legacy: no query params — return all
 	list, err := h.svc.List()
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if list == nil {
 		list = []models.Railcar{}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(list)
+	httputil.WriteJSON(w, http.StatusOK, list)
 }
 
 func parseIntParam(s string, defaultVal int) (int, error) {
@@ -82,48 +77,61 @@ func parseIntParam(s string, defaultVal int) (int, error) {
 	return n, nil
 }
 
+// parseMultipartFile parses the multipart form and returns the file and filename.
+// If useFormFilename is true, filename is taken from form value "filename" first, then header.
+func parseMultipartFile(r *http.Request, maxMem int64, formField string, useFormFilename bool) (file io.ReadCloser, filename string, err error) {
+	if err = r.ParseMultipartForm(maxMem); err != nil {
+		return nil, "", fmt.Errorf("failed to parse multipart form: %w", err)
+	}
+	file, header, err := r.FormFile(formField)
+	if err != nil {
+		return nil, "", fmt.Errorf("missing or invalid file (use form field %q)", formField)
+	}
+	if useFormFilename {
+		filename = r.FormValue("filename")
+	}
+	if filename == "" && header != nil {
+		filename = header.Filename
+	}
+	if filename == "" {
+		filename = "unknown.xlsx"
+	}
+	return file, filename, nil
+}
+
 // HandleGet returns one railcar (GET /api/railcars/:id)
 func (h *RailcarHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 	if id == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		httputil.WriteJSONError(w, http.StatusBadRequest, "missing id")
 		return
 	}
 	rc, err := h.svc.GetByID(id)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if rc == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(rc)
+	httputil.WriteJSON(w, http.StatusOK, rc)
 }
 
 // HandleCreate creates a railcar (POST /api/railcars)
 func (h *RailcarHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateRailcarRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON"})
+		httputil.WriteJSONError(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
 	rc, err := h.svc.Create(req)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(rc)
+	httputil.WriteJSON(w, http.StatusCreated, rc)
 }
 
 // HandleUpdate updates a railcar (PUT /api/railcars/:id)
@@ -131,29 +139,24 @@ func (h *RailcarHandler) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 	if id == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		httputil.WriteJSONError(w, http.StatusBadRequest, "missing id")
 		return
 	}
 	var req models.UpdateRailcarRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON"})
+		httputil.WriteJSONError(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
 	rc, err := h.svc.Update(id, req)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if rc == nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(rc)
+	httputil.WriteJSON(w, http.StatusOK, rc)
 }
 
 // HandleDelete deletes a railcar (DELETE /api/railcars/:id)
@@ -161,14 +164,12 @@ func (h *RailcarHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 	if id == "" {
-		w.WriteHeader(http.StatusBadRequest)
+		httputil.WriteJSONError(w, http.StatusBadRequest, "missing id")
 		return
 	}
 	ok, err := h.svc.Delete(id)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !ok {
@@ -182,94 +183,48 @@ func (h *RailcarHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 func (h *RailcarHandler) HandleDeleteAll(w http.ResponseWriter, r *http.Request) {
 	n, err := h.svc.DeleteAll()
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]int64{"deleted": n})
+	httputil.WriteJSON(w, http.StatusOK, map[string]int64{"deleted": n})
 }
 
 // HandleImport parses multipart form file and imports XLSX (POST /api/railcars/import).
 // Auto-detects format: Savana (row 0 = "DAILY WORK SCHEDULE...") vs standard (row 0 = name, startTime, endTime).
 func (h *RailcarHandler) HandleImport(w http.ResponseWriter, r *http.Request) {
 	const maxMem = 10 << 20 // 10 MB
-	if err := r.ParseMultipartForm(maxMem); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "failed to parse multipart form"})
-		return
-	}
-	file, header, err := r.FormFile("file")
+	file, filename, err := parseMultipartFile(r, maxMem, "file", false)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "missing or invalid file (use form field 'file')"})
+		httputil.WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	defer file.Close()
-	filename := ""
-	if header != nil {
-		filename = header.Filename
-	}
-	if filename == "" {
-		filename = "unknown.xlsx"
-	}
-
 	buf, err := io.ReadAll(file)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "failed to read file"})
+		httputil.WriteJSONError(w, http.StatusBadRequest, "failed to read file")
 		return
 	}
-
 	result, err := h.svc.ImportFromXLSXAuto(buf, filename)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(result)
+	httputil.WriteJSON(w, http.StatusOK, result)
 }
 
 // HandleImportSavana parses Savana monthly XLSX (per docs). Expects multipart "file" and optional "filename" (e.g. APRIL 2026.xlsx).
 func (h *RailcarHandler) HandleImportSavana(w http.ResponseWriter, r *http.Request) {
 	const maxMem = 10 << 20
-	if err := r.ParseMultipartForm(maxMem); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "failed to parse multipart form"})
-		return
-	}
-	file, header, err := r.FormFile("file")
+	file, filename, err := parseMultipartFile(r, maxMem, "file", true)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "missing or invalid file (use form field 'file')"})
+		httputil.WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	defer file.Close()
-	filename := r.FormValue("filename")
-	if filename == "" && header != nil {
-		filename = header.Filename
-	}
-	if filename == "" {
-		filename = "unknown.xlsx"
-	}
 	result, err := h.svc.ImportFromSavanaXLSX(file, filename)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(result)
+	httputil.WriteJSON(w, http.StatusOK, result)
 }

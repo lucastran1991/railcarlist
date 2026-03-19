@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"railcarlist/internal/httputil"
 	"railcarlist/internal/services"
 )
 
@@ -52,41 +53,31 @@ func (h *TagsHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	}
 	items, total, err := h.tagsService.ListTagsPaginated(page, limit, search)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(TagsListResponse{Items: items, Total: total})
+	httputil.WriteJSON(w, http.StatusOK, TagsListResponse{Items: items, Total: total})
 }
 
 // HandleListNames returns all tag names (GET /api/tags/names)
 func (h *TagsHandler) HandleListNames(w http.ResponseWriter, r *http.Request) {
 	names, err := h.tagsService.ListTagNames()
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(TagsNamesResponse{Tags: names})
+	httputil.WriteJSON(w, http.StatusOK, TagsNamesResponse{Tags: names})
 }
 
 // HandleDelete deletes a tag (DELETE /api/tags?tag=...)
 func (h *TagsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	tag := strings.TrimSpace(r.URL.Query().Get("tag"))
 	if tag == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "missing query param: tag"})
+		httputil.WriteJSONError(w, http.StatusBadRequest, "missing query param: tag")
 		return
 	}
 	if err := h.tagsService.DeleteTagData(tag); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusOK)
@@ -96,28 +87,21 @@ func (h *TagsHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 func (h *TagsHandler) HandlePost(w http.ResponseWriter, r *http.Request) {
 	var req CreateTagRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON body"})
+		httputil.WriteJSONError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	tag := strings.TrimSpace(req.Tag)
 	if tag == "" {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "tag is required and cannot be empty"})
+		httputil.WriteJSONError(w, http.StatusBadRequest, "tag is required and cannot be empty")
 		return
 	}
 	source := strings.TrimSpace(req.Source)
 	if err := h.tagsService.CreateTag(tag, source); err != nil {
-		w.Header().Set("Content-Type", "application/json")
 		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "constraint") {
-			w.WriteHeader(http.StatusConflict)
-			json.NewEncoder(w).Encode(map[string]string{"error": "tag already exists"})
+			httputil.WriteJSONError(w, http.StatusConflict, "tag already exists")
 			return
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+		httputil.WriteJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusCreated)

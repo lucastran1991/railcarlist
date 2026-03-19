@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"railcarlist/internal/httputil"
 	"railcarlist/internal/services"
 )
 
@@ -47,17 +47,14 @@ func (h *LoadHandler) Handle(w http.ResponseWriter, r *http.Request) {
 	// Load all JSON files from configured folder
 	count, filesCount, err := h.loader.LoadFromFolder(h.rawDataFolder)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(LoadResponse{
+		httputil.WriteJSON(w, http.StatusInternalServerError, LoadResponse{
 			Success: false,
 			Message: err.Error(),
 		})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(LoadResponse{
+	httputil.WriteJSON(w, http.StatusOK, LoadResponse{
 		Success:    true,
 		Message:    "Data loaded successfully",
 		Count:      count,

@@ -346,7 +346,7 @@ func (db *DB) CountRailcars() (int, error) {
 	return n, nil
 }
 
-// ListRailcarsPaginated returns a page of railcars. orderBy: "start_time" (default), "name", "end_time"
+// ListRailcarsPaginated returns a page of railcars. orderBy is whitelisted (start_time, name, end_time) to avoid SQL injection.
 func (db *DB) ListRailcarsPaginated(offset, limit int, orderBy string) ([]RailcarRow, error) {
 	col := "start_time"
 	switch orderBy {

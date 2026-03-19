@@ -47,6 +47,25 @@ type ValueRange struct {
 	Max float64 `json:"max"`
 }
 
+// GenerationDefaults returns value range and generation time range with defaults applied.
+// Used by main to initialize GeneratorHandler and ConfigHandler without duplicating default logic.
+func (c *Config) GenerationDefaults() (minVal, maxVal float64, useSequential bool, startTime, endTime string) {
+	minVal, maxVal = 1.0, 10000.0
+	if c.Data.ValueRange != nil {
+		minVal, maxVal = c.Data.ValueRange.Min, c.Data.ValueRange.Max
+	}
+	useSequential = c.Data.UseSequentialGeneration
+	startTime = c.Data.GenerationStartTime
+	if startTime == "" {
+		startTime = "2025-12-01T00:00:00"
+	}
+	endTime = c.Data.GenerationEndTime
+	if endTime == "" {
+		endTime = "2026-01-31T23:59:59"
+	}
+	return minVal, maxVal, useSequential, startTime, endTime
+}
+
 // LoadConfig loads configuration from a JSON file
 func LoadConfig(configPath string) (*Config, error) {
 	// Default config path

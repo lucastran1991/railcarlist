@@ -52,28 +52,9 @@ func main() {
 	tagsService := services.NewTagsService(db)
 	railcarService := services.NewRailcarService(db)
 
-	// Get value range from config (with defaults)
-	minValue := 1.0
-	maxValue := 10000.0
-	if cfg.Data.ValueRange != nil {
-		minValue = cfg.Data.ValueRange.Min
-		maxValue = cfg.Data.ValueRange.Max
-	}
+	minValue, maxValue, useSequential, startTime, endTime := cfg.GenerationDefaults()
 
-	// Get sequential generation flag from config (default: false)
-	useSequential := cfg.Data.UseSequentialGeneration
-
-	// Get generation time range from config (with defaults)
-	startTime := cfg.Data.GenerationStartTime
-	endTime := cfg.Data.GenerationEndTime
-	if startTime == "" {
-		startTime = "2025-12-01T00:00:00"
-	}
-	if endTime == "" {
-		endTime = "2026-01-31T23:59:59"
-	}
-
-	// Initialize handlers with config
+	// Initialize handlers
 	loadHandler := handlers.NewLoadHandler(loader, cfg.Data.RawDataFolder)
 	queryHandler := handlers.NewQueryHandler(queryService)
 	generatorHandler := handlers.NewGeneratorHandler(generator, minValue, maxValue, useSequential, startTime, endTime)

@@ -13,7 +13,6 @@ import {
   Th,
   Td,
   TableContainer,
-  Link,
   Spinner,
   Text,
   useToast,
@@ -32,20 +31,238 @@ import {
 import NextLink from 'next/link';
 import { FiPlus, FiUpload, FiTrash2 } from 'react-icons/fi';
 import { getRailcarsPaginated, deleteRailcar, deleteAllRailcars } from '@/lib/api';
+import { formatTime } from '@/lib/format';
 import type { Railcar } from '@/types/api';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
 const SORT_BY = 'startTime';
 
-function formatTime(iso: string): string {
-  if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    return isNaN(d.getTime()) ? iso : d.toLocaleString();
-  } catch {
-    return iso;
-  }
+function RailcarsToolbar({
+  onDeleteAllOpen,
+  total,
+}: {
+  onDeleteAllOpen: () => void;
+  total: number;
+}) {
+  return (
+    <Box mb={6} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={4}>
+      <Heading size="lg" color="gray.800">Railcar list</Heading>
+      <Box>
+        <Button as={NextLink} href="/railcars/new" leftIcon={<FiPlus />} colorScheme="brand" mr={3}>
+          Create new
+        </Button>
+        <Button as={NextLink} href="/railcars/import" leftIcon={<FiUpload />} variant="outline" mr={3}>
+          Import XLSX
+        </Button>
+        <Button
+          leftIcon={<FiTrash2 />}
+          variant="outline"
+          colorScheme="red"
+          onClick={onDeleteAllOpen}
+          isDisabled={total === 0}
+        >
+          Delete All
+        </Button>
+      </Box>
+    </Box>
+  );
+}
+
+function RailcarsTable({
+  railcars,
+  onDeleteClick,
+}: {
+  railcars: Railcar[];
+  onDeleteClick: (id: string) => void;
+}) {
+  return (
+    <TableContainer>
+      <Table variant="simple">
+        <Thead>
+          <Tr>
+            <Th>Name</Th>
+            <Th>Start time</Th>
+            <Th>End time</Th>
+            <Th>Spot</Th>
+            <Th>Product</Th>
+            <Th>Tank</Th>
+            <Th isNumeric>Actions</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {railcars.length === 0 ? (
+            <Tr>
+              <Td colSpan={7} textAlign="center" color="gray.500">
+                No railcars yet. Create one or import from XLSX.
+              </Td>
+            </Tr>
+          ) : (
+            railcars.map((rc) => (
+              <Tr key={rc.id}>
+                <Td fontWeight="medium">{rc.name}</Td>
+                <Td>{formatTime(rc.startTime)}</Td>
+                <Td>{formatTime(rc.endTime)}</Td>
+                <Td>{rc.spot ?? '—'}</Td>
+                <Td>{rc.product ?? '—'}</Td>
+                <Td>{rc.tank ?? '—'}</Td>
+                <Td isNumeric>
+                  <IconButton
+                    aria-label="Delete"
+                    icon={<FiTrash2 />}
+                    size="sm"
+                    colorScheme="red"
+                    variant="ghost"
+                    onClick={() => onDeleteClick(rc.id)}
+                  />
+                </Td>
+              </Tr>
+            ))
+          )}
+        </Tbody>
+      </Table>
+    </TableContainer>
+  );
+}
+
+function RailcarsPagination({
+  startItem,
+  endItem,
+  total,
+  pageSize,
+  pageSizeOptions,
+  onPageSizeChange,
+  page,
+  totalPages,
+  onPageChange,
+}: {
+  startItem: number;
+  endItem: number;
+  total: number;
+  pageSize: number;
+  pageSizeOptions: number[];
+  onPageSizeChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  page: number;
+  totalPages: number;
+  onPageChange: (updater: (p: number) => number) => void;
+}) {
+  return (
+    <Flex mt={4} justify="space-between" align="center" flexWrap="wrap" gap={3}>
+      <HStack spacing={4}>
+        <Text fontSize="sm" color="gray.600">
+          Showing {startItem}–{endItem} of {total}
+        </Text>
+        <HStack spacing={2} align="center">
+          <Text as="label" htmlFor="page-size" fontSize="sm" color="gray.600" whiteSpace="nowrap">
+            Per page
+          </Text>
+          <Select
+            id="page-size"
+            size="sm"
+            width="auto"
+            minW="4rem"
+            value={pageSize}
+            onChange={onPageSizeChange}
+          >
+            {pageSizeOptions.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </Select>
+        </HStack>
+      </HStack>
+      <HStack spacing={2}>
+        <Button
+          size="sm"
+          variant="outline"
+          isDisabled={page <= 1}
+          onClick={() => onPageChange((p) => Math.max(1, p - 1))}
+        >
+          Previous
+        </Button>
+        <Text fontSize="sm" px={2}>
+          Page {page} of {totalPages}
+        </Text>
+        <Button
+          size="sm"
+          variant="outline"
+          isDisabled={page >= totalPages}
+          onClick={() => onPageChange((p) => Math.min(totalPages, p + 1))}
+        >
+          Next
+        </Button>
+      </HStack>
+    </Flex>
+  );
+}
+
+function DeleteRailcarDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  isLoading,
+  cancelRef,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isLoading: boolean;
+  cancelRef: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const ref = cancelRef as React.RefObject<HTMLButtonElement>;
+  return (
+    <AlertDialog isOpen={isOpen} onClose={onClose} leastDestructiveRef={ref}>
+      <AlertDialogOverlay>
+        <AlertDialogContent>
+          <AlertDialogHeader>Delete railcar</AlertDialogHeader>
+          <AlertDialogBody>Are you sure? This cannot be undone.</AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={ref} onClick={onClose}>Cancel</Button>
+            <Button colorScheme="red" onClick={onConfirm} isLoading={isLoading} ml={3}>
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialogOverlay>
+    </AlertDialog>
+  );
+}
+
+function DeleteAllRailcarsDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  isLoading,
+  total,
+  cancelRef,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isLoading: boolean;
+  total: number;
+  cancelRef: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const ref = cancelRef as React.RefObject<HTMLButtonElement>;
+  return (
+    <AlertDialog isOpen={isOpen} onClose={onClose} leastDestructiveRef={ref}>
+      <AlertDialogOverlay>
+        <AlertDialogContent>
+          <AlertDialogHeader>Delete all railcars</AlertDialogHeader>
+          <AlertDialogBody>
+            This will permanently delete all {total} railcar(s). This cannot be undone.
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button ref={ref} onClick={onClose}>Cancel</Button>
+            <Button colorScheme="red" onClick={onConfirm} isLoading={isLoading} ml={3}>
+              Delete All
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialogOverlay>
+    </AlertDialog>
+  );
 }
 
 export default function RailcarsListPage() {
@@ -140,166 +357,51 @@ export default function RailcarsListPage() {
   return (
     <Box bg="gray.50" minH="calc(100vh - 64px)">
       <Container maxW="container.xl" py={6}>
-        <Box mb={6} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={4}>
-          <Heading size="lg" color="gray.800">Railcar list</Heading>
-          <Box>
-            <Button as={NextLink} href="/railcars/new" leftIcon={<FiPlus />} colorScheme="brand" mr={3}>
-            Create new
-          </Button>
-          <Button as={NextLink} href="/railcars/import" leftIcon={<FiUpload />} variant="outline" mr={3}>
-            Import XLSX
-          </Button>
-          <Button
-            leftIcon={<FiTrash2 />}
-            variant="outline"
-            colorScheme="red"
-            onClick={onDeleteAllOpen}
-            isDisabled={total === 0}
-          >
-            Delete All
-          </Button>
-        </Box>
-      </Box>
+        <RailcarsToolbar onDeleteAllOpen={onDeleteAllOpen} total={total} />
 
-      {loading && (
-        <Box py={8} textAlign="center">
-          <Spinner size="xl" />
-        </Box>
-      )}
-      {error && (
-        <Text color="red.500" mb={4}>
-          {error}
-        </Text>
-      )}
-      {!loading && !error && (
-        <TableContainer>
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Name</Th>
-                <Th>Start time</Th>
-                <Th>End time</Th>
-                <Th>Spot</Th>
-                <Th>Product</Th>
-                <Th>Tank</Th>
-                <Th isNumeric>Actions</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {railcars.length === 0 ? (
-                <Tr>
-                  <Td colSpan={7} textAlign="center" color="gray.500">
-                    No railcars yet. Create one or import from XLSX.
-                  </Td>
-                </Tr>
-              ) : (
-                railcars.map((rc) => (
-                  <Tr key={rc.id}>
-                    <Td fontWeight="medium">{rc.name}</Td>
-                    <Td>{formatTime(rc.startTime)}</Td>
-                    <Td>{formatTime(rc.endTime)}</Td>
-                    <Td>{rc.spot ?? '—'}</Td>
-                    <Td>{rc.product ?? '—'}</Td>
-                    <Td>{rc.tank ?? '—'}</Td>
-                    <Td isNumeric>
-                      <IconButton
-                        aria-label="Delete"
-                        icon={<FiTrash2 />}
-                        size="sm"
-                        colorScheme="red"
-                        variant="ghost"
-                        onClick={() => handleDeleteClick(rc.id)}
-                      />
-                    </Td>
-                  </Tr>
-                ))
-              )}
-            </Tbody>
-          </Table>
-        </TableContainer>
-      )}
+        {loading && (
+          <Box py={8} textAlign="center">
+            <Spinner size="xl" />
+          </Box>
+        )}
+        {error && (
+          <Text color="red.500" mb={4}>
+            {error}
+          </Text>
+        )}
+        {!loading && !error && (
+          <RailcarsTable railcars={railcars} onDeleteClick={handleDeleteClick} />
+        )}
 
-      {!loading && !error && total > 0 && (
-        <Flex mt={4} justify="space-between" align="center" flexWrap="wrap" gap={3}>
-          <HStack spacing={4}>
-            <Text fontSize="sm" color="gray.600">
-              Showing {startItem}–{endItem} of {total}
-            </Text>
-            <HStack spacing={2} align="center">
-              <Text as="label" htmlFor="page-size" fontSize="sm" color="gray.600" whiteSpace="nowrap">
-                Per page
-              </Text>
-              <Select
-                id="page-size"
-                size="sm"
-                width="auto"
-                minW="4rem"
-                value={pageSize}
-                onChange={handlePageSizeChange}
-              >
-                {PAGE_SIZE_OPTIONS.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </Select>
-            </HStack>
-          </HStack>
-          <HStack spacing={2}>
-            <Button
-              size="sm"
-              variant="outline"
-              isDisabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Previous
-            </Button>
-            <Text fontSize="sm" px={2}>
-              Page {page} of {totalPages}
-            </Text>
-            <Button
-              size="sm"
-              variant="outline"
-              isDisabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Next
-            </Button>
-          </HStack>
-        </Flex>
-      )}
+        {!loading && !error && total > 0 && (
+          <RailcarsPagination
+            startItem={startItem}
+            endItem={endItem}
+            total={total}
+            pageSize={pageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            onPageSizeChange={handlePageSizeChange}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
+        )}
 
-      <AlertDialog isOpen={isOpen} onClose={onClose} leastDestructiveRef={cancelRef}>
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader>Delete railcar</AlertDialogHeader>
-            <AlertDialogBody>Are you sure? This cannot be undone.</AlertDialogBody>
-            <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={onClose}>Cancel</Button>
-              <Button colorScheme="red" onClick={handleDeleteConfirm} isLoading={deleteLoading} ml={3}>
-                Delete
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
-
-      <AlertDialog isOpen={isDeleteAllOpen} onClose={onDeleteAllClose} leastDestructiveRef={cancelDeleteAllRef}>
-        <AlertDialogOverlay>
-          <AlertDialogContent>
-            <AlertDialogHeader>Delete all railcars</AlertDialogHeader>
-            <AlertDialogBody>
-              This will permanently delete all {total} railcar(s). This cannot be undone.
-            </AlertDialogBody>
-            <AlertDialogFooter>
-              <Button ref={cancelDeleteAllRef} onClick={onDeleteAllClose}>Cancel</Button>
-              <Button colorScheme="red" onClick={handleDeleteAllConfirm} isLoading={deleteAllLoading} ml={3}>
-                Delete All
-              </Button>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogOverlay>
-      </AlertDialog>
+        <DeleteRailcarDialog
+          isOpen={isOpen}
+          onClose={onClose}
+          onConfirm={handleDeleteConfirm}
+          isLoading={deleteLoading}
+          cancelRef={cancelRef}
+        />
+        <DeleteAllRailcarsDialog
+          isOpen={isDeleteAllOpen}
+          onClose={onDeleteAllClose}
+          onConfirm={handleDeleteAllConfirm}
+          isLoading={deleteAllLoading}
+          total={total}
+          cancelRef={cancelDeleteAllRef}
+        />
       </Container>
     </Box>
   );
