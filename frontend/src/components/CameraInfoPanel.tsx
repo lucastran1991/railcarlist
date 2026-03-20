@@ -1,59 +1,33 @@
 'use client';
 
-import { Box, Text, VStack, HStack } from '@chakra-ui/react';
 import type { CameraInfo } from '@/lib/three/terminalScene';
-
-export type CameraInfoPanelProps = {
-  info: CameraInfo | null;
-};
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <HStack justify="space-between" spacing={3}>
-      <Text fontSize="xs" color="gray.400">{label}</Text>
-      <Text fontSize="xs" color="white" fontFamily="mono">{value}</Text>
-    </HStack>
+    <div className="flex justify-between gap-3">
+      <span className="text-xs text-gray-400">{label}</span>
+      <span className="text-xs text-white font-mono">{value}</span>
+    </div>
   );
 }
 
-export default function CameraInfoPanel({ info }: CameraInfoPanelProps) {
+export default function CameraInfoPanel({ info }: { info: CameraInfo | null }) {
   if (!info) return null;
 
   return (
-    <Box
-      position="fixed"
-      right={3}
-      top={3}
-      zIndex={20}
-      w="180px"
-      p={3}
-      borderRadius="lg"
-      bg="rgba(0, 0, 0, 0.5)"
-      backdropFilter="blur(10px)"
-      borderWidth="1px"
-      borderColor="whiteAlpha.100"
-      boxShadow="md"
-      pointerEvents="auto"
-    >
-      <Text
-        fontSize="xs"
-        fontWeight="700"
-        textTransform="uppercase"
-        letterSpacing="wider"
-        mb={2}
-        color="gray.400"
-      >
+    <div className="fixed right-3 top-3 z-20 w-[180px] p-3 rounded-lg bg-black/50 backdrop-blur-[10px] border border-white/10 shadow-md pointer-events-auto">
+      <p className="text-xs font-bold uppercase tracking-wider mb-2 text-gray-400">
         Camera Info
-      </Text>
-      <VStack align="stretch" spacing={1}>
+      </p>
+      <div className="flex flex-col gap-1">
         <Row label="Angle" value={`${info.angle}°`} />
         <Row label="Radius" value={`${info.radius}`} />
         <Row label="Height" value={`${info.height}`} />
-        <Box borderTop="1px solid" borderColor="whiteAlpha.100" my={1} />
+        <div className="border-t border-white/10 my-1" />
         <Row label="X" value={`${info.x}`} />
         <Row label="Y" value={`${info.y}`} />
         <Row label="Z" value={`${info.z}`} />
-      </VStack>
-    </Box>
+      </div>
+    </div>
   );
 }

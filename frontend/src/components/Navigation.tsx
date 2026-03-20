@@ -1,8 +1,8 @@
 'use client';
 
-import { Box, Flex, Link, Heading, Container } from '@chakra-ui/react';
-import NextLink from 'next/link';
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -14,44 +14,35 @@ export default function Navigation() {
   ];
 
   return (
-    <Box bg="nav.bg" borderBottom="1px" borderColor="nav.border" py={3}>
-      <Container maxW="container.xl">
-        <Flex align="center" justify="space-between">
-          <Link
-            as={NextLink}
-            href="/"
-            _hover={{ opacity: 0.9 }}
-          >
-            <Heading size="md" color="nav.linkActive" fontWeight={600} as="span">
+    <nav className="bg-nav-bg border-b border-nav-border py-3">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="hover:opacity-90">
+            <span className="text-lg font-semibold text-nav-link-active">
               Railcar Schedule
-            </Heading>
+            </span>
           </Link>
-          <Flex gap={6}>
+          <div className="flex gap-6">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
-                  as={NextLink}
-                  href={item.href}
                   key={item.href}
-                  fontWeight={isActive ? 600 : 400}
-                  color={isActive ? 'nav.linkActive' : 'nav.link'}
-                  _hover={{ color: 'nav.linkHover' }}
-                  px={3}
-                  py={2}
-                  borderRadius="md"
-                  borderBottomWidth={isActive ? '2px' : 0}
-                  borderBottomStyle="solid"
-                  borderBottomColor={isActive ? 'brand.500' : 'transparent'}
-                  bg={isActive ? 'whiteAlpha.200' : 'transparent'}
+                  href={item.href}
+                  className={cn(
+                    'px-3 py-2 rounded-md text-sm transition-colors',
+                    isActive
+                      ? 'font-semibold text-nav-link-active border-b-2 border-brand-500 bg-white/10'
+                      : 'font-normal text-nav-link hover:text-nav-link-hover'
+                  )}
                 >
                   {item.label}
                 </Link>
               );
             })}
-          </Flex>
-        </Flex>
-      </Container>
-    </Box>
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }

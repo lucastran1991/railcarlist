@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { Box } from '@chakra-ui/react';
 import {
   initTerminalScene,
   loadSceneConfig,
@@ -38,13 +37,9 @@ export default function HomeThreeBackground({ onHandleReady }: HomeThreeBackgrou
   }, []);
 
   return (
-    <Box
+    <div
       ref={containerRef}
-      position="absolute"
-      inset={0}
-      zIndex={0}
-      pointerEvents="auto"
-      overflow="hidden"
+      className="absolute inset-0 z-0 pointer-events-auto overflow-hidden"
       aria-hidden
     />
   );

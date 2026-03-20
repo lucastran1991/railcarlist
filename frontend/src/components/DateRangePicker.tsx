@@ -1,6 +1,5 @@
 'use client';
 
-import { FormControl, FormLabel, Input, HStack } from '@chakra-ui/react';
 import { format } from 'date-fns';
 
 interface DateRangePickerProps {
@@ -11,50 +10,45 @@ interface DateRangePickerProps {
 }
 
 export default function DateRangePicker({
-  fromDate,
-  toDate,
-  onFromDateChange,
-  onToDateChange,
+  fromDate, toDate, onFromDateChange, onToDateChange,
 }: DateRangePickerProps) {
-  // Convert ISO string to datetime-local format (YYYY-MM-DDTHH:mm)
   const formatForInput = (isoString: string): string => {
     try {
-      const date = new Date(isoString);
-      return format(date, "yyyy-MM-dd'T'HH:mm");
+      return format(new Date(isoString), "yyyy-MM-dd'T'HH:mm");
     } catch {
       return '';
     }
   };
 
-  // Convert datetime-local format to ISO string
   const parseFromInput = (inputValue: string): string => {
     if (!inputValue) return '';
     try {
-      const date = new Date(inputValue);
-      return format(date, "yyyy-MM-dd'T'HH:mm:ss");
+      return format(new Date(inputValue), "yyyy-MM-dd'T'HH:mm:ss");
     } catch {
       return inputValue;
     }
   };
 
   return (
-    <HStack spacing={4} align="end">
-      <FormControl>
-        <FormLabel color="gray.700">From</FormLabel>
-        <Input
+    <div className="flex gap-4 items-end">
+      <div className="flex-1">
+        <label className="block text-sm font-medium text-gray-700 mb-1">From</label>
+        <input
           type="datetime-local"
           value={formatForInput(fromDate)}
           onChange={(e) => onFromDateChange(parseFromInput(e.target.value))}
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
-      </FormControl>
-      <FormControl>
-        <FormLabel color="gray.700">To</FormLabel>
-        <Input
+      </div>
+      <div className="flex-1">
+        <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
+        <input
           type="datetime-local"
           value={formatForInput(toDate)}
           onChange={(e) => onToDateChange(parseFromInput(e.target.value))}
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
-      </FormControl>
-    </HStack>
+      </div>
+    </div>
   );
 }

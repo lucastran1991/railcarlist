@@ -1,85 +1,50 @@
 'use client';
 
 import {
-  Box,
-  VStack,
-  Text,
-  HStack,
-  IconButton,
-} from '@chakra-ui/react';
-import {
-  FiZoomIn,
-  FiZoomOut,
-  FiRotateCcw,
-  FiRotateCw,
-  FiChevronUp,
-  FiChevronDown,
-  FiRefreshCw,
-} from 'react-icons/fi';
+  ZoomIn, ZoomOut, RotateCcw, RotateCw,
+  ChevronUp, ChevronDown, RefreshCw,
+} from 'lucide-react';
 import type { TerminalCameraApi } from '@/lib/three/terminalScene';
+import { cn } from '@/lib/utils';
 
-export type TerminalSceneControlsProps = {
-  cameraApi: TerminalCameraApi | null;
-};
-
-export default function TerminalSceneControls({ cameraApi }: TerminalSceneControlsProps) {
-  const btn = (label: string, icon: React.ReactElement, onClick: () => void) => (
-    <IconButton
+export default function TerminalSceneControls({ cameraApi }: { cameraApi: TerminalCameraApi | null }) {
+  const btn = (label: string, icon: React.ReactNode, onClick: () => void) => (
+    <button
       aria-label={label}
-      icon={icon}
-      size="sm"
-      variant="outline"
-      colorScheme="whiteAlpha"
-      color="gray.300"
-      borderColor="whiteAlpha.300"
-      _hover={{ bg: 'whiteAlpha.200', borderColor: 'whiteAlpha.500' }}
-      isDisabled={!cameraApi}
+      disabled={!cameraApi}
       onClick={onClick}
-    />
+      className={cn(
+        'w-8 h-8 flex items-center justify-center rounded border border-white/20 text-gray-300',
+        'hover:bg-white/10 hover:border-white/40 disabled:opacity-30 disabled:cursor-not-allowed',
+        'transition-colors'
+      )}
+    >
+      {icon}
+    </button>
   );
 
   return (
-    <Box
-      position="fixed"
-      left={3}
-      top={3}
-      zIndex={20}
-      w="200px"
-      p={3}
-      borderRadius="lg"
-      bg="rgba(0, 0, 0, 0.5)"
-      backdropFilter="blur(10px)"
-      borderWidth="1px"
-      borderColor="whiteAlpha.100"
-      boxShadow="md"
-    >
-      <Text
-        fontSize="xs"
-        fontWeight="700"
-        textTransform="uppercase"
-        letterSpacing="wider"
-        mb={3}
-        color="gray.400"
-      >
+    <div className="fixed left-3 top-3 z-20 w-[200px] p-3 rounded-lg bg-black/50 backdrop-blur-[10px] border border-white/10 shadow-md">
+      <p className="text-xs font-bold uppercase tracking-wider mb-3 text-gray-400">
         Camera
-      </Text>
-      <VStack align="stretch" spacing={2}>
-        <HStack spacing={1} justify="center">
-          {btn('Zoom in', <FiZoomIn />, () => cameraApi?.zoomIn())}
-          {btn('Zoom out', <FiZoomOut />, () => cameraApi?.zoomOut())}
-        </HStack>
-        <HStack spacing={1} justify="center">
-          {btn('Rotate left', <FiRotateCcw />, () => cameraApi?.rotateLeft())}
-          {btn('Rotate right', <FiRotateCw />, () => cameraApi?.rotateRight())}
-        </HStack>
-        <HStack spacing={1} justify="center">
-          {btn('Tilt up', <FiChevronUp />, () => cameraApi?.tiltUp())}
-          {btn('Tilt down', <FiChevronDown />, () => cameraApi?.tiltDown())}
-        </HStack>
-        <HStack spacing={1} justify="center">
-          {btn('Reset camera', <FiRefreshCw />, () => cameraApi?.reset())}
-        </HStack>
-      </VStack>
-    </Box>
+      </p>
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-1 justify-center">
+          {btn('Zoom in', <ZoomIn size={16} />, () => cameraApi?.zoomIn())}
+          {btn('Zoom out', <ZoomOut size={16} />, () => cameraApi?.zoomOut())}
+        </div>
+        <div className="flex gap-1 justify-center">
+          {btn('Rotate left', <RotateCcw size={16} />, () => cameraApi?.rotateLeft())}
+          {btn('Rotate right', <RotateCw size={16} />, () => cameraApi?.rotateRight())}
+        </div>
+        <div className="flex gap-1 justify-center">
+          {btn('Tilt up', <ChevronUp size={16} />, () => cameraApi?.tiltUp())}
+          {btn('Tilt down', <ChevronDown size={16} />, () => cameraApi?.tiltDown())}
+        </div>
+        <div className="flex gap-1 justify-center">
+          {btn('Reset camera', <RefreshCw size={16} />, () => cameraApi?.reset())}
+        </div>
+      </div>
+    </div>
   );
 }

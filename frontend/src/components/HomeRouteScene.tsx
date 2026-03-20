@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Box } from '@chakra-ui/react';
 import HomeThreeBackground from '@/components/HomeThreeBackground';
 import TerminalSceneControls from '@/components/TerminalSceneControls';
 import CameraInfoPanel from '@/components/CameraInfoPanel';
@@ -26,19 +25,9 @@ export default function HomeRouteScene() {
 
   return (
     <>
-      <Box
-        position="fixed"
-        top={0}
-        left={0}
-        right={0}
-        bottom={0}
-        zIndex={0}
-        pointerEvents="auto"
-        overflow="hidden"
-        aria-hidden
-      >
+      <div className="fixed inset-0 z-0 pointer-events-auto overflow-hidden" aria-hidden>
         <HomeThreeBackground onHandleReady={onHandleReady} />
-      </Box>
+      </div>
       <TerminalSceneControls cameraApi={cameraApi} />
       <CameraInfoPanel info={cameraInfo} />
       <ObjectPopup obj={clickedObj} />

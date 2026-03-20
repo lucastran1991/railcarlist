@@ -1,267 +1,41 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import {
-  Container,
-  Box,
-  Heading,
-  Button,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  TableContainer,
-  Spinner,
-  Text,
-  useToast,
-  IconButton,
-  AlertDialog,
-  AlertDialogBody,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogContent,
-  AlertDialogOverlay,
-  useDisclosure,
-  Flex,
-  HStack,
-  Select,
-} from '@chakra-ui/react';
-import NextLink from 'next/link';
-import { FiPlus, FiUpload, FiTrash2 } from 'react-icons/fi';
+import Link from 'next/link';
+import { Plus, Upload, Trash2, Loader2 } from 'lucide-react';
 import { getRailcarsPaginated, deleteRailcar, deleteAllRailcars } from '@/lib/api';
 import { formatTime } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { Railcar } from '@/types/api';
 
 const DEFAULT_PAGE_SIZE = 5;
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50];
 const SORT_BY = 'startTime';
 
-function RailcarsToolbar({
-  onDeleteAllOpen,
-  total,
+function ConfirmDialog({
+  open, title, message, onClose, onConfirm, loading, confirmLabel = 'Delete',
 }: {
-  onDeleteAllOpen: () => void;
-  total: number;
+  open: boolean; title: string; message: string;
+  onClose: () => void; onConfirm: () => void; loading: boolean; confirmLabel?: string;
 }) {
+  if (!open) return null;
   return (
-    <Box mb={6} display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={4}>
-      <Heading size="lg" color="gray.800">Railcar list</Heading>
-      <Box>
-        <Button as={NextLink} href="/railcars/new" leftIcon={<FiPlus />} colorScheme="brand" mr={3}>
-          Create new
-        </Button>
-        <Button as={NextLink} href="/railcars/import" leftIcon={<FiUpload />} variant="outline" mr={3}>
-          Import XLSX
-        </Button>
-        <Button
-          leftIcon={<FiTrash2 />}
-          variant="outline"
-          colorScheme="red"
-          onClick={onDeleteAllOpen}
-          isDisabled={total === 0}
-        >
-          Delete All
-        </Button>
-      </Box>
-    </Box>
-  );
-}
-
-function RailcarsTable({
-  railcars,
-  onDeleteClick,
-}: {
-  railcars: Railcar[];
-  onDeleteClick: (id: string) => void;
-}) {
-  return (
-    <TableContainer>
-      <Table variant="simple">
-        <Thead>
-          <Tr>
-            <Th>Name</Th>
-            <Th>Start time</Th>
-            <Th>End time</Th>
-            <Th>Spot</Th>
-            <Th>Product</Th>
-            <Th>Tank</Th>
-            <Th isNumeric>Actions</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {railcars.length === 0 ? (
-            <Tr>
-              <Td colSpan={7} textAlign="center" color="gray.500">
-                No railcars yet. Create one or import from XLSX.
-              </Td>
-            </Tr>
-          ) : (
-            railcars.map((rc) => (
-              <Tr key={rc.id}>
-                <Td fontWeight="medium">{rc.name}</Td>
-                <Td>{formatTime(rc.startTime)}</Td>
-                <Td>{formatTime(rc.endTime)}</Td>
-                <Td>{rc.spot ?? '—'}</Td>
-                <Td>{rc.product ?? '—'}</Td>
-                <Td>{rc.tank ?? '—'}</Td>
-                <Td isNumeric>
-                  <IconButton
-                    aria-label="Delete"
-                    icon={<FiTrash2 />}
-                    size="sm"
-                    colorScheme="red"
-                    variant="ghost"
-                    onClick={() => onDeleteClick(rc.id)}
-                  />
-                </Td>
-              </Tr>
-            ))
-          )}
-        </Tbody>
-      </Table>
-    </TableContainer>
-  );
-}
-
-function RailcarsPagination({
-  startItem,
-  endItem,
-  total,
-  pageSize,
-  pageSizeOptions,
-  onPageSizeChange,
-  page,
-  totalPages,
-  onPageChange,
-}: {
-  startItem: number;
-  endItem: number;
-  total: number;
-  pageSize: number;
-  pageSizeOptions: number[];
-  onPageSizeChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  page: number;
-  totalPages: number;
-  onPageChange: (updater: (p: number) => number) => void;
-}) {
-  return (
-    <Flex mt={4} justify="space-between" align="center" flexWrap="wrap" gap={3}>
-      <HStack spacing={4}>
-        <Text fontSize="sm" color="gray.600">
-          Showing {startItem}–{endItem} of {total}
-        </Text>
-        <HStack spacing={2} align="center">
-          <Text as="label" htmlFor="page-size" fontSize="sm" color="gray.600" whiteSpace="nowrap">
-            Per page
-          </Text>
-          <Select
-            id="page-size"
-            size="sm"
-            width="auto"
-            minW="4rem"
-            value={pageSize}
-            onChange={onPageSizeChange}
-          >
-            {pageSizeOptions.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </Select>
-        </HStack>
-      </HStack>
-      <HStack spacing={2}>
-        <Button
-          size="sm"
-          variant="outline"
-          isDisabled={page <= 1}
-          onClick={() => onPageChange((p) => Math.max(1, p - 1))}
-        >
-          Previous
-        </Button>
-        <Text fontSize="sm" px={2}>
-          Page {page} of {totalPages}
-        </Text>
-        <Button
-          size="sm"
-          variant="outline"
-          isDisabled={page >= totalPages}
-          onClick={() => onPageChange((p) => Math.min(totalPages, p + 1))}
-        >
-          Next
-        </Button>
-      </HStack>
-    </Flex>
-  );
-}
-
-function DeleteRailcarDialog({
-  isOpen,
-  onClose,
-  onConfirm,
-  isLoading,
-  cancelRef,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  isLoading: boolean;
-  cancelRef: React.RefObject<HTMLButtonElement | null>;
-}) {
-  const ref = cancelRef as React.RefObject<HTMLButtonElement>;
-  return (
-    <AlertDialog isOpen={isOpen} onClose={onClose} leastDestructiveRef={ref}>
-      <AlertDialogOverlay>
-        <AlertDialogContent>
-          <AlertDialogHeader>Delete railcar</AlertDialogHeader>
-          <AlertDialogBody>Are you sure? This cannot be undone.</AlertDialogBody>
-          <AlertDialogFooter>
-            <Button ref={ref} onClick={onClose}>Cancel</Button>
-            <Button colorScheme="red" onClick={onConfirm} isLoading={isLoading} ml={3}>
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialogOverlay>
-    </AlertDialog>
-  );
-}
-
-function DeleteAllRailcarsDialog({
-  isOpen,
-  onClose,
-  onConfirm,
-  isLoading,
-  total,
-  cancelRef,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  isLoading: boolean;
-  total: number;
-  cancelRef: React.RefObject<HTMLButtonElement | null>;
-}) {
-  const ref = cancelRef as React.RefObject<HTMLButtonElement>;
-  return (
-    <AlertDialog isOpen={isOpen} onClose={onClose} leastDestructiveRef={ref}>
-      <AlertDialogOverlay>
-        <AlertDialogContent>
-          <AlertDialogHeader>Delete all railcars</AlertDialogHeader>
-          <AlertDialogBody>
-            This will permanently delete all {total} railcar(s). This cannot be undone.
-          </AlertDialogBody>
-          <AlertDialogFooter>
-            <Button ref={ref} onClick={onClose}>Cancel</Button>
-            <Button colorScheme="red" onClick={onConfirm} isLoading={isLoading} ml={3}>
-              Delete All
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialogOverlay>
-    </AlertDialog>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+        <p className="text-sm text-gray-600 mb-6">{message}</p>
+        <div className="flex justify-end gap-3">
+          <button onClick={onClose} className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button onClick={onConfirm} disabled={loading} className="px-4 py-2 rounded-md bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 flex items-center gap-2">
+            {loading && <Loader2 size={14} className="animate-spin" />}
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -274,135 +48,160 @@ export default function RailcarsListPage() {
   const [error, setError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   const [deleteAllLoading, setDeleteAllLoading] = useState(false);
-  const toast = useToast();
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const { isOpen: isDeleteAllOpen, onOpen: onDeleteAllOpen, onClose: onDeleteAllClose } = useDisclosure();
-  const cancelRef = useRef<HTMLButtonElement>(null);
-  const cancelDeleteAllRef = useRef<HTMLButtonElement>(null);
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const startItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, total);
 
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const fetchList = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const res = await getRailcarsPaginated(page, pageSize, SORT_BY);
-      setRailcars(res.items);
-      setTotal(res.total);
+      setRailcars(res.items); setTotal(res.total);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load railcars');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchList();
-  }, [page, pageSize]);
+  useEffect(() => { fetchList(); }, [page, pageSize]);
 
-  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = Number(e.target.value);
-    if (PAGE_SIZE_OPTIONS.includes(value)) {
-      setPageSize(value);
-      setPage(1);
-    }
-  };
-
-  // If current page is empty after fetch (e.g. after delete) and there are more pages, go to previous page
   useEffect(() => {
-    if (!loading && railcars.length === 0 && total > 0 && page > 1) {
-      setPage((p) => p - 1);
-    }
+    if (!loading && railcars.length === 0 && total > 0 && page > 1) setPage((p) => p - 1);
   }, [loading, railcars.length, total, page]);
-
-  const handleDeleteClick = (id: string) => {
-    setDeleteId(id);
-    onOpen();
-  };
 
   const handleDeleteConfirm = async () => {
     if (!deleteId) return;
     setDeleteLoading(true);
     try {
       await deleteRailcar(deleteId);
-      toast({ title: 'Railcar deleted', status: 'success' });
-      setDeleteId(null);
-      onClose();
-      fetchList();
+      setToast({ text: 'Railcar deleted', type: 'success' });
+      setDeleteId(null); fetchList();
     } catch (e) {
-      toast({ title: e instanceof Error ? e.message : 'Delete failed', status: 'error' });
-    } finally {
-      setDeleteLoading(false);
-    }
+      setToast({ text: e instanceof Error ? e.message : 'Delete failed', type: 'error' });
+    } finally { setDeleteLoading(false); }
   };
 
   const handleDeleteAllConfirm = async () => {
     setDeleteAllLoading(true);
     try {
       const res = await deleteAllRailcars();
-      toast({ title: `Deleted ${res.deleted} railcar(s)`, status: 'success' });
-      onDeleteAllClose();
-      setPage(1);
-      fetchList();
+      setToast({ text: `Deleted ${res.deleted} railcar(s)`, type: 'success' });
+      setDeleteAllOpen(false); setPage(1); fetchList();
     } catch (e) {
-      toast({ title: e instanceof Error ? e.message : 'Delete all failed', status: 'error' });
-    } finally {
-      setDeleteAllLoading(false);
-    }
+      setToast({ text: e instanceof Error ? e.message : 'Delete all failed', type: 'error' });
+    } finally { setDeleteAllLoading(false); }
   };
 
   return (
-    <Box bg="gray.50" minH="calc(100vh - 64px)">
-      <Container maxW="container.xl" py={6}>
-        <RailcarsToolbar onDeleteAllOpen={onDeleteAllOpen} total={total} />
+    <div className="bg-gray-50 min-h-[calc(100vh-64px)]">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Toast */}
+        {toast && (
+          <div className={cn('fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium', toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white')}>
+            {toast.text}
+          </div>
+        )}
 
+        {/* Toolbar */}
+        <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
+          <h1 className="text-2xl font-bold text-gray-800">Railcar list</h1>
+          <div className="flex gap-3">
+            <Link href="/railcars/new" className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand-500 text-white text-sm font-medium hover:bg-brand-600">
+              <Plus size={16} /> Create new
+            </Link>
+            <Link href="/railcars/import" className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
+              <Upload size={16} /> Import XLSX
+            </Link>
+            <button onClick={() => setDeleteAllOpen(true)} disabled={total === 0} className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-red-300 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed">
+              <Trash2 size={16} /> Delete All
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
         {loading && (
-          <Box py={8} textAlign="center">
-            <Spinner size="xl" />
-          </Box>
+          <div className="py-8 text-center"><Loader2 size={32} className="animate-spin text-gray-400 mx-auto" /></div>
         )}
-        {error && (
-          <Text color="red.500" mb={4}>
-            {error}
-          </Text>
-        )}
+        {error && <p className="text-red-500 mb-4">{error}</p>}
         {!loading && !error && (
-          <RailcarsTable railcars={railcars} onDeleteClick={handleDeleteClick} />
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Name</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Start time</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">End time</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Spot</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Product</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-600">Tank</th>
+                  <th className="text-right py-3 px-4 font-semibold text-gray-600">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {railcars.length === 0 ? (
+                  <tr><td colSpan={7} className="text-center py-8 text-gray-500">No railcars yet. Create one or import from XLSX.</td></tr>
+                ) : (
+                  railcars.map((rc) => (
+                    <tr key={rc.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4 font-medium">{rc.name}</td>
+                      <td className="py-3 px-4">{formatTime(rc.startTime)}</td>
+                      <td className="py-3 px-4">{formatTime(rc.endTime)}</td>
+                      <td className="py-3 px-4">{rc.spot ?? '—'}</td>
+                      <td className="py-3 px-4">{rc.product ?? '—'}</td>
+                      <td className="py-3 px-4">{rc.tank ?? '—'}</td>
+                      <td className="py-3 px-4 text-right">
+                        <button onClick={() => setDeleteId(rc.id)} className="p-1.5 rounded text-red-500 hover:bg-red-50" aria-label="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
 
+        {/* Pagination */}
         {!loading && !error && total > 0 && (
-          <RailcarsPagination
-            startItem={startItem}
-            endItem={endItem}
-            total={total}
-            pageSize={pageSize}
-            pageSizeOptions={PAGE_SIZE_OPTIONS}
-            onPageSizeChange={handlePageSizeChange}
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-          />
+          <div className="mt-4 flex justify-between items-center flex-wrap gap-3">
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600">Showing {startItem}–{endItem} of {total}</span>
+              <div className="flex items-center gap-2">
+                <label htmlFor="page-size" className="text-sm text-gray-600 whitespace-nowrap">Per page</label>
+                <select id="page-size" value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} className="rounded-md border border-gray-300 px-2 py-1 text-sm">
+                  {PAGE_SIZE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="px-3 py-1.5 rounded-md border border-gray-300 text-sm disabled:opacity-40 hover:bg-gray-50">Previous</button>
+              <span className="text-sm px-2">Page {page} of {totalPages}</span>
+              <button disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} className="px-3 py-1.5 rounded-md border border-gray-300 text-sm disabled:opacity-40 hover:bg-gray-50">Next</button>
+            </div>
+          </div>
         )}
 
-        <DeleteRailcarDialog
-          isOpen={isOpen}
-          onClose={onClose}
-          onConfirm={handleDeleteConfirm}
-          isLoading={deleteLoading}
-          cancelRef={cancelRef}
+        {/* Dialogs */}
+        <ConfirmDialog
+          open={!!deleteId} title="Delete railcar" message="Are you sure? This cannot be undone."
+          onClose={() => setDeleteId(null)} onConfirm={handleDeleteConfirm} loading={deleteLoading}
         />
-        <DeleteAllRailcarsDialog
-          isOpen={isDeleteAllOpen}
-          onClose={onDeleteAllClose}
-          onConfirm={handleDeleteAllConfirm}
-          isLoading={deleteAllLoading}
-          total={total}
-          cancelRef={cancelDeleteAllRef}
+        <ConfirmDialog
+          open={deleteAllOpen} title="Delete all railcars" message={`This will permanently delete all ${total} railcar(s). This cannot be undone.`}
+          onClose={() => setDeleteAllOpen(false)} onConfirm={handleDeleteAllConfirm} loading={deleteAllLoading} confirmLabel="Delete All"
         />
-      </Container>
-    </Box>
+      </div>
+    </div>
   );
 }

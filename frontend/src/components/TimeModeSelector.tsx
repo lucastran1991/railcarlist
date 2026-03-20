@@ -1,7 +1,5 @@
 'use client';
 
-import { Select } from '@chakra-ui/react';
-
 export type TimeMode =
   | 'today'
   | 'weekToDate'
@@ -15,17 +13,12 @@ interface TimeModeSelectorProps {
   onChange: (mode: TimeMode) => void;
 }
 
-export default function TimeModeSelector({
-  value,
-  onChange,
-}: TimeModeSelectorProps) {
+export default function TimeModeSelector({ value, onChange }: TimeModeSelectorProps) {
   return (
-    <Select
+    <select
       value={value}
       onChange={(e) => onChange(e.target.value as TimeMode)}
-      width="100%"
-      size="md"
-      variant="outline"
+      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
     >
       <option value="today">Today</option>
       <option value="weekToDate">Week to date</option>
@@ -33,6 +26,6 @@ export default function TimeModeSelector({
       <option value="yearToDate">Year to date</option>
       <option value="previous1Year">Previous 1 year</option>
       <option value="previous2Year">Previous 2 years</option>
-    </Select>
+    </select>
   );
 }

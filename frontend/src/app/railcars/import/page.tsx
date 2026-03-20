@@ -1,214 +1,139 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import {
-  Container,
-  Box,
-  Heading,
-  Button,
-  VStack,
-  Text,
-  useToast,
-  Alert,
-  AlertIcon,
-  List,
-  ListItem,
-  ListIcon,
-  Card,
-  CardBody,
-  CardHeader,
-  Flex,
-  Icon,
-  Input,
-} from '@chakra-ui/react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { FiAlertCircle, FiUploadCloud, FiFile } from 'react-icons/fi';
+import { AlertCircle, UploadCloud, FileText, CheckCircle } from 'lucide-react';
 import { importRailcarsXLSX } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 export default function ImportRailcarsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [result, setResult] = useState<{ created: number; errors?: string[] } | null>(null);
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const toast = useToast();
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    setFile(f || null);
-    setResult(null);
+    setFile(e.target.files?.[0] || null); setResult(null);
   };
 
   const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     setDragActive(e.type === 'dragenter' || e.type === 'dragover');
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+    e.preventDefault(); e.stopPropagation(); setDragActive(false);
     const dropped = e.dataTransfer.files?.[0];
     if (dropped && (dropped.name.endsWith('.xlsx') || dropped.name.endsWith('.xls'))) {
-      setFile(dropped);
-      setResult(null);
+      setFile(dropped); setResult(null);
     } else if (dropped) {
-      toast({ title: 'Please use .xlsx or .xls file', status: 'warning' });
+      setToast({ text: 'Please use .xlsx or .xls file', type: 'warning' });
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
-      toast({ title: 'Choose an XLSX file', status: 'warning' });
-      return;
-    }
+    if (!file) { setToast({ text: 'Choose an XLSX file', type: 'warning' }); return; }
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-      toast({ title: 'File must be .xlsx or .xls', status: 'warning' });
-      return;
+      setToast({ text: 'File must be .xlsx or .xls', type: 'warning' }); return;
     }
-    setLoading(true);
-    setResult(null);
+    setLoading(true); setResult(null);
     try {
       const res = await importRailcarsXLSX(file);
       setResult({ created: res.created, errors: res.errors });
-      if (res.created > 0) {
-        toast({ title: `Imported ${res.created} railcar(s)`, status: 'success' });
-      }
+      if (res.created > 0) setToast({ text: `Imported ${res.created} railcar(s)`, type: 'success' });
       if (inputRef.current) inputRef.current.value = '';
       setFile(null);
     } catch (err) {
-      toast({ title: err instanceof Error ? err.message : 'Import failed', status: 'error' });
-    } finally {
-      setLoading(false);
-    }
+      setToast({ text: err instanceof Error ? err.message : 'Import failed', type: 'error' });
+    } finally { setLoading(false); }
   };
 
   return (
-    <Box bg="gray.50" minH="calc(100vh - 64px)">
-      <Container maxW="container.md" py={8}>
-        <Heading size="lg" mb={2} color="gray.800">
-          Import railcar list
-        </Heading>
-      <Text mb={6} color="gray.600" fontSize="sm">
-        Upload a spreadsheet with columns: <strong>name</strong>, <strong>startTime</strong> (or start_time), <strong>endTime</strong> (or end_time). First row is the header.
-      </Text>
+    <div className="bg-gray-50 min-h-[calc(100vh-64px)]">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        {/* Toast */}
+        {toast && (
+          <div className={cn('fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white',
+            toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-yellow-600'
+          )}>{toast.text}</div>
+        )}
 
-      <Card variant="outline" shadow="sm" borderRadius="xl" overflow="hidden" mb={6}>
-        <CardBody p={0}>
-          <Box
-            as="form"
-            onSubmit={handleSubmit}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-          >
-            <Flex
-              as="label"
-              cursor="pointer"
-              direction="column"
-              align="center"
-              justify="center"
-              minH="200px"
-              px={6}
-              py={8}
-              bg={dragActive ? 'brand.50' : 'gray.50'}
-              borderWidth="2px"
-              borderStyle="dashed"
-              borderColor={dragActive ? 'brand.400' : 'gray.200'}
-              borderRadius="lg"
-              mx={4}
-              mt={4}
-              mb={4}
-              transition="all 0.2s"
-              _hover={{ bg: 'gray.100', borderColor: 'gray.300' }}
-            >
-              <Input
-                ref={inputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleFileChange}
-                position="absolute"
-                width="0"
-                height="0"
-                opacity={0}
-                aria-hidden="true"
-              />
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Import railcar list</h1>
+        <p className="text-sm text-gray-600 mb-6">
+          Upload a spreadsheet with columns: <strong>name</strong>, <strong>startTime</strong> (or start_time), <strong>endTime</strong> (or end_time). First row is the header.
+        </p>
+
+        <div className="border border-gray-200 rounded-xl shadow-sm bg-white overflow-hidden mb-6">
+          <form onSubmit={handleSubmit} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
+            <label className={cn(
+              'flex flex-col items-center justify-center min-h-[200px] px-6 py-8 m-4 cursor-pointer',
+              'border-2 border-dashed rounded-lg transition-all',
+              dragActive ? 'bg-brand-50 border-brand-400' : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+            )}>
+              <input ref={inputRef} type="file" accept=".xlsx,.xls" onChange={handleFileChange} className="absolute w-0 h-0 opacity-0" aria-hidden="true" />
               {file ? (
-                <VStack spacing={2}>
-                  <Icon as={FiFile} boxSize={10} color="green.500" />
-                  <Text fontWeight="medium" color="gray.700">
-                    {file.name}
-                  </Text>
-                  <Text fontSize="sm" color="gray.500">
-                    Click the area or drop another file to replace
-                  </Text>
-                </VStack>
+                <div className="flex flex-col items-center gap-2">
+                  <FileText size={40} className="text-green-500" />
+                  <p className="font-medium text-gray-700">{file.name}</p>
+                  <p className="text-sm text-gray-500">Click the area or drop another file to replace</p>
+                </div>
               ) : (
-                <VStack spacing={3}>
-                  <Icon as={FiUploadCloud} boxSize={12} color="gray.400" />
-                  <Text fontWeight="medium" color="gray.600">
-                    Drag & drop your file here, or click to browse
-                  </Text>
-                  <Text fontSize="sm" color="gray.500">
-                    .xlsx or .xls only
-                  </Text>
-                </VStack>
+                <div className="flex flex-col items-center gap-3">
+                  <UploadCloud size={48} className="text-gray-400" />
+                  <p className="font-medium text-gray-600">Drag & drop your file here, or click to browse</p>
+                  <p className="text-sm text-gray-500">.xlsx or .xls only</p>
+                </div>
               )}
-            </Flex>
-            <Flex gap={3} px={4} pb={4} justify="flex-start" flexWrap="wrap">
-              <Button
-                type="submit"
-                colorScheme="brand"
-                isLoading={loading}
-                isDisabled={!file}
-                size="md"
-              >
-                Import
-              </Button>
-              <Button as={Link} href="/railcars" variant="outline" size="md">
+            </label>
+            <div className="flex gap-3 px-4 pb-4">
+              <button type="submit" disabled={loading || !file} className="px-4 py-2 rounded-md bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-50">
+                {loading ? 'Importing...' : 'Import'}
+              </button>
+              <Link href="/railcars" className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50">
                 Back to list
-              </Button>
-            </Flex>
-          </Box>
-        </CardBody>
-      </Card>
+              </Link>
+            </div>
+          </form>
+        </div>
 
-      {result && (
-        <VStack align="stretch" spacing={4}>
-          <Alert status="success" borderRadius="lg" shadow="sm">
-            <AlertIcon />
-            Created {result.created} railcar(s).
-          </Alert>
-          {result.errors && result.errors.length > 0 && (
-            <Card variant="outline" shadow="sm" borderRadius="lg" overflow="hidden">
-              <CardHeader py={3} px={4} bg="orange.50" borderBottomWidth="1px">
-                <Text fontWeight="bold" fontSize="sm" color="orange.800">
-                  {result.errors.length} row error(s)
-                </Text>
-              </CardHeader>
-              <CardBody py={3} px={4}>
-                <List spacing={2}>
-                  {result.errors.slice(0, 20).map((msg, i) => (
-                    <ListItem key={i} display="flex" alignItems="flex-start" fontSize="sm">
-                      <ListIcon as={FiAlertCircle} color="orange.500" mt={0.5} />
-                      {msg}
-                    </ListItem>
-                  ))}
-                  {result.errors.length > 20 && (
-                    <ListItem color="gray.500" fontSize="sm">
-                      ... and {result.errors.length - 20} more
-                    </ListItem>
-                  )}
-                </List>
-              </CardBody>
-            </Card>
-          )}
-        </VStack>
-      )}
-      </Container>
-    </Box>
+        {result && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+              <CheckCircle size={16} className="shrink-0" />
+              Created {result.created} railcar(s).
+            </div>
+            {result.errors && result.errors.length > 0 && (
+              <div className="border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div className="py-3 px-4 bg-orange-50 border-b border-gray-200">
+                  <p className="font-bold text-sm text-orange-800">{result.errors.length} row error(s)</p>
+                </div>
+                <div className="py-3 px-4">
+                  <ul className="space-y-2">
+                    {result.errors.slice(0, 20).map((msg, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <AlertCircle size={14} className="text-orange-500 mt-0.5 shrink-0" />
+                        {msg}
+                      </li>
+                    ))}
+                    {result.errors.length > 20 && (
+                      <li className="text-gray-500 text-sm">... and {result.errors.length - 20} more</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

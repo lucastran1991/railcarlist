@@ -1,14 +1,7 @@
 'use client';
 
-import { Box } from '@chakra-ui/react';
-
 export default function HomePage() {
   return (
-    <Box
-      minH="100vh"
-      position="relative"
-      zIndex={1}
-      pointerEvents="none"
-    />
+    <div className="min-h-screen relative z-[1] pointer-events-none" />
   );
 }
