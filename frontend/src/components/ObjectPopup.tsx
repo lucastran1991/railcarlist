@@ -1,57 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import {
-  Thermometer, Activity, Zap, Wind, Droplets, AlertTriangle,
+  Thermometer, Activity, Zap, Wind, Droplets, AlertTriangle, ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { mockBoilerData, fmtNum, MODES } from '@/lib/boilerData';
 import type { ClickedObject } from '@/lib/three/terminalScene';
-
-interface BoilerData {
-  boilerId: string;
-  boilerMode: number;
-  currentPSI: number;
-  requestPSI: number;
-  setpointPSI: number;
-  firingRate: number;
-  flameLevel: number;
-  gasConsumed: number;
-  steamProduced: number;
-  diagnosticCode: string;
-}
-
-const MODES: Record<number, { label: string; cls: string }> = {
-  0: { label: 'OFF', cls: 'bg-gray-500/20 text-gray-400' },
-  1: { label: 'ACTIVE', cls: 'bg-green-500/20 text-green-400' },
-  2: { label: 'STANDBY', cls: 'bg-yellow-500/20 text-yellow-400' },
-  3: { label: 'ERROR', cls: 'bg-red-500/20 text-red-400' },
-};
-
-function mockBoilerData(name: string): BoilerData {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
-  const h = Math.abs(hash);
-  const mode = h % 3 === 0 ? 1 : 2;
-  const isActive = mode === 1;
-  return {
-    boilerId: `Boiler-${name.slice(-4)}`,
-    boilerMode: mode,
-    currentPSI: isActive ? 80 + (h % 50) : 0,
-    requestPSI: 85 + (h % 10),
-    setpointPSI: isActive ? 120 + (h % 15) : 0,
-    firingRate: isActive ? 40 + (h % 55) : 0,
-    flameLevel: isActive ? 1 + (h % 3) : 0,
-    gasConsumed: 1e6 + (h % 9) * 2.3e7,
-    steamProduced: isActive ? 100 + (h % 200) : 0,
-    diagnosticCode: isActive ? '0' : String(h % 64),
-  };
-}
-
-function fmtNum(n: number, d = 1): string {
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
-  return n.toFixed(d);
-}
 
 function Row({ icon: Icon, label, value, unit, accent }: {
   icon: React.ElementType; label: string; value: string; unit?: string; accent?: boolean;
@@ -71,6 +27,7 @@ function Row({ icon: Icon, label, value, unit, accent }: {
 }
 
 export default function ObjectPopup({ obj }: { obj: ClickedObject | null }) {
+  const router = useRouter();
   const boiler = useMemo(() => (obj ? mockBoilerData(obj.name) : null), [obj]);
   if (!obj || !boiler) return null;
 
@@ -140,6 +97,16 @@ export default function ObjectPopup({ obj }: { obj: ClickedObject | null }) {
                 </div>
               </>
             )}
+
+            {/* Details button */}
+            <div className="border-t border-white/5" />
+            <button
+              onClick={() => router.push(`/boiler/${obj.name}`)}
+              className="pointer-events-auto flex items-center justify-center gap-1.5 w-full py-1.5 rounded-md bg-brand-500/20 text-brand-400 text-xs font-medium hover:bg-brand-500/30 transition-colors"
+            >
+              <ExternalLink size={12} />
+              Details
+            </button>
           </div>
         </div>
       </div>

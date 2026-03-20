@@ -12,6 +12,7 @@ export default function Navigation() {
     { href: '/railcars', label: 'Railcars' },
     { href: '/railcars/new', label: 'New railcar' },
     { href: '/railcars/import', label: 'Import XLSX' },
+    { href: '/boiler', label: 'Boilers' },
   ];
 
   return (
