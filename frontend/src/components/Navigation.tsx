@@ -16,10 +16,8 @@ export default function Navigation() {
 
   return (
     <nav className={cn(
-      'py-3 border-b z-30 pointer-events-auto',
-      isHome
-        ? 'fixed top-0 left-0 right-0 bg-black/30 backdrop-blur-md border-white/10'
-        : 'relative bg-nav-bg border-nav-border'
+      'py-3 border-b border-nav-border z-30 pointer-events-auto bg-nav-bg',
+      isHome && 'fixed top-0 left-0 right-0'
     )}>
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between">
@@ -30,7 +28,7 @@ export default function Navigation() {
           </Link>
           <div className="flex gap-6">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
