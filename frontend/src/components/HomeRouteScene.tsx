@@ -1,57 +1,42 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Box } from '@chakra-ui/react';
 import HomeThreeBackground from '@/components/HomeThreeBackground';
-import HomeSceneControls from '@/components/HomeSceneControls';
-import type {
-  HomeSceneCameraApi,
-  SnowThiccLevel,
-  WindMode,
-} from '@/lib/three/homeScene';
+import TerminalSceneControls from '@/components/TerminalSceneControls';
+import CameraInfoPanel from '@/components/CameraInfoPanel';
+import type { TerminalSceneHandle, TerminalCameraApi, CameraInfo } from '@/lib/three/terminalScene';
 
-/**
- * Renders only on "/". Unmounting disposes WebGL so other routes are unaffected.
- */
 export default function HomeRouteScene() {
-  const [treeCount, setTreeCount] = useState(6);
-  const [snowThicc, setSnowThicc] = useState<SnowThiccLevel>(2);
-  const [isNight, setIsNight] = useState(true);
-  const [windMode, setWindMode] = useState<WindMode>('breezy');
-  const [cameraApi, setCameraApi] = useState<HomeSceneCameraApi | null>(null);
+  const [cameraApi, setCameraApi] = useState<TerminalCameraApi | null>(null);
+  const [cameraInfo, setCameraInfo] = useState<CameraInfo | null>(null);
+
+  const onHandleReady = useCallback((handle: TerminalSceneHandle | null) => {
+    setCameraApi(handle?.camera ?? null);
+    if (handle) {
+      handle.onCameraChange(setCameraInfo);
+    } else {
+      setCameraInfo(null);
+    }
+  }, []);
 
   return (
     <>
       <Box
         position="fixed"
-        top="64px"
+        top={0}
         left={0}
         right={0}
         bottom={0}
         zIndex={0}
-        pointerEvents="none"
+        pointerEvents="auto"
         overflow="hidden"
         aria-hidden
       >
-        <HomeThreeBackground
-          treeCount={treeCount}
-          snowThicc={snowThicc}
-          isNight={isNight}
-          windMode={windMode}
-          onCameraApiReady={setCameraApi}
-        />
+        <HomeThreeBackground onHandleReady={onHandleReady} />
       </Box>
-      <HomeSceneControls
-        treeCount={treeCount}
-        onTreeCountChange={setTreeCount}
-        snowThicc={snowThicc}
-        onSnowThiccChange={setSnowThicc}
-        isNight={isNight}
-        onNightModeChange={setIsNight}
-        windMode={windMode}
-        onWindModeChange={setWindMode}
-        cameraApi={cameraApi}
-      />
+      <TerminalSceneControls cameraApi={cameraApi} />
+      <CameraInfoPanel info={cameraInfo} />
     </>
   );
 }

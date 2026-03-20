@@ -13,14 +13,15 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ChakraProvider theme={theme}>
-      <Navigation />
+      {!isHome && <Navigation />}
       {isHome && <HomeRouteScene />}
       <Box
         as="main"
         position="relative"
         zIndex={1}
         bg={isHome ? 'transparent' : 'gray.50'}
-        minH="calc(100vh - 64px)"
+        minH={isHome ? '100vh' : 'calc(100vh - 64px)'}
+        pointerEvents={isHome ? 'none' : 'auto'}
       >
         {children}
       </Box>
