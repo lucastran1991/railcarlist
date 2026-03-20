@@ -1,139 +1,108 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
+import { Selection, EffectComposer, Outline } from '@react-three/postprocessing';
+import { BlendFunction, KernelSize } from 'postprocessing';
 import * as THREE from 'three';
 import TerminalModel from './TerminalModel';
 import SceneLighting from './SceneLighting';
 import GradientSky from './GradientSky';
 import CameraController, { type CameraControllerHandle } from './CameraController';
+import ObjectPopupContent from './ObjectPopupContent';
 import type { SceneConfig, CameraInfo, ClickedObject, TerminalCameraApi } from '@/lib/three/types';
 import { loadSceneConfig, DEFAULT_CONFIG } from '@/lib/three/types';
 
-/** Reprojects a 3D point to screen coordinates each frame */
-function PopupProjector({
-  target,
-  clickedObj,
-  onUpdate,
-}: {
-  target: THREE.Object3D | null;
-  clickedObj: ClickedObject | null;
-  onUpdate: (obj: ClickedObject) => void;
-}) {
-  const { camera, gl } = useThree();
+/** Drei Html popup attached to selected 3D object */
+function ObjectPopup3D({ mesh, clickedObj }: { mesh: THREE.Object3D; clickedObj: ClickedObject }) {
+  const box = new THREE.Box3().setFromObject(mesh);
+  const top: [number, number, number] = [
+    (box.min.x + box.max.x) / 2,
+    box.max.y + 0.05,
+    (box.min.z + box.max.z) / 2,
+  ];
 
-  useFrame(() => {
-    if (!target || !clickedObj) return;
-    const box = new THREE.Box3().setFromObject(target);
-    const top = new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2);
-    const projected = top.clone().project(camera);
-    const rect = gl.domElement.getBoundingClientRect();
-    const sx = ((projected.x + 1) / 2) * rect.width + rect.left;
-    const sy = ((-projected.y + 1) / 2) * rect.height + rect.top;
-
-    if (Math.round(sx) !== clickedObj.screenX || Math.round(sy) !== clickedObj.screenY) {
-      onUpdate({ ...clickedObj, screenX: Math.round(sx), screenY: Math.round(sy) });
-    }
-  });
-
-  return null;
+  return (
+    <Html position={top} center zIndexRange={[30, 0]} style={{ pointerEvents: 'auto' }}>
+      <ObjectPopupContent obj={clickedObj} />
+    </Html>
+  );
 }
 
 interface TerminalCanvasProps {
   onCameraApiReady?: (api: TerminalCameraApi | null) => void;
   onCameraChange?: (info: CameraInfo) => void;
-  onObjectClick?: (obj: ClickedObject | null) => void;
 }
 
-function SceneContent({
-  config,
-  onCameraApiReady,
-  onCameraChange,
-  onObjectClick,
-}: TerminalCanvasProps & { config: SceneConfig }) {
+function SceneContent({ config, onCameraApiReady, onCameraChange }: { config: SceneConfig } & TerminalCanvasProps) {
   const cameraRef = useRef<CameraControllerHandle>(null);
-  const [selectedName, setSelectedName] = useState<string | null>(null);
   const [selectedMesh, setSelectedMesh] = useState<THREE.Object3D | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<THREE.Vector3 | null>(null);
   const [clickedObj, setClickedObj] = useState<ClickedObject | null>(null);
 
-  // Expose camera API
   useEffect(() => {
     if (cameraRef.current) onCameraApiReady?.(cameraRef.current.api);
     return () => onCameraApiReady?.(null);
   }, [onCameraApiReady]);
 
+  const deselect = useCallback(() => {
+    setSelectedMesh(null);
+    setSelectedTarget(null);
+    setClickedObj(null);
+  }, []);
+
   const handleObjectClick = useCallback((obj: ClickedObject | null, mesh: THREE.Object3D | null) => {
     if (obj && mesh) {
-      setSelectedName(obj.name);
       setSelectedMesh(mesh);
       const box = new THREE.Box3().setFromObject(mesh);
-      const center = box.getCenter(new THREE.Vector3());
-      setSelectedTarget(center);
+      setSelectedTarget(box.getCenter(new THREE.Vector3()));
       setClickedObj(obj);
-      onObjectClick?.(obj);
     } else {
-      setSelectedName(null);
-      setSelectedMesh(null);
-      setSelectedTarget(null);
-      setClickedObj(null);
-      onObjectClick?.(null);
+      deselect();
     }
-  }, [onObjectClick]);
-
-  const handlePopupUpdate = useCallback((obj: ClickedObject) => {
-    setClickedObj(obj);
-    onObjectClick?.(obj);
-  }, [onObjectClick]);
+  }, [deselect]);
 
   return (
-    <>
+    <Selection>
       <GradientSky />
       <SceneLighting />
       <fog attach="fog" args={[0x99bbdd, 50, 200]} />
-      <CameraController
-        ref={cameraRef}
-        config={config}
-        selectedTarget={selectedTarget}
-        onCameraChange={onCameraChange}
-      />
-      <TerminalModel
-        selectedName={selectedName}
-        onObjectClick={handleObjectClick}
-      />
-      <PopupProjector
-        target={selectedMesh}
-        clickedObj={clickedObj}
-        onUpdate={handlePopupUpdate}
-      />
-    </>
+      <CameraController ref={cameraRef} config={config} selectedTarget={selectedTarget} onCameraChange={onCameraChange} />
+
+      <TerminalModel selectedMesh={selectedMesh} onObjectClick={handleObjectClick} onMissed={deselect} />
+
+      {selectedMesh && clickedObj && <ObjectPopup3D mesh={selectedMesh} clickedObj={clickedObj} />}
+
+      <EffectComposer multisampling={4} autoClear={false}>
+        <Outline
+          blur
+          visibleEdgeColor={0xff6a00}
+          hiddenEdgeColor={0xff4400}
+          edgeStrength={80}
+          kernelSize={KernelSize.SMALL}
+          xRay={false}
+          blendFunction={BlendFunction.SCREEN}
+          pulseSpeed={0.4}
+        />
+      </EffectComposer>
+    </Selection>
   );
 }
 
-export default function TerminalCanvas({ onCameraApiReady, onCameraChange, onObjectClick }: TerminalCanvasProps) {
+export default function TerminalCanvas({ onCameraApiReady, onCameraChange }: TerminalCanvasProps) {
   const [config, setConfig] = useState<SceneConfig>(DEFAULT_CONFIG);
 
-  useEffect(() => {
-    loadSceneConfig().then(setConfig);
-  }, []);
+  useEffect(() => { loadSceneConfig().then(setConfig); }, []);
 
   return (
     <Canvas
       shadows
-      gl={{
-        antialias: true,
-        toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.2,
-      }}
+      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
       camera={{ fov: 50, near: 0.1, far: 200 }}
       style={{ width: '100%', height: '100%' }}
     >
-      <SceneContent
-        config={config}
-        onCameraApiReady={onCameraApiReady}
-        onCameraChange={onCameraChange}
-        onObjectClick={onObjectClick}
-      />
+      <SceneContent config={config} onCameraApiReady={onCameraApiReady} onCameraChange={onCameraChange} />
     </Canvas>
   );
 }
