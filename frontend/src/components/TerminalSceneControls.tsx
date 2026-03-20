@@ -24,7 +24,7 @@ export default function TerminalSceneControls({ cameraApi }: { cameraApi: Termin
   );
 
   return (
-    <div className="fixed left-3 top-3 z-20 w-[200px] p-3 rounded-lg bg-black/50 backdrop-blur-[10px] border border-white/10 shadow-md">
+    <div className="fixed left-3 top-16 z-20 w-[200px] p-3 rounded-lg bg-black/50 backdrop-blur-[10px] border border-white/10 shadow-md">
       <p className="text-xs font-bold uppercase tracking-wider mb-3 text-gray-400">
         Camera
       </p>

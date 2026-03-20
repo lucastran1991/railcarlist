@@ -10,7 +10,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {!isHome && <Navigation />}
+      <Navigation />
       {isHome && <HomeRouteScene />}
       <main
         className={`relative z-[1] ${isHome ? 'bg-transparent min-h-screen pointer-events-none' : 'bg-gray-50 min-h-[calc(100vh-64px)] pointer-events-auto'}`}

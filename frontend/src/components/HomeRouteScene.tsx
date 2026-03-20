@@ -5,6 +5,7 @@ import HomeThreeBackground from '@/components/HomeThreeBackground';
 import TerminalSceneControls from '@/components/TerminalSceneControls';
 import CameraInfoPanel from '@/components/CameraInfoPanel';
 import ObjectPopup from '@/components/ObjectPopup';
+import HomeBottomCharts from '@/components/HomeBottomCharts';
 import type { TerminalSceneHandle, TerminalCameraApi, CameraInfo, ClickedObject } from '@/lib/three/terminalScene';
 
 export default function HomeRouteScene() {
@@ -31,6 +32,7 @@ export default function HomeRouteScene() {
       <TerminalSceneControls cameraApi={cameraApi} />
       <CameraInfoPanel info={cameraInfo} />
       <ObjectPopup obj={clickedObj} />
+      <HomeBottomCharts />
     </>
   );
 }
