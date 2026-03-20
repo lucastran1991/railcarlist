@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { Box } from '@chakra-ui/react';
 import {
   initTerminalScene,
+  loadSceneConfig,
   type TerminalSceneHandle,
 } from '@/lib/three/terminalScene';
 
@@ -18,10 +19,17 @@ export default function HomeThreeBackground({ onHandleReady }: HomeThreeBackgrou
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const h = initTerminalScene(el);
-    handleRef.current = h;
-    onHandleReady?.(h);
+    let disposed = false;
+
+    loadSceneConfig().then((cfg) => {
+      if (disposed) return;
+      const h = initTerminalScene(el, cfg);
+      handleRef.current = h;
+      onHandleReady?.(h);
+    });
+
     return () => {
+      disposed = true;
       onHandleReady?.(null);
       handleRef.current?.dispose();
       handleRef.current = null;

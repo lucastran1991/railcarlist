@@ -5,18 +5,22 @@ import { Box } from '@chakra-ui/react';
 import HomeThreeBackground from '@/components/HomeThreeBackground';
 import TerminalSceneControls from '@/components/TerminalSceneControls';
 import CameraInfoPanel from '@/components/CameraInfoPanel';
-import type { TerminalSceneHandle, TerminalCameraApi, CameraInfo } from '@/lib/three/terminalScene';
+import ObjectPopup from '@/components/ObjectPopup';
+import type { TerminalSceneHandle, TerminalCameraApi, CameraInfo, ClickedObject } from '@/lib/three/terminalScene';
 
 export default function HomeRouteScene() {
   const [cameraApi, setCameraApi] = useState<TerminalCameraApi | null>(null);
   const [cameraInfo, setCameraInfo] = useState<CameraInfo | null>(null);
+  const [clickedObj, setClickedObj] = useState<ClickedObject | null>(null);
 
   const onHandleReady = useCallback((handle: TerminalSceneHandle | null) => {
     setCameraApi(handle?.camera ?? null);
     if (handle) {
       handle.onCameraChange(setCameraInfo);
+      handle.onObjectClick(setClickedObj);
     } else {
       setCameraInfo(null);
+      setClickedObj(null);
     }
   }, []);
 
@@ -37,6 +41,7 @@ export default function HomeRouteScene() {
       </Box>
       <TerminalSceneControls cameraApi={cameraApi} />
       <CameraInfoPanel info={cameraInfo} />
+      <ObjectPopup obj={clickedObj} />
     </>
   );
 }

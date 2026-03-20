@@ -1,0 +1,33 @@
+{
+  "scene": {
+    "camera": {
+      "default": {
+        "angle": 0,
+        "radius": 25,
+        "height": 25
+      },
+      "limits": {
+        "radius_min": 10,
+        "radius_max": 80,
+        "height_min": 5,
+        "height_max": 60,
+        "angle_max": 360
+      },
+      "zoom": {
+        "min": 10,
+        "max": 100,
+        "speed": 0.001
+      },
+      "rotate": {
+        "speed": 0.005,
+        "tilt_speed": 0.3
+      }
+    },
+    "target": {
+      "x": 0,
+      "y": 0,
+      "z": 5
+    },
+    "auto_orbit": false
+  }
+}

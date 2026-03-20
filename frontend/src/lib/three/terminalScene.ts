@@ -12,7 +12,7 @@ export interface TerminalCameraApi {
 }
 
 export interface CameraInfo {
-  angle: number;   // degrees
+  angle: number;
   radius: number;
   height: number;
   x: number;
@@ -20,14 +20,60 @@ export interface CameraInfo {
   z: number;
 }
 
+export interface ClickedObject {
+  name: string;
+  type: 'tank' | 'building' | 'ground';
+  verts: number;
+  position: { x: number; y: number; z: number };
+  screenX: number;
+  screenY: number;
+}
+
+export interface SceneConfig {
+  scene: {
+    camera: {
+      default: { angle: number; radius: number; height: number };
+      limits: { radius_min: number; radius_max: number; height_min: number; height_max: number; angle_max: number };
+      zoom?: { min: number; max: number; speed: number };
+      rotate?: { speed: number; tilt_speed: number };
+    };
+    target: { x: number; y: number; z: number };
+    auto_orbit: boolean;
+  };
+}
+
 export interface TerminalSceneHandle {
   dispose: () => void;
   camera: TerminalCameraApi;
   onCameraChange: (cb: (info: CameraInfo) => void) => void;
+  onObjectClick: (cb: (obj: ClickedObject | null) => void) => void;
+}
+
+// Default config used if system.cfg.json fails to load
+const DEFAULT_CONFIG: SceneConfig = {
+  scene: {
+    camera: {
+      default: { angle: 0, radius: 15, height: 35 },
+      limits: { radius_min: 10, radius_max: 80, height_min: 5, height_max: 60, angle_max: 360 },
+    },
+    target: { x: -20, y: 2, z: 15 },
+    auto_orbit: false,
+  },
+};
+
+export async function loadSceneConfig(): Promise<SceneConfig> {
+  try {
+    const res = await fetch('/system.cfg.json');
+    if (!res.ok) throw new Error(res.statusText);
+    return await res.json();
+  } catch {
+    return DEFAULT_CONFIG;
+  }
 }
 
 export function initTerminalScene(
   container: HTMLElement,
+  config: SceneConfig = DEFAULT_CONFIG,
   settings?: { pixelRatio?: number }
 ): TerminalSceneHandle | null {
   // --- Renderer ---
@@ -124,29 +170,30 @@ export function initTerminalScene(
   scene.environment = envTexture;
   pmremGenerator.dispose();
 
-  // --- Camera ---
+  // --- Camera (driven by system.cfg.json) ---
+  const sc = config.scene;
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
-  const CAMERA_TARGET = new THREE.Vector3(0, 2, 0);
-  const INITIAL_RADIUS = 65;
-  const INITIAL_Y = 30;
-  const INITIAL_ANGLE = 0;
+  const CAMERA_TARGET = new THREE.Vector3(sc.target.x, sc.target.y, sc.target.z);
+  const INITIAL_RADIUS = sc.camera.default.radius;
+  const INITIAL_Y = sc.camera.default.height;
+  const INITIAL_ANGLE = sc.camera.default.angle * (Math.PI / 180);
   let camRadius = INITIAL_RADIUS;
   let camY = INITIAL_Y;
   let camAngle = INITIAL_ANGLE;
   let camDirection = 1;
   const CAM_SPEED = 0.5 * (Math.PI / 180);
-  const CAM_ANGLE_MAX = 15 * (Math.PI / 180);
+  const CAM_ANGLE_MAX = sc.camera.limits.angle_max * (Math.PI / 180);
   const CAM_ZOOM_STEP = 0.9;
   const CAM_ROT_STEP = 5 * (Math.PI / 180);
   const CAM_TILT_STEP = 2;
-  const CAM_RADIUS_MIN = 15;
-  const CAM_RADIUS_MAX = 120;
-  const CAM_Y_MIN = 2;
-  const CAM_Y_MAX = 60;
+  const CAM_RADIUS_MIN = sc.camera.zoom?.min ?? sc.camera.limits.radius_min;
+  const CAM_RADIUS_MAX = sc.camera.zoom?.max ?? sc.camera.limits.radius_max;
+  const CAM_Y_MIN = sc.camera.limits.height_min;
+  const CAM_Y_MAX = sc.camera.limits.height_max;
 
   const updateCamera = () => {
-    const x = Math.sin(camAngle) * camRadius;
-    const z = Math.cos(camAngle) * camRadius;
+    const x = CAMERA_TARGET.x + Math.sin(camAngle) * camRadius;
+    const z = CAMERA_TARGET.z + Math.cos(camAngle) * camRadius;
     camera.position.set(x, camY, z);
     camera.lookAt(CAMERA_TARGET);
   };
@@ -247,13 +294,191 @@ export function initTerminalScene(
     });
   };
 
+  // --- Object click callback ---
+  let objectClickCallback: ((obj: ClickedObject | null) => void) | null = null;
+
+  // --- Raycasting for click & hover detection ---
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+
+  // Selected (clicked) state
+  let selectedMesh: THREE.Mesh | null = null;
+  let selectedOriginalMat: THREE.Material | THREE.Material[] | null = null;
+  let selectedShell: THREE.Group | null = null;
+
+  // Camera animation state for zoom-to-object
+  let savedCamAngle = camAngle;
+  let savedCamRadius = camRadius;
+  let savedCamY = camY;
+  let savedTarget = CAMERA_TARGET.clone();
+  let camAnimating = false;
+  let camAnimTarget = { angle: 0, radius: 0, y: 0, tx: CAMERA_TARGET.x, ty: CAMERA_TARGET.y, tz: CAMERA_TARGET.z };
+  let camAnimStart = { angle: 0, radius: 0, y: 0, tx: CAMERA_TARGET.x, ty: CAMERA_TARGET.y, tz: CAMERA_TARGET.z };
+  let camAnimProgress = 0;
+  const CAM_ANIM_DURATION = 0.6; // seconds
+
+  // Thick orange outline materials
+  const outlineShellMat = new THREE.MeshBasicMaterial({
+    color: 0xff6a00,
+    side: THREE.BackSide,
+    transparent: true,
+    opacity: 0.95,
+    depthTest: true,
+    depthWrite: false,
+  });
+  const outlineEdgeMat = new THREE.LineBasicMaterial({
+    color: 0xff6a00,
+    transparent: true,
+    opacity: 1.0,
+  });
+
+  /** Test if a mesh is a clickable building/tank */
+  const isClickable = (obj: THREE.Object3D): obj is THREE.Mesh => {
+    if (!(obj instanceof THREE.Mesh)) return false;
+    const name = obj.name || obj.parent?.name || '';
+    if (name.includes('GOOGLE_SAT') || name.includes('EXPORT_GOOGLE')) return false;
+    if (name === 'Cube') return false;
+    const verts = obj.geometry?.attributes?.position?.count || 0;
+    return verts > 4;
+  };
+
+  /** Smooth ease in-out */
+  const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+  /** Start animating camera to a target state */
+  const animateCameraTo = (angle: number, radius: number, y: number, tx: number, ty: number, tz: number) => {
+    camAnimStart = { angle: camAngle, radius: camRadius, y: camY, tx: CAMERA_TARGET.x, ty: CAMERA_TARGET.y, tz: CAMERA_TARGET.z };
+    camAnimTarget = { angle, radius, y, tx, ty, tz };
+    camAnimProgress = 0;
+    camAnimating = true;
+  };
+
+  const deselectCurrent = (restoreCamera = true) => {
+    if (selectedMesh && selectedOriginalMat) {
+      selectedMesh.material = selectedOriginalMat;
+    }
+    if (selectedShell) {
+      selectedShell.removeFromParent();
+      selectedShell.traverse((child) => {
+        if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
+          child.geometry.dispose();
+        }
+      });
+      selectedShell = null;
+    }
+    selectedMesh = null;
+    selectedOriginalMat = null;
+
+    // Restore camera to saved position
+    if (restoreCamera) {
+      animateCameraTo(savedCamAngle, savedCamRadius, savedCamY, savedTarget.x, savedTarget.y, savedTarget.z);
+    }
+  };
+
+  /** Raycast helper: returns first clickable mesh under mouse coords */
+  const raycastClickable = (clientX: number, clientY: number): THREE.Mesh | null => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    for (const inter of intersects) {
+      if (isClickable(inter.object)) return inter.object;
+    }
+    return null;
+  };
+
+  const handleClick = (e: MouseEvent) => {
+    const hit = raycastClickable(e.clientX, e.clientY);
+
+    const wasSelected = !!selectedMesh;
+    deselectCurrent(!hit); // only restore camera if clicking empty space
+
+    if (hit) {
+      const name = hit.name || hit.parent?.name || 'unknown';
+      const verts = hit.geometry?.attributes?.position?.count || 0;
+      const type = verts >= 70 ? 'tank' as const : 'building' as const;
+
+      // Save current camera if not already saved from a previous selection
+      if (!wasSelected) {
+        savedCamAngle = camAngle;
+        savedCamRadius = camRadius;
+        savedCamY = camY;
+        savedTarget = CAMERA_TARGET.clone();
+      }
+
+      // Store original material
+      selectedMesh = hit;
+      selectedOriginalMat = hit.material;
+
+      // Create highlight group: BackSide shell (sides/top) + edge wireframe (all edges including bottom)
+      const group = new THREE.Group();
+      group.raycast = () => {};
+
+      // 1) BackSide shell — expanded outward from geometry center
+      const shellGeo = hit.geometry.clone();
+      const posAttr = shellGeo.attributes.position;
+      if (posAttr) {
+        shellGeo.computeBoundingBox();
+        const geoCenter = new THREE.Vector3();
+        shellGeo.boundingBox!.getCenter(geoCenter);
+        const expand = 1.5;
+        const arr = posAttr.array as Float32Array;
+        for (let i = 0; i < arr.length; i += 3) {
+          const dx = arr[i] - geoCenter.x;
+          const dy = arr[i + 1] - geoCenter.y;
+          const dz = arr[i + 2] - geoCenter.z;
+          const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+          arr[i] += (dx / len) * expand;
+          arr[i + 1] += (dy / len) * expand;
+          arr[i + 2] += (dz / len) * expand;
+        }
+        posAttr.needsUpdate = true;
+      }
+      const shellMesh = new THREE.Mesh(shellGeo, outlineShellMat);
+      shellMesh.renderOrder = -1;
+      group.add(shellMesh);
+
+      // 2) Edge wireframe — highlights all edges including bottom
+      const edgesGeo = new THREE.EdgesGeometry(hit.geometry, 30);
+      const edgeLines = new THREE.LineSegments(edgesGeo, outlineEdgeMat);
+      group.add(edgeLines);
+
+      hit.add(group);
+      selectedShell = group;
+
+      // Get world center of object
+      const box = new THREE.Box3().setFromObject(hit);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const objRadius = Math.max(size.x, size.z) * 2.5;
+      const zoomRadius = Math.max(CAM_RADIUS_MIN, Math.min(objRadius, 25));
+
+      // Animate camera to zoom into the object
+      animateCameraTo(camAngle, zoomRadius, Math.max(center.y + 8, 12), center.x, center.y, center.z);
+
+      // Popup screen position will be computed per-frame during animation
+      objectClickCallback?.({
+        name,
+        type,
+        verts,
+        position: { x: parseFloat(center.x.toFixed(1)), y: parseFloat(center.y.toFixed(1)), z: parseFloat(center.z.toFixed(1)) },
+        screenX: -1000, // will be updated in loop
+        screenY: -1000,
+      });
+    } else {
+      objectClickCallback?.(null);
+    }
+  };
+
   // --- Mouse interaction ---
   let isDragging = false;
-  let autoOrbit = true;
+  let dragMoved = false;
+  let autoOrbit = sc.auto_orbit;
   let autoOrbitTimeout: ReturnType<typeof setTimeout> | null = null;
-  const MOUSE_ROT_SPEED = 0.005;
-  const MOUSE_TILT_SPEED = 0.3;
-  const WHEEL_ZOOM_SPEED = 0.001;
+  const MOUSE_ROT_SPEED = sc.camera.rotate?.speed ?? 0.005;
+  const MOUSE_TILT_SPEED = sc.camera.rotate?.tilt_speed ?? 0.3;
+  const WHEEL_ZOOM_SPEED = sc.camera.zoom?.speed ?? 0.001;
 
   const resumeAutoOrbit = () => {
     if (autoOrbitTimeout) clearTimeout(autoOrbitTimeout);
@@ -261,16 +486,22 @@ export function initTerminalScene(
   };
 
   const onMouseDown = (e: MouseEvent) => {
-    if (e.button === 0) { isDragging = true; autoOrbit = false; }
+    if (e.button === 0) { isDragging = true; dragMoved = false; autoOrbit = false; }
   };
-  const onMouseUp = () => {
+  const onMouseUp = (e: MouseEvent) => {
+    if (!dragMoved && e.button === 0) {
+      handleClick(e);
+    }
     isDragging = false;
+    dragMoved = false;
     resumeAutoOrbit();
   };
   const onMouseMove = (e: MouseEvent) => {
-    if (!isDragging) return;
-    camAngle -= e.movementX * MOUSE_ROT_SPEED;
-    camY = Math.min(CAM_Y_MAX, Math.max(CAM_Y_MIN, camY - e.movementY * MOUSE_TILT_SPEED));
+    if (isDragging) {
+      if (Math.abs(e.movementX) > 2 || Math.abs(e.movementY) > 2) dragMoved = true;
+      camAngle -= e.movementX * MOUSE_ROT_SPEED;
+      camY = Math.min(CAM_Y_MAX, Math.max(CAM_Y_MIN, camY - e.movementY * MOUSE_TILT_SPEED));
+    }
   };
   const onWheel = (e: WheelEvent) => {
     e.preventDefault();
@@ -322,14 +553,53 @@ export function initTerminalScene(
     const dt = Math.min(0.05, (now - lastTime) / 1000);
     lastTime = now;
 
-    // Camera oscillation (paused during mouse interaction)
-    if (autoOrbit) {
+    // Camera animation (zoom to object / restore)
+    if (camAnimating) {
+      camAnimProgress += dt / CAM_ANIM_DURATION;
+      if (camAnimProgress >= 1) {
+        camAnimProgress = 1;
+        camAnimating = false;
+      }
+      const t = easeInOut(camAnimProgress);
+      const lerp = (a: number, b: number) => a + (b - a) * t;
+      camAngle = lerp(camAnimStart.angle, camAnimTarget.angle);
+      camRadius = lerp(camAnimStart.radius, camAnimTarget.radius);
+      camY = lerp(camAnimStart.y, camAnimTarget.y);
+      CAMERA_TARGET.x = lerp(camAnimStart.tx, camAnimTarget.tx);
+      CAMERA_TARGET.y = lerp(camAnimStart.ty, camAnimTarget.ty);
+      CAMERA_TARGET.z = lerp(camAnimStart.tz, camAnimTarget.tz);
+    } else if (autoOrbit) {
       camAngle += CAM_SPEED * dt * camDirection;
       if (camAngle > CAM_ANGLE_MAX) { camAngle = CAM_ANGLE_MAX; camDirection = -1; }
       if (camAngle < -CAM_ANGLE_MAX) { camAngle = -CAM_ANGLE_MAX; camDirection = 1; }
     }
     updateCamera();
     reportCamera();
+
+    // Reproject popup position when camera moves (selected object)
+    if (selectedMesh && objectClickCallback) {
+      const box = new THREE.Box3().setFromObject(selectedMesh);
+      const top = new THREE.Vector3(
+        (box.min.x + box.max.x) / 2,
+        box.max.y,
+        (box.min.z + box.max.z) / 2,
+      );
+      const projected = top.clone().project(camera);
+      const rect = renderer.domElement.getBoundingClientRect();
+      const sx = ((projected.x + 1) / 2) * rect.width + rect.left;
+      const sy = ((-projected.y + 1) / 2) * rect.height + rect.top;
+      const name = selectedMesh.name || selectedMesh.parent?.name || 'unknown';
+      const verts = selectedMesh.geometry?.attributes?.position?.count || 0;
+      const center = box.getCenter(new THREE.Vector3());
+      objectClickCallback({
+        name,
+        type: verts >= 70 ? 'tank' : 'building',
+        verts,
+        position: { x: parseFloat(center.x.toFixed(1)), y: parseFloat(center.y.toFixed(1)), z: parseFloat(center.z.toFixed(1)) },
+        screenX: Math.round(sx),
+        screenY: Math.round(sy),
+      });
+    }
 
     renderer.render(scene, camera);
     animationId = requestAnimationFrame(loop);
@@ -356,6 +626,8 @@ export function initTerminalScene(
       window.removeEventListener('mouseup', onMouseUp);
       window.removeEventListener('mousemove', onMouseMove);
       renderer.domElement.removeEventListener('wheel', onWheel);
+      deselectCurrent();
+      outlineShellMat.dispose();
       if (autoOrbitTimeout) clearTimeout(autoOrbitTimeout);
       ro.disconnect();
       cancelAnimationFrame(animationId);
@@ -374,5 +646,6 @@ export function initTerminalScene(
     },
     camera: cameraApi,
     onCameraChange: (cb: (info: CameraInfo) => void) => { cameraChangeCallback = cb; reportCamera(); },
+    onObjectClick: (cb: (obj: ClickedObject | null) => void) => { objectClickCallback = cb; },
   };
 }
