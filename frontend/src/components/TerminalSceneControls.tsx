@@ -4,7 +4,7 @@ import {
   ZoomIn, ZoomOut, RotateCcw, RotateCw,
   ChevronUp, ChevronDown, RefreshCw,
 } from 'lucide-react';
-import type { TerminalCameraApi } from '@/lib/three/terminalScene';
+import type { TerminalCameraApi } from '@/lib/three/types';
 import { cn } from '@/lib/utils';
 
 export default function TerminalSceneControls({ cameraApi }: { cameraApi: TerminalCameraApi | null }) {

@@ -7,10 +7,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { mockBoilerData, fmtNum, MODES } from '@/lib/boilerData';
-import type { ClickedObject } from '@/lib/three/terminalScene';
+import type { ClickedObject } from '@/lib/three/types';
 
 function Row({ icon: Icon, label, value, unit, accent }: {
-  icon: React.ElementType; label: string; value: string; unit?: string; accent?: boolean;
+  icon: React.FC<{ size?: number; className?: string }>; label: string; value: string; unit?: string; accent?: boolean;
 }) {
   return (
     <div className="flex justify-between items-center gap-3">

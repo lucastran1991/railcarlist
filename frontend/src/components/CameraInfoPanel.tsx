@@ -1,6 +1,6 @@
 'use client';
 
-import type { CameraInfo } from '@/lib/three/terminalScene';
+import type { CameraInfo } from '@/lib/three/types';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (

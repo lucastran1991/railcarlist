@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { mockBoilerData, fmtNum, MODES, generateBoilerTimeseries } from '@/lib/boilerData';
 
 function InfoCard({ icon: Icon, label, value, unit, accent }: {
-  icon: React.ElementType; label: string; value: string; unit?: string; accent?: boolean;
+  icon: React.FC<{ size?: number; className?: string }>; label: string; value: string; unit?: string; accent?: boolean;
 }) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 flex items-center gap-3">
