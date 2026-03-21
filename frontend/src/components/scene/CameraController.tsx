@@ -30,12 +30,17 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
 
     // Set initial camera position
     useEffect(() => {
-      const angle = sc.camera.default.angle * (Math.PI / 180);
-      const radius = sc.camera.default.radius;
-      const height = sc.camera.default.height;
-      const x = sc.target.x + Math.sin(angle) * radius;
-      const z = sc.target.z + Math.cos(angle) * radius;
-      camera.position.set(x, height, z);
+      const def = sc.camera.default;
+      let x: number, y: number, z: number;
+      if (def.x !== undefined && def.y !== undefined && def.z !== undefined) {
+        x = def.x; y = def.y; z = def.z;
+      } else {
+        const angle = def.angle * (Math.PI / 180);
+        x = sc.target.x + Math.sin(angle) * def.radius;
+        y = def.height;
+        z = sc.target.z + Math.cos(angle) * def.radius;
+      }
+      camera.position.set(x, y, z);
       if (controlsRef.current) {
         controlsRef.current.target.set(sc.target.x, sc.target.y, sc.target.z);
         controlsRef.current.update();
@@ -64,13 +69,18 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
         animating.current = true;
       } else if (savedState.current) {
         // Restore to default config position
-        const angle = sc.camera.default.angle * (Math.PI / 180);
-        const r = sc.camera.default.radius;
-        const defaultPos = new THREE.Vector3(
-          sc.target.x + Math.sin(angle) * r,
-          sc.camera.default.height,
-          sc.target.z + Math.cos(angle) * r,
-        );
+        const def = sc.camera.default;
+        let defaultPos: THREE.Vector3;
+        if (def.x !== undefined && def.y !== undefined && def.z !== undefined) {
+          defaultPos = new THREE.Vector3(def.x, def.y, def.z);
+        } else {
+          const angle = def.angle * (Math.PI / 180);
+          defaultPos = new THREE.Vector3(
+            sc.target.x + Math.sin(angle) * def.radius,
+            def.height,
+            sc.target.z + Math.cos(angle) * def.radius,
+          );
+        }
         const defaultTarget = new THREE.Vector3(sc.target.x, sc.target.y, sc.target.z);
         animFrom.current = { pos: camera.position.clone(), target: controlsRef.current.target.clone() };
         animTo.current = { pos: defaultPos, target: defaultTarget };
@@ -80,7 +90,11 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
       }
     }, [selectedTarget, camera]);
 
-    // Animation + camera info reporting
+    // Animation + camera info reporting (throttled to avoid re-render loops)
+    const lastReported = useRef({ angle: -999, radius: -999, height: -999 });
+    const onCameraChangeRef = useRef(onCameraChange);
+    onCameraChangeRef.current = onCameraChange;
+
     useFrame((_, delta) => {
       if (!controlsRef.current) return;
 
@@ -97,22 +111,27 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
         if (animProgress.current >= 1) animating.current = false;
       }
 
-      // Report camera info
-      if (onCameraChange) {
-        const target = controlsRef.current.target;
-        const dx = camera.position.x - target.x;
-        const dz = camera.position.z - target.z;
-        const radius = Math.sqrt(dx * dx + dz * dz);
-        const angle = Math.atan2(dx, dz) * (180 / Math.PI);
-        onCameraChange({
-          angle: parseFloat(angle.toFixed(1)),
-          radius: parseFloat(radius.toFixed(1)),
-          height: parseFloat(camera.position.y.toFixed(1)),
-          x: parseFloat(camera.position.x.toFixed(1)),
-          y: parseFloat(camera.position.y.toFixed(1)),
-          z: parseFloat(camera.position.z.toFixed(1)),
-        });
-      }
+      // Report camera info only when values change (avoid infinite re-render)
+      const cb = onCameraChangeRef.current;
+      if (!cb) return;
+      const target = controlsRef.current.target;
+      const dx = camera.position.x - target.x;
+      const dz = camera.position.z - target.z;
+      const radius = parseFloat(Math.sqrt(dx * dx + dz * dz).toFixed(1));
+      const angle = parseFloat((Math.atan2(dx, dz) * (180 / Math.PI)).toFixed(1));
+      const height = parseFloat(camera.position.y.toFixed(1));
+
+      if (angle === lastReported.current.angle && radius === lastReported.current.radius && height === lastReported.current.height) return;
+      lastReported.current = { angle, radius, height };
+
+      cb({
+        angle,
+        radius,
+        height,
+        x: parseFloat(camera.position.x.toFixed(1)),
+        y: parseFloat(camera.position.y.toFixed(1)),
+        z: parseFloat(camera.position.z.toFixed(1)),
+      });
     });
 
     // Camera API
@@ -131,9 +150,13 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
         tiltUp: () => { camera.position.y = Math.min(sc.camera.limits.height_max, camera.position.y + tiltStep); },
         tiltDown: () => { camera.position.y = Math.max(sc.camera.limits.height_min, camera.position.y - tiltStep); },
         reset: () => {
-          const angle = sc.camera.default.angle * (Math.PI / 180);
-          const r = sc.camera.default.radius;
-          camera.position.set(sc.target.x + Math.sin(angle) * r, sc.camera.default.height, sc.target.z + Math.cos(angle) * r);
+          const def = sc.camera.default;
+          if (def.x !== undefined && def.y !== undefined && def.z !== undefined) {
+            camera.position.set(def.x, def.y, def.z);
+          } else {
+            const angle = def.angle * (Math.PI / 180);
+            camera.position.set(sc.target.x + Math.sin(angle) * def.radius, def.height, sc.target.z + Math.cos(angle) * def.radius);
+          }
           if (controlsRef.current) { controlsRef.current.target.set(sc.target.x, sc.target.y, sc.target.z); controlsRef.current.update(); }
         },
       },
@@ -144,10 +167,11 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
         ref={controlsRef}
         enableDamping
         dampingFactor={0.1}
+        zoomSpeed={sc.camera.zoom?.speed ?? 0.4}
         minDistance={minDist}
         maxDistance={maxDist}
-        minPolarAngle={0.2}
-        maxPolarAngle={Math.PI / 2.2}
+        minPolarAngle={0.3}
+        maxPolarAngle={Math.atan2(maxDist, sc.camera.limits.height_min)}
         enablePan={false}
       />
     );

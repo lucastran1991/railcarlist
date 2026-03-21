@@ -1,10 +1,9 @@
 'use client';
 
-import { useRef, useMemo, useCallback, useState } from 'react';
+import { memo, useRef, useMemo, useCallback } from 'react';
 import * as THREE from 'three';
 import { useGLTF } from '@react-three/drei';
-import { ThreeEvent, useFrame } from '@react-three/fiber';
-import { Select } from '@react-three/postprocessing';
+import { ThreeEvent } from '@react-three/fiber';
 import type { ClickedObject } from '@/lib/three/types';
 
 // PBR materials
@@ -127,7 +126,6 @@ export default function TerminalModel({ selectedMesh, onObjectClick, onMissed }:
 
   return (
     <group>
-      {/* Ground / satellite meshes — not selectable */}
       {groundMeshes.map((entry, i) => (
         <mesh
           key={`ground-${i}`}
@@ -140,24 +138,19 @@ export default function TerminalModel({ selectedMesh, onObjectClick, onMissed }:
         />
       ))}
 
-      {/* Clickable buildings/tanks — wrapped in <Select> for postprocessing outline */}
-      {meshes.map((entry, i) => {
-        const isSelected = selectedName === entry.name;
-        return (
-          <Select key={`mesh-${i}`} enabled={isSelected}>
-            <mesh
-              name={entry.name}
-              geometry={entry.geometry}
-              material={entry.material}
-              matrixAutoUpdate={false}
-              matrix={entry.matrix}
-              castShadow={entry.castShadow}
-              receiveShadow={entry.receiveShadow}
-              onClick={(e) => handleMeshClick(e, entry)}
-            />
-          </Select>
-        );
-      })}
+      {meshes.map((entry, i) => (
+        <mesh
+          key={`mesh-${i}`}
+          name={entry.name}
+          geometry={entry.geometry}
+          material={entry.material}
+          matrixAutoUpdate={false}
+          matrix={entry.matrix}
+          castShadow={entry.castShadow}
+          receiveShadow={entry.receiveShadow}
+          onClick={(e) => handleMeshClick(e, entry)}
+        />
+      ))}
     </group>
   );
 }

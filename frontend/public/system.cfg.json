@@ -3,20 +3,23 @@
     "camera": {
       "default": {
         "angle": 0,
-        "radius": 25,
-        "height": 25
+        "radius": 20,
+        "height": 35,
+        "x": 0,
+        "y": 35,
+        "z": 25
       },
       "limits": {
-        "radius_min": 10,
-        "radius_max": 80,
-        "height_min": 5,
+        "radius_min": 15,
+        "radius_max": 60,
+        "height_min": 10,
         "height_max": 60,
         "angle_max": 360
       },
       "zoom": {
-        "min": 10,
-        "max": 100,
-        "speed": 0.001
+        "min": 15,
+        "max": 60,
+        "speed": 0.4
       },
       "rotate": {
         "speed": 0.005,

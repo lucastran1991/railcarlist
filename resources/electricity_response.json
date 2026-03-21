@@ -1,0 +1,682 @@
+{
+	"TerminalPlannedUsage": {
+		"TerminalId": "K3QFT6XHAAAMBKABB3RGW22W",
+		"LoadUsageProfiles": {
+			"LoadProfile": [
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774139400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774141200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774143000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774144800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774146600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "25.18",
+						"unit": "kW"
+					},
+					"Timestamp": "1774148400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "25.18",
+						"unit": "kW"
+					},
+					"Timestamp": "1774150200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "25.18",
+						"unit": "kW"
+					},
+					"Timestamp": "1774152000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "25.18",
+						"unit": "kW"
+					},
+					"Timestamp": "1774153800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "32.42",
+						"unit": "kW"
+					},
+					"Timestamp": "1774155600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "32.42",
+						"unit": "kW"
+					},
+					"Timestamp": "1774157400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "32.42",
+						"unit": "kW"
+					},
+					"Timestamp": "1774159200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "32.42",
+						"unit": "kW"
+					},
+					"Timestamp": "1774161000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "32.42",
+						"unit": "kW"
+					},
+					"Timestamp": "1774162800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774164600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774166400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774168200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774170000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774171800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774173600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774175400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774177200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774179000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774180800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774182600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774184400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774186200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774188000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774189800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774191600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774193400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774195200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "21.72",
+						"unit": "kW"
+					},
+					"Timestamp": "1774197000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774198800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774200600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774202400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774204200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774206000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774207800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774209600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774211400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774213200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774215000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774216800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774218600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774220400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774222200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774224000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "20.77",
+						"unit": "kW"
+					},
+					"Timestamp": "1774053000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "31.47",
+						"unit": "kW"
+					},
+					"Timestamp": "1774054800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "31.47",
+						"unit": "kW"
+					},
+					"Timestamp": "1774056600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "31.47",
+						"unit": "kW"
+					},
+					"Timestamp": "1774058400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "31.47",
+						"unit": "kW"
+					},
+					"Timestamp": "1774060200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "31.47",
+						"unit": "kW"
+					},
+					"Timestamp": "1774062000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "31.47",
+						"unit": "kW"
+					},
+					"Timestamp": "1774063800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "31.47",
+						"unit": "kW"
+					},
+					"Timestamp": "1774065600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "31.47",
+						"unit": "kW"
+					},
+					"Timestamp": "1774067400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "31.47",
+						"unit": "kW"
+					},
+					"Timestamp": "1774069200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "31.47",
+						"unit": "kW"
+					},
+					"Timestamp": "1774071000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "20.77",
+						"unit": "kW"
+					},
+					"Timestamp": "1774072800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "20.77",
+						"unit": "kW"
+					},
+					"Timestamp": "1774074600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774076400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "14.48",
+						"unit": "kW"
+					},
+					"Timestamp": "1774078200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774080000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774081800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774083600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774085400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774087200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774089000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "17.939999999999998",
+						"unit": "kW"
+					},
+					"Timestamp": "1774090800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "17.939999999999998",
+						"unit": "kW"
+					},
+					"Timestamp": "1774092600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "17.939999999999998",
+						"unit": "kW"
+					},
+					"Timestamp": "1774094400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "17.939999999999998",
+						"unit": "kW"
+					},
+					"Timestamp": "1774096200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "17.939999999999998",
+						"unit": "kW"
+					},
+					"Timestamp": "1774098000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "17.939999999999998",
+						"unit": "kW"
+					},
+					"Timestamp": "1774099800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "17.939999999999998",
+						"unit": "kW"
+					},
+					"Timestamp": "1774101600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "17.939999999999998",
+						"unit": "kW"
+					},
+					"Timestamp": "1774103400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "17.939999999999998",
+						"unit": "kW"
+					},
+					"Timestamp": "1774105200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "17.939999999999998",
+						"unit": "kW"
+					},
+					"Timestamp": "1774107000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774108800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774110600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774112400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774114200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774116000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774117800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774119600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774121400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774123200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774125000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774126800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774128600000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774130400000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774132200000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774134000000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774135800000"
+				},
+				{
+					"loadProfileData": {
+						"data": "7.24",
+						"unit": "kW"
+					},
+					"Timestamp": "1774137600000"
+				}
+			]
+		},
+		"EnergyUsageProfiles": ""
+	}
+}

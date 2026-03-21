@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import { Selection, EffectComposer, Outline } from '@react-three/postprocessing';
+import { EffectComposer, Outline } from '@react-three/postprocessing';
 import { BlendFunction, KernelSize } from 'postprocessing';
 import * as THREE from 'three';
 import TerminalModel from './TerminalModel';
@@ -62,8 +62,14 @@ function SceneContent({ config, onCameraApiReady, onCameraChange }: { config: Sc
     }
   }, [deselect]);
 
+  // Collect selected mesh refs for Outline selection prop
+  const selectedMeshRef = useRef<THREE.Mesh[]>([]);
+  useEffect(() => {
+    selectedMeshRef.current = selectedMesh ? [selectedMesh as THREE.Mesh] : [];
+  }, [selectedMesh]);
+
   return (
-    <Selection>
+    <>
       <SceneLighting />
       <CameraController ref={cameraRef} config={config} selectedTarget={selectedTarget} onCameraChange={onCameraChange} />
 
@@ -73,17 +79,19 @@ function SceneContent({ config, onCameraApiReady, onCameraChange }: { config: Sc
 
       <EffectComposer multisampling={4} autoClear={false}>
         <Outline
+          selection={selectedMeshRef.current}
+          visibleEdgeColor={0x0969da}
+          hiddenEdgeColor={0x0969da}
+          edgeStrength={300}
+          width={4500}
           blur
-          visibleEdgeColor={0xff6a00}
-          hiddenEdgeColor={0xff4400}
-          edgeStrength={80}
-          kernelSize={KernelSize.SMALL}
+          kernelSize={KernelSize.MEDIUM}
           xRay={false}
-          blendFunction={BlendFunction.SCREEN}
-          pulseSpeed={0.4}
+          pulseSpeed={0}
+          blendFunction={BlendFunction.ALPHA}
         />
       </EffectComposer>
-    </Selection>
+    </>
   );
 }
 

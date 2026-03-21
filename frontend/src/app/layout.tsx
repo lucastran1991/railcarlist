@@ -5,8 +5,8 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'Railcarlist - Timeseries Data Visualization',
-  description: 'Visualize and manage timeseries data',
+  title: 'Vopak Terminal - Industrial Monitoring',
+  description: 'Industrial terminal monitoring and visualization',
   icons: {
     icon: '/favicon.svg',
   },

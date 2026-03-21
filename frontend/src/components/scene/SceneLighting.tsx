@@ -9,20 +9,8 @@ export default function SceneLighting() {
 
   return (
     <>
-      {/* Procedural sky dome — Preetham sun/atmosphere model */}
-      <Sky
-        distance={4500}
-        sunPosition={[-100, 30, -50]}
-        inclination={0.52}
-        azimuth={0.25}
-        turbidity={8}
-        rayleigh={1.5}
-        mieCoefficient={0.005}
-        mieDirectionalG={0.8}
-      />
-
       {/* Exponential fog — natural atmospheric haze */}
-      <fogExp2 attach="fog" args={[0xc8d8e8, 0.008]} />
+      <fogExp2 attach="fog" args={[0xc8d8e8, 0.006]} />
 
       {/* Main sun light with shadows */}
       <directionalLight
@@ -63,8 +51,14 @@ export default function SceneLighting() {
         color="#334455"
       />
 
-      {/* Environment map for PBR reflections on tanks */}
-      <Environment preset="sunset" background={false} environmentIntensity={0.6} />
+      {/* Self-hosted HDRI — background sky with clouds + PBR reflections */}
+      <Environment
+        files="/hdri/sunflowers_puresky_1k.exr"
+        background
+        backgroundBlurriness={0}
+        backgroundRotation={[0.15, Math.PI, 0]}
+        environmentIntensity={0.8}
+      />
     </>
   );
 }
