@@ -71,10 +71,12 @@ export default function Navigation() {
   return (
     <>
       <nav className={cn(
-        'py-3 z-30 pointer-events-auto glass',
-        isHome ? 'fixed top-0 left-0 right-0 border-b border-transparent' : 'border-b border-border'
+        'py-3 z-30 pointer-events-auto',
+        isHome
+          ? 'fixed top-0 left-0 right-0 border-b border-border/30 bg-background/80'
+          : 'border-b border-border glass'
       )}>
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <Link href="/" className="hover:opacity-90">
               <span className="text-lg font-semibold gradient-text">Vopak Terminal</span>
