@@ -14,8 +14,8 @@ export default function TerminalSceneControls({ cameraApi }: { cameraApi: Termin
       disabled={!cameraApi}
       onClick={onClick}
       className={cn(
-        'w-8 h-8 flex items-center justify-center rounded-lg border border-[#2C2E39] text-[#F5F5F7]/70',
-        'hover:bg-white/10 hover:border-[#5CE5A0]/50 hover:text-[#5CE5A0] disabled:opacity-30 disabled:cursor-not-allowed',
+        'w-8 h-8 flex items-center justify-center rounded-lg border border-border text-foreground/70',
+        'hover:bg-muted hover:border-[#5CE5A0]/50 hover:text-[#5CE5A0] disabled:opacity-30 disabled:cursor-not-allowed',
         'transition-colors'
       )}
     >
@@ -24,8 +24,8 @@ export default function TerminalSceneControls({ cameraApi }: { cameraApi: Termin
   );
 
   return (
-    <div className="hidden sm:block fixed left-3 top-16 z-20 w-[200px] p-3 rounded-xl glass border border-[#2C2E39] shadow-[0_4px_32px_rgba(0,0,0,0.8)]">
-      <p className="text-xs font-bold uppercase tracking-wider mb-3 text-[#454A5F]">
+    <div className="hidden sm:block fixed left-3 top-[72px] z-20 w-[200px] p-3 rounded-xl glass border border-border shadow-ntx">
+      <p className="text-xs font-bold uppercase tracking-wider mb-3 text-muted-foreground">
         Camera
       </p>
       <div className="flex flex-col gap-2">

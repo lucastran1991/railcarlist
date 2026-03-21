@@ -1,5 +1,6 @@
 'use client';
 
+import { ThemeProvider } from 'next-themes';
 import { usePathname } from 'next/navigation';
 import Navigation from './Navigation';
 import HomeRouteScene from './HomeRouteScene';
@@ -10,7 +11,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   const isLogin = pathname === '/login';
 
   return (
-    <>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       {!isLogin && <Navigation />}
       {isHome && !isLogin && <HomeRouteScene />}
       <main
@@ -19,11 +20,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             ? ''
             : isHome
               ? 'bg-transparent min-h-screen pointer-events-none'
-              : 'bg-[#080A11] min-h-[calc(100vh-64px)] pointer-events-auto'
+              : 'min-h-[calc(100vh-64px)] pointer-events-auto'
         }`}
       >
         {children}
       </main>
-    </>
+    </ThemeProvider>
   );
 }

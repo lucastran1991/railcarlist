@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { ChevronDown, LogOut, Zap, Activity, Droplets, Gauge, Flame, Menu, X } from 'lucide-react';
 import { getUser, logout } from '@/lib/auth';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -41,23 +42,23 @@ export default function Navigation() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setMenuOpen(!menuOpen)}
-        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/10 transition-colors"
+        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors"
       >
-        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#5CE5A0] to-[#56CDE7] flex items-center justify-center text-[#080A11] text-sm font-bold">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#5CE5A0] to-[#56CDE7] flex items-center justify-center text-primary-foreground text-sm font-bold">
           {user?.name?.charAt(0) ?? 'A'}
         </div>
-        <ChevronDown size={14} className={cn('text-white/60 transition-transform hidden sm:block', menuOpen && 'rotate-180')} />
+        <ChevronDown size={14} className={cn('text-foreground/60 transition-transform hidden sm:block', menuOpen && 'rotate-180')} />
       </button>
 
       {menuOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-[#1B1E27] border border-[#2C2E39] rounded-xl shadow-ntx py-1 z-50">
-          <div className="px-4 py-3 border-b border-[#2C2E39]">
-            <p className="text-sm font-semibold text-[#F5F5F7]">{user?.name ?? 'Admin'}</p>
-            <p className="text-xs text-[#454A5F]">{user?.role ?? 'Administrator'}</p>
+        <div className="absolute right-0 mt-2 w-56 bg-popover border border-border rounded-xl shadow-ntx py-1 z-50">
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-sm font-semibold text-foreground">{user?.name ?? 'Admin'}</p>
+            <p className="text-xs text-muted-foreground">{user?.role ?? 'Administrator'}</p>
           </div>
           <button
             onClick={() => { setMenuOpen(false); logout(); }}
-            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-white/5 transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-muted transition-colors"
           >
             <LogOut size={14} />
             Sign out
@@ -67,26 +68,12 @@ export default function Navigation() {
     </div>
   );
 
-  // Home page: logo top-left, user top-right, no nav bar
-  if (isHome) {
-    return (
-      <>
-        <div className="fixed top-4 left-4 z-30 pointer-events-auto">
-          <Link href="/" className="hover:opacity-90">
-            <span className="text-lg font-semibold gradient-text">Vopak Terminal</span>
-          </Link>
-        </div>
-        <div className="fixed top-3 right-4 z-30 pointer-events-auto">
-          {userMenu}
-        </div>
-      </>
-    );
-  }
-
-  // Other pages: full nav bar with mobile hamburger
   return (
     <>
-      <nav className="py-3 border-b border-[#2C2E39] z-30 pointer-events-auto glass">
+      <nav className={cn(
+        'py-3 z-30 pointer-events-auto glass',
+        isHome ? 'fixed top-0 left-0 right-0 border-b border-transparent' : 'border-b border-border'
+      )}>
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="hover:opacity-90">
@@ -105,8 +92,8 @@ export default function Navigation() {
                     className={cn(
                       'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all duration-200',
                       isActive
-                        ? 'font-bold text-white bg-gradient-to-r from-[#5CE5A0]/10 to-[#56CDE7]/10 border border-[#5CE5A0]/30 shadow-[0_0_12px_rgba(92,229,160,0.15)]'
-                        : 'font-normal text-[#F5F5F7]/70 hover:text-[#5DDFFF] hover:bg-white/5 border border-transparent'
+                        ? 'font-bold text-foreground bg-gradient-to-r from-[#5CE5A0]/10 to-[#56CDE7]/10 border border-[#5CE5A0]/30 shadow-[0_0_12px_rgba(92,229,160,0.15)]'
+                        : 'font-normal text-foreground/70 hover:text-[#5DDFFF] hover:bg-muted/50 border border-transparent'
                     )}
                   >
                     <Icon size={14} />
@@ -117,11 +104,12 @@ export default function Navigation() {
             </div>
 
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               {userMenu}
               {/* Mobile hamburger */}
               <button
                 onClick={() => setMobileNavOpen(!mobileNavOpen)}
-                className="md:hidden p-2 rounded-md hover:bg-white/10 text-[#F5F5F7]/70 transition-colors"
+                className="md:hidden p-2 rounded-md hover:bg-muted text-foreground/70 transition-colors"
               >
                 {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
@@ -132,7 +120,7 @@ export default function Navigation() {
 
       {/* Mobile nav drawer */}
       {mobileNavOpen && (
-        <div className="md:hidden fixed inset-x-0 top-[57px] z-30 glass border-b border-[#2C2E39] pointer-events-auto animate-[fadeIn_0.15s_ease-out]">
+        <div className="md:hidden fixed inset-x-0 top-[57px] z-30 glass border-b border-border pointer-events-auto animate-[fadeIn_0.15s_ease-out]">
           <div className="px-4 py-3 flex flex-col gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -144,8 +132,8 @@ export default function Navigation() {
                   className={cn(
                     'flex items-center gap-2 px-4 py-3 rounded-lg text-sm transition-all duration-200',
                     isActive
-                      ? 'font-bold text-white bg-gradient-to-r from-[#5CE5A0]/10 to-[#56CDE7]/10 border border-[#5CE5A0]/30 shadow-[0_0_12px_rgba(92,229,160,0.15)]'
-                      : 'font-normal text-[#F5F5F7]/70 hover:text-white hover:bg-white/5 border border-transparent'
+                      ? 'font-bold text-foreground bg-gradient-to-r from-[#5CE5A0]/10 to-[#56CDE7]/10 border border-[#5CE5A0]/30 shadow-[0_0_12px_rgba(92,229,160,0.15)]'
+                      : 'font-normal text-foreground/70 hover:text-foreground hover:bg-muted/50 border border-transparent'
                   )}
                 >
                   <Icon size={16} />

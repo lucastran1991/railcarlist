@@ -20,30 +20,74 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: geometricPrecision;
-  background-color: #080A11;
-  color: #F5F5F7;
 }
 
-/* ── Natix-inspired dark theme ── */
+/* ── Theme variables ── */
 @layer base {
+  /* Light mode */
   :root {
-    --background: 222 27% 4%;
-    --foreground: 240 7% 97%;
-    --card: 222 22% 8%;
+    --background: 220 20% 97%;       /* #F5F6FA */
+    --foreground: 222 27% 10%;       /* #141820 */
+    --card: 0 0% 100%;               /* white */
+    --card-foreground: 222 27% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 27% 10%;
+    --primary: 155 72% 45%;          /* darker green for light bg */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 192 67% 45%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 10% 46%;
+    --accent: 220 14% 92%;
+    --accent-foreground: 222 27% 10%;
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 87%;
+    --input: 220 13% 87%;
+    --ring: 155 72% 45%;
+    --radius: 0.75rem;
+    --chart-1: 155 72% 45%;
+    --chart-2: 192 67% 45%;
+    --chart-3: 234 100% 55%;
+    --chart-4: 38 92% 55%;
+    --chart-5: 0 70% 50%;
+
+    /* Theme-aware component colors */
+    --nav-bg: rgba(255, 255, 255, 0.85);
+    --nav-border: 220 13% 87%;
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-card-bg: rgba(245, 246, 250, 0.9);
+    --glass-card-border: rgba(220, 222, 230, 0.5);
+    --kpi-bg: 0 0% 100%;
+    --kpi-icon-bg: 220 14% 96%;
+    --chart-grid: #E2E5EB;
+    --chart-axis: #8890A0;
+    --tooltip-bg: #FFFFFF;
+    --tooltip-border: #E2E5EB;
+    --scrollbar-track: #F5F6FA;
+    --scrollbar-thumb: #CDD1DA;
+    --scrollbar-hover: #A0A8B8;
+  }
+
+  /* Dark mode */
+  .dark {
+    --background: 222 27% 4%;        /* #080A11 */
+    --foreground: 240 7% 97%;        /* #F5F5F7 */
+    --card: 222 22% 8%;              /* #131620 */
     --card-foreground: 240 7% 97%;
-    --popover: 222 20% 10%;
+    --popover: 222 20% 10%;          /* #1B1E27 */
     --popover-foreground: 240 7% 97%;
-    --primary: 155 72% 63%;
+    --primary: 155 72% 63%;          /* #5CE5A0 */
     --primary-foreground: 222 27% 4%;
-    --secondary: 192 67% 62%;
+    --secondary: 192 67% 62%;        /* #56CDE7 */
     --secondary-foreground: 222 27% 4%;
-    --muted: 225 15% 15%;
-    --muted-foreground: 225 12% 40%;
+    --muted: 225 15% 15%;            /* #1B1E27 */
+    --muted-foreground: 225 12% 40%; /* #454A5F */
     --accent: 225 15% 15%;
     --accent-foreground: 240 7% 97%;
     --destructive: 0 63% 50%;
     --destructive-foreground: 240 7% 97%;
-    --border: 225 12% 20%;
+    --border: 225 12% 20%;           /* #2C2E39 */
     --input: 225 12% 20%;
     --ring: 155 72% 63%;
     --radius: 0.75rem;
@@ -52,24 +96,58 @@ body {
     --chart-3: 234 100% 65%;
     --chart-4: 38 92% 62%;
     --chart-5: 0 70% 56%;
+
+    --nav-bg: rgba(8, 10, 17, 0.8);
+    --nav-border: 225 12% 20%;
+    --glass-bg: rgba(8, 10, 17, 0.8);
+    --glass-card-bg: rgba(19, 22, 32, 0.8);
+    --glass-card-border: rgba(44, 46, 57, 0.5);
+    --kpi-bg: 222 22% 8%;
+    --kpi-icon-bg: 222 20% 10%;
+    --chart-grid: #2C2E39;
+    --chart-axis: #454A5F;
+    --tooltip-bg: #1B1E27;
+    --tooltip-border: #2C2E39;
+    --scrollbar-track: #080A11;
+    --scrollbar-thumb: #2C2E39;
+    --scrollbar-hover: #454A5F;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 
 /* ── Utility classes ── */
 .glass {
-  background: rgba(8, 10, 17, 0.8);
+  background: var(--glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
 
 .glass-card {
-  background: rgba(19, 22, 32, 0.8);
+  background: var(--glass-card-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(44, 46, 57, 0.5);
+  border: 1px solid var(--glass-card-border);
 }
 
 .gradient-text {
+  background: linear-gradient(104deg, #E8E8ED 37.03%, #C0C4DA 57.64%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+:root .gradient-text {
+  background: linear-gradient(104deg, #1a1e2e 37.03%, #3a3f55 57.64%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .gradient-text {
   background: linear-gradient(104deg, #E8E8ED 37.03%, #C0C4DA 57.64%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -111,12 +189,12 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #080A11;
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #2C2E39;
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #454A5F;
+  background: var(--scrollbar-hover);
 }

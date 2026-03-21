@@ -62,13 +62,13 @@ export default function TankPage() {
   const tempData = tanks.map((t) => ({ name: t.name, temperature: t.temperature }));
 
   const tooltipStyle = {
-    contentStyle: { backgroundColor: '#1B1E27', border: '1px solid #2C2E39', borderRadius: '8px', color: '#F5F5F7' },
-    itemStyle: { color: '#F5F5F7' },
-    labelStyle: { color: '#454A5F' },
+    contentStyle: { backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' },
+    itemStyle: { color: 'hsl(var(--foreground))' },
+    labelStyle: { color: 'hsl(var(--muted-foreground))' },
   };
 
   return (
-    <div className="bg-[#080A11] min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6"><div className="max-w-6xl mx-auto space-y-6">
+    <div className="bg-background min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6"><div className="max-w-6xl mx-auto space-y-6">
       <h1 className="text-xl sm:text-2xl font-bold gradient-text">Tank Overview</h1>
 
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
