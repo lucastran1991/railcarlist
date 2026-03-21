@@ -1,0 +1,78 @@
+{
+  "kpis": {
+    "totalConsumption": 42850,
+    "realTimeDemand": 3420,
+    "peakDemand": 3950,
+    "powerFactor": 0.94,
+    "energyCost": 12450,
+    "carbonEmissions": 18.6,
+    "gridAvailability": 99.7,
+    "transformerLoad": 72
+  },
+  "loadProfile": [
+    {"hour":"00:00","actual":2400,"planned":2500,"threshold":4000},
+    {"hour":"01:00","actual":2200,"planned":2400,"threshold":4000},
+    {"hour":"02:00","actual":2100,"planned":2300,"threshold":4000},
+    {"hour":"03:00","actual":2050,"planned":2200,"threshold":4000},
+    {"hour":"04:00","actual":2150,"planned":2250,"threshold":4000},
+    {"hour":"05:00","actual":2400,"planned":2500,"threshold":4000},
+    {"hour":"06:00","actual":3100,"planned":3000,"threshold":4000},
+    {"hour":"07:00","actual":3500,"planned":3300,"threshold":4000},
+    {"hour":"08:00","actual":3800,"planned":3500,"threshold":4000},
+    {"hour":"09:00","actual":3900,"planned":3600,"threshold":4000},
+    {"hour":"10:00","actual":3950,"planned":3600,"threshold":4000},
+    {"hour":"11:00","actual":3850,"planned":3550,"threshold":4000},
+    {"hour":"12:00","actual":3600,"planned":3400,"threshold":4000},
+    {"hour":"13:00","actual":3700,"planned":3500,"threshold":4000},
+    {"hour":"14:00","actual":3900,"planned":3700,"threshold":4000},
+    {"hour":"15:00","actual":3850,"planned":3650,"threshold":4000},
+    {"hour":"16:00","actual":3700,"planned":3500,"threshold":4000},
+    {"hour":"17:00","actual":3400,"planned":3300,"threshold":4000},
+    {"hour":"18:00","actual":3200,"planned":3100,"threshold":4000},
+    {"hour":"19:00","actual":3000,"planned":2900,"threshold":4000},
+    {"hour":"20:00","actual":2800,"planned":2700,"threshold":4000},
+    {"hour":"21:00","actual":2600,"planned":2600,"threshold":4000},
+    {"hour":"22:00","actual":2500,"planned":2500,"threshold":4000},
+    {"hour":"23:00","actual":2350,"planned":2450,"threshold":4000}
+  ],
+  "weeklyConsumption": [
+    {"day":"Mon","thisWeek":18500,"lastWeek":17800},
+    {"day":"Tue","thisWeek":19200,"lastWeek":18500},
+    {"day":"Wed","thisWeek":19800,"lastWeek":19100},
+    {"day":"Thu","thisWeek":18900,"lastWeek":18700},
+    {"day":"Fri","thisWeek":19500,"lastWeek":19000},
+    {"day":"Sat","thisWeek":12000,"lastWeek":11500},
+    {"day":"Sun","thisWeek":8500,"lastWeek":8200}
+  ],
+  "powerFactorTrend": [
+    {"time":"00:00","value":0.96},{"time":"02:00","value":0.95},
+    {"time":"04:00","value":0.95},{"time":"06:00","value":0.94},
+    {"time":"08:00","value":0.93},{"time":"10:00","value":0.92},
+    {"time":"12:00","value":0.91},{"time":"14:00","value":0.93},
+    {"time":"16:00","value":0.94},{"time":"18:00","value":0.95},
+    {"time":"20:00","value":0.95},{"time":"22:00","value":0.96}
+  ],
+  "costBreakdown": [
+    {"source":"Grid","cost":8700,"color":"#4D65FF"},
+    {"source":"Generator","cost":2500,"color":"#F6AD55"},
+    {"source":"Solar","cost":1250,"color":"#5CE5A0"}
+  ],
+  "peakDemandHistory": [
+    {"date":"Feb 20","peak":3650},{"date":"Feb 22","peak":3720},
+    {"date":"Feb 24","peak":3800},{"date":"Feb 26","peak":3680},
+    {"date":"Feb 28","peak":3850},{"date":"Mar 02","peak":3920},
+    {"date":"Mar 04","peak":3750},{"date":"Mar 06","peak":3880},
+    {"date":"Mar 08","peak":3950},{"date":"Mar 10","peak":4100},
+    {"date":"Mar 12","peak":3820},{"date":"Mar 14","peak":3900},
+    {"date":"Mar 16","peak":3780},{"date":"Mar 18","peak":3850},
+    {"date":"Mar 20","peak":3920},{"date":"Mar 22","peak":3950}
+  ],
+  "phaseBalance": [
+    {"time":"Now-5m","phaseA":245,"phaseB":238,"phaseC":251},
+    {"time":"Now-4m","phaseA":248,"phaseB":241,"phaseC":249},
+    {"time":"Now-3m","phaseA":252,"phaseB":239,"phaseC":247},
+    {"time":"Now-2m","phaseA":246,"phaseB":243,"phaseC":250},
+    {"time":"Now-1m","phaseA":250,"phaseB":240,"phaseC":248},
+    {"time":"Now","phaseA":247,"phaseB":242,"phaseC":253}
+  ]
+}

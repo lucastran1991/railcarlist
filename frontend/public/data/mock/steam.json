@@ -1,0 +1,76 @@
+{
+  "kpis": {
+    "totalProduction": 55.5,
+    "totalDemand": 52.8,
+    "headerPressure": 40.2,
+    "steamTemperature": 285,
+    "systemEfficiency": 87.5,
+    "condensateRecovery": 83,
+    "makeupWaterFlow": 4.2,
+    "fuelConsumption": 680
+  },
+  "steamBalance": [
+    {"hour":"00:00","boiler1":15,"boiler2":12,"boiler3":0,"demand":24},
+    {"hour":"02:00","boiler1":16,"boiler2":13,"boiler3":0,"demand":26},
+    {"hour":"04:00","boiler1":18,"boiler2":14,"boiler3":0,"demand":28},
+    {"hour":"06:00","boiler1":20,"boiler2":16,"boiler3":8,"demand":40},
+    {"hour":"08:00","boiler1":22,"boiler2":18,"boiler3":15,"demand":50},
+    {"hour":"10:00","boiler1":24,"boiler2":19,"boiler3":17,"demand":55},
+    {"hour":"12:00","boiler1":25,"boiler2":20,"boiler3":18,"demand":58},
+    {"hour":"14:00","boiler1":24,"boiler2":19,"boiler3":17,"demand":56},
+    {"hour":"16:00","boiler1":23,"boiler2":19,"boiler3":16,"demand":53},
+    {"hour":"18:00","boiler1":20,"boiler2":17,"boiler3":12,"demand":44},
+    {"hour":"20:00","boiler1":18,"boiler2":15,"boiler3":10,"demand":38},
+    {"hour":"22:00","boiler1":16,"boiler2":13,"boiler3":5,"demand":30}
+  ],
+  "headerPressureTrend": [
+    {"time":"00:00","hp":40.2,"mp":14.1,"lp":3.8},
+    {"time":"02:00","hp":40.4,"mp":14.2,"lp":3.9},
+    {"time":"04:00","hp":40.5,"mp":14.3,"lp":4.0},
+    {"time":"06:00","hp":40.0,"mp":13.9,"lp":3.7},
+    {"time":"08:00","hp":39.8,"mp":13.8,"lp":3.6},
+    {"time":"10:00","hp":39.5,"mp":13.6,"lp":3.5},
+    {"time":"12:00","hp":39.2,"mp":13.5,"lp":3.4},
+    {"time":"14:00","hp":39.5,"mp":13.7,"lp":3.5},
+    {"time":"16:00","hp":39.9,"mp":14.0,"lp":3.7},
+    {"time":"18:00","hp":40.1,"mp":14.1,"lp":3.8},
+    {"time":"20:00","hp":40.3,"mp":14.2,"lp":3.9},
+    {"time":"22:00","hp":40.4,"mp":14.3,"lp":4.0}
+  ],
+  "steamDistribution": [
+    {"consumer":"Process Unit A","value":18.5,"color":"#4D65FF"},
+    {"consumer":"Process Unit B","value":14.2,"color":"#56CDE7"},
+    {"consumer":"Heating","value":10.8,"color":"#5CE5A0"},
+    {"consumer":"Tank Farm","value":7.5,"color":"#F6AD55"},
+    {"consumer":"Utilities","value":4.5,"color":"#E53E3E"}
+  ],
+  "condensateRecoveryTrend": [
+    {"hour":"00:00","recovery":88},{"hour":"02:00","recovery":87},
+    {"hour":"04:00","recovery":86},{"hour":"06:00","recovery":84},
+    {"hour":"08:00","recovery":82},{"hour":"10:00","recovery":80},
+    {"hour":"12:00","recovery":79},{"hour":"14:00","recovery":81},
+    {"hour":"16:00","recovery":83},{"hour":"18:00","recovery":85},
+    {"hour":"20:00","recovery":87},{"hour":"22:00","recovery":88}
+  ],
+  "fuelVsSteam": [
+    {"fuel":120,"steam":15.2,"hour":"01:00"},
+    {"fuel":130,"steam":16.0,"hour":"03:00"},
+    {"fuel":145,"steam":18.1,"hour":"05:00"},
+    {"fuel":180,"steam":22.0,"hour":"07:00"},
+    {"fuel":210,"steam":25.5,"hour":"09:00"},
+    {"fuel":240,"steam":28.8,"hour":"11:00"},
+    {"fuel":245,"steam":29.8,"hour":"13:00"},
+    {"fuel":230,"steam":27.5,"hour":"15:00"},
+    {"fuel":200,"steam":24.5,"hour":"17:00"},
+    {"fuel":180,"steam":22.0,"hour":"19:00"},
+    {"fuel":150,"steam":18.5,"hour":"21:00"},
+    {"fuel":125,"steam":15.8,"hour":"23:00"}
+  ],
+  "steamLoss": [
+    {"location":"Header North","loss":3.2,"trapsTotal":24,"trapsFailed":5},
+    {"location":"Process Unit A","loss":2.8,"trapsTotal":18,"trapsFailed":4},
+    {"location":"Tank Farm","loss":1.9,"trapsTotal":12,"trapsFailed":2},
+    {"location":"Building HVAC","loss":1.2,"trapsTotal":15,"trapsFailed":1},
+    {"location":"Process Unit B","loss":0.8,"trapsTotal":20,"trapsFailed":1}
+  ]
+}

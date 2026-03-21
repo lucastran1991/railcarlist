@@ -1,0 +1,67 @@
+{
+  "kpis": {
+    "totalInventory": 245000,
+    "availableCapacity": 32,
+    "tanksInOperation": 18,
+    "tanksTotal": 22,
+    "currentThroughput": 1850,
+    "avgTemperature": 42,
+    "activeAlarms": 2,
+    "dailyReceipts": 32000,
+    "dailyDispatches": 26000
+  },
+  "tankLevels": [
+    {"tank":"TK-101","product":"Gasoline","level":78,"capacity":50000,"volume":39000,"color":"#F6AD55"},
+    {"tank":"TK-102","product":"Gasoline","level":45,"capacity":50000,"volume":22500,"color":"#F6AD55"},
+    {"tank":"TK-103","product":"Gasoline","level":62,"capacity":50000,"volume":31000,"color":"#F6AD55"},
+    {"tank":"TK-201","product":"Diesel","level":92,"capacity":80000,"volume":73600,"color":"#4D65FF"},
+    {"tank":"TK-202","product":"Diesel","level":33,"capacity":80000,"volume":26400,"color":"#4D65FF"},
+    {"tank":"TK-203","product":"Diesel","level":71,"capacity":80000,"volume":56800,"color":"#4D65FF"},
+    {"tank":"TK-301","product":"Crude","level":67,"capacity":100000,"volume":67000,"color":"#56CDE7"},
+    {"tank":"TK-302","product":"Crude","level":54,"capacity":100000,"volume":54000,"color":"#56CDE7"},
+    {"tank":"TK-401","product":"Ethanol","level":55,"capacity":30000,"volume":16500,"color":"#5CE5A0"},
+    {"tank":"TK-402","product":"Ethanol","level":38,"capacity":30000,"volume":11400,"color":"#5CE5A0"}
+  ],
+  "inventoryTrend": [
+    {"date":"Mar 16","gasoline":61500,"diesel":95000,"crude":67000,"ethanol":18000},
+    {"date":"Mar 17","gasoline":58000,"diesel":92000,"crude":72000,"ethanol":16500},
+    {"date":"Mar 18","gasoline":55000,"diesel":98000,"crude":68000,"ethanol":19000},
+    {"date":"Mar 19","gasoline":62000,"diesel":94000,"crude":65000,"ethanol":17500},
+    {"date":"Mar 20","gasoline":59000,"diesel":100000,"crude":70000,"ethanol":16000},
+    {"date":"Mar 21","gasoline":57000,"diesel":96000,"crude":67000,"ethanol":18500},
+    {"date":"Mar 22","gasoline":61500,"diesel":100000,"crude":67000,"ethanol":16500}
+  ],
+  "throughput": [
+    {"date":"Mar 16","receipts":25000,"dispatches":28000},
+    {"date":"Mar 17","receipts":30000,"dispatches":27000},
+    {"date":"Mar 18","receipts":22000,"dispatches":25000},
+    {"date":"Mar 19","receipts":35000,"dispatches":30000},
+    {"date":"Mar 20","receipts":28000,"dispatches":32000},
+    {"date":"Mar 21","receipts":18000,"dispatches":20000},
+    {"date":"Mar 22","receipts":32000,"dispatches":26000}
+  ],
+  "productDistribution": [
+    {"product":"Diesel","volume":156800,"color":"#4D65FF"},
+    {"product":"Crude Oil","volume":121000,"color":"#56CDE7"},
+    {"product":"Gasoline","volume":92500,"color":"#F6AD55"},
+    {"product":"Ethanol","volume":27900,"color":"#5CE5A0"}
+  ],
+  "tankLevelChanges": [
+    {"tank":"TK-101","change":5200},
+    {"tank":"TK-102","change":-8500},
+    {"tank":"TK-103","change":3200},
+    {"tank":"TK-201","change":12000},
+    {"tank":"TK-202","change":-3200},
+    {"tank":"TK-203","change":-6800},
+    {"tank":"TK-301","change":-15000},
+    {"tank":"TK-302","change":8500},
+    {"tank":"TK-401","change":2800},
+    {"tank":"TK-402","change":-1500}
+  ],
+  "tankTemperatures": [
+    {"tank":"TK-101","t00":25,"t06":24,"t12":32,"t18":28},
+    {"tank":"TK-201","t00":45,"t06":44,"t12":52,"t18":48},
+    {"tank":"TK-301","t00":60,"t06":58,"t12":68,"t18":63},
+    {"tank":"TK-401","t00":22,"t06":21,"t12":28,"t18":25}
+  ]
+}

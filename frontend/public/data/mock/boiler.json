@@ -1,0 +1,66 @@
+{
+  "kpis": {
+    "boilersOnline": 3,
+    "boilersTotal": 4,
+    "totalSteamOutput": 55.5,
+    "fleetEfficiency": 87.5,
+    "avgStackTemp": 185,
+    "totalFuelRate": 680,
+    "avgO2": 3.4,
+    "coEmissions": 85,
+    "noxEmissions": 120
+  },
+  "boilerComparison": [
+    {"boiler":"BLR-01","efficiency":88,"load":85,"steamOutput":25},
+    {"boiler":"BLR-02","efficiency":84,"load":72,"steamOutput":20},
+    {"boiler":"BLR-03","efficiency":91,"load":90,"steamOutput":28},
+    {"boiler":"BLR-04","efficiency":0,"load":0,"steamOutput":0}
+  ],
+  "efficiencyTrend": [
+    {"date":"Mar 16","blr01":89,"blr02":86,"blr03":92,"blr04":85},
+    {"date":"Mar 17","blr01":88,"blr02":85,"blr03":91,"blr04":84},
+    {"date":"Mar 18","blr01":88,"blr02":84,"blr03":91,"blr04":0},
+    {"date":"Mar 19","blr01":87,"blr02":84,"blr03":90,"blr04":0},
+    {"date":"Mar 20","blr01":88,"blr02":83,"blr03":91,"blr04":0},
+    {"date":"Mar 21","blr01":88,"blr02":84,"blr03":91,"blr04":0},
+    {"date":"Mar 22","blr01":88,"blr02":84,"blr03":91,"blr04":0}
+  ],
+  "combustionAnalysis": [
+    {"boiler":"BLR-01","o2":3.2,"co2":12.5,"co":85,"nox":45},
+    {"boiler":"BLR-02","o2":4.1,"co2":11.8,"co":120,"nox":65},
+    {"boiler":"BLR-03","o2":2.8,"co2":13.1,"co":52,"nox":38}
+  ],
+  "steamVsFuel": [
+    {"hour":"00:00","steam":27,"fuel":320},
+    {"hour":"02:00","steam":29,"fuel":345},
+    {"hour":"04:00","steam":32,"fuel":380},
+    {"hour":"06:00","steam":40,"fuel":475},
+    {"hour":"08:00","steam":55,"fuel":650},
+    {"hour":"10:00","steam":60,"fuel":710},
+    {"hour":"12:00","steam":63,"fuel":740},
+    {"hour":"14:00","steam":61,"fuel":720},
+    {"hour":"16:00","steam":58,"fuel":690},
+    {"hour":"18:00","steam":48,"fuel":570},
+    {"hour":"20:00","steam":43,"fuel":510},
+    {"hour":"22:00","steam":32,"fuel":380}
+  ],
+  "emissionsGauges": [
+    {"pollutant":"CO","current":85,"limit":200,"unit":"ppm"},
+    {"pollutant":"NOx","current":120,"limit":150,"unit":"mg/Nm³"},
+    {"pollutant":"SOx","current":35,"limit":100,"unit":"mg/Nm³"}
+  ],
+  "stackTemperature": [
+    {"hour":"00:00","blr01":172,"blr02":185,"blr03":168},
+    {"hour":"02:00","blr01":170,"blr02":183,"blr03":165},
+    {"hour":"04:00","blr01":171,"blr02":184,"blr03":166},
+    {"hour":"06:00","blr01":174,"blr02":188,"blr03":170},
+    {"hour":"08:00","blr01":178,"blr02":192,"blr03":175},
+    {"hour":"10:00","blr01":182,"blr02":196,"blr03":178},
+    {"hour":"12:00","blr01":185,"blr02":198,"blr03":180},
+    {"hour":"14:00","blr01":184,"blr02":202,"blr03":179},
+    {"hour":"16:00","blr01":182,"blr02":205,"blr03":178},
+    {"hour":"18:00","blr01":178,"blr02":200,"blr03":175},
+    {"hour":"20:00","blr01":175,"blr02":195,"blr03":172},
+    {"hour":"22:00","blr01":173,"blr02":190,"blr03":169}
+  ]
+}

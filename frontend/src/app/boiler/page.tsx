@@ -4,140 +4,228 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
-import { Flame, Hash, Gauge, Activity } from 'lucide-react';
+import {
+  Flame, Cloud, TrendingUp, Thermometer, Droplets, Wind, AlertCircle, AlertTriangle,
+} from 'lucide-react';
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
+  LineChart, Line,
+  BarChart, Bar,
+  AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine,
 } from 'recharts';
 
-interface BoilerReading {
-  boilerId: string;
-  boilerMode: number;
-  currentPSI: number;
-  firingRate: number;
-  steamProduced: number;
-  gasConsumed: number;
-  lastUpdatedTimestamp: number;
+interface BoilerData {
+  kpis: {
+    boilersOnline: number;
+    boilersTotal: number;
+    totalSteamOutput: number;
+    fleetEfficiency: number;
+    avgStackTemp: number;
+    totalFuelRate: number;
+    avgO2: number;
+    coEmissions: number;
+    noxEmissions: number;
+  };
+  boilerComparison: { boiler: string; efficiency: number; load: number; steamOutput: number }[];
+  efficiencyTrend: { date: string; blr01: number; blr02: number; blr03: number; blr04: number }[];
+  combustionAnalysis: { boiler: string; o2: number; co2: number; co: number; nox: number }[];
+  steamVsFuel: { hour: string; steam: number; fuel: number }[];
+  emissionsGauges: { pollutant: string; current: number; limit: number; unit: string }[];
+  stackTemperature: { hour: string; blr01: number; blr02: number; blr03: number }[];
 }
 
-const BOILER_COLORS: Record<string, string> = {
-  Boiler1: '#5CE5A0',
-  Boiler2: '#F6AD55',
-  Boiler3: '#56CDE7',
-  Boiler4: '#4D65FF',
-  Boiler5: '#E53E3E',
+const tooltipStyle = {
+  contentStyle: { backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' },
+  itemStyle: { color: 'hsl(var(--foreground))' },
+  labelStyle: { color: 'hsl(var(--muted-foreground))' },
 };
+const GRID = 'hsl(var(--border))';
+const AXIS = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 
 export default function BoilerPage() {
   const ready = useAuth();
-  const [readings, setReadings] = useState<BoilerReading[]>([]);
+  const [data, setData] = useState<BoilerData | null>(null);
 
   useEffect(() => {
-    fetch('/data/boiler_response.json')
+    fetch('/data/mock/boiler.json')
       .then((r) => r.json())
-      .then((json) => {
-        setReadings(json.Message?.Value?.readingHistory ?? []);
-      });
+      .then(setData);
   }, []);
 
-  if (!ready) return null;
+  if (!ready || !data) return null;
 
-  const totalReadings = readings.length.toString();
-  const uniqueBoilers = new Set(readings.map((r) => r.boilerId)).size.toString();
-  const avgPSI = readings.length
-    ? (readings.reduce((s, r) => s + r.currentPSI, 0) / readings.length).toFixed(2)
-    : '0';
-  const totalGas = readings.reduce((s, r) => s + r.gasConsumed, 0);
-  const totalGasStr = totalGas > 1e6 ? `${(totalGas / 1e6).toFixed(1)}M` : totalGas.toLocaleString();
-
-  const fmtTime = (ts: number) =>
-    new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-  // PSI over time — one line per boilerId
-  const boilerIds = Array.from(new Set(readings.map((r) => r.boilerId)));
-  const sorted = readings.slice().sort((a, b) => a.lastUpdatedTimestamp - b.lastUpdatedTimestamp);
-
-  // Build time-series data: each point has time + one key per boiler
-  const timeMap = new Map<number, Record<string, number | string>>();
-  sorted.forEach((r) => {
-    let entry = timeMap.get(r.lastUpdatedTimestamp);
-    if (!entry) {
-      entry = { time: fmtTime(r.lastUpdatedTimestamp) };
-      timeMap.set(r.lastUpdatedTimestamp, entry);
-    }
-    entry[r.boilerId] = r.currentPSI;
-  });
-  const psiData = Array.from(timeMap.values());
-
-  // Firing rate bar chart
-  const firingData = sorted.map((r, i) => ({
-    idx: i,
-    firingRate: r.firingRate,
-    boilerId: r.boilerId,
-  }));
-
-  const tooltipStyle = {
-    contentStyle: { backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' },
-    itemStyle: { color: 'hsl(var(--foreground))' },
-    labelStyle: { color: 'hsl(var(--muted-foreground))' },
-  };
+  const { kpis } = data;
 
   return (
-    <div className="bg-background min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6"><div className="max-w-6xl mx-auto space-y-6">
-      <h1 className="text-xl sm:text-2xl font-bold gradient-text">Boilers Overview</h1>
+    <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <h1 className="text-xl sm:text-2xl font-bold gradient-text">Boilers Overview</h1>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <KpiCard label="Total Readings" value={totalReadings} icon={<Hash className="w-5 h-5 text-[#5CE5A0]" />} accent />
-        <KpiCard label="Unique Boilers" value={uniqueBoilers} icon={<Flame className="w-5 h-5 text-[#F6AD55]" />} />
-        <KpiCard label="Avg PSI" value={avgPSI} unit="PSI" icon={<Gauge className="w-5 h-5 text-[#56CDE7]" />} />
-        <KpiCard label="Total Gas" value={totalGasStr} icon={<Activity className="w-5 h-5 text-[#4D65FF]" />} />
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <KpiCard
+            label="Boilers Online"
+            value={`${kpis.boilersOnline}/${kpis.boilersTotal}`}
+            icon={<Flame className="w-5 h-5 text-[#5CE5A0]" />}
+            accent
+          />
+          <KpiCard
+            label="Steam Output"
+            value={String(kpis.totalSteamOutput)}
+            unit="tonnes/h"
+            icon={<Cloud className="w-5 h-5 text-[#56CDE7]" />}
+          />
+          <KpiCard
+            label="Fleet Efficiency"
+            value={String(kpis.fleetEfficiency)}
+            unit="%"
+            icon={<TrendingUp className={`w-5 h-5 ${kpis.fleetEfficiency > 85 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />}
+          />
+          <KpiCard
+            label="Avg Stack Temp"
+            value={String(kpis.avgStackTemp)}
+            unit="°C"
+            icon={<Thermometer className={`w-5 h-5 ${kpis.avgStackTemp > 200 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />}
+          />
+          <KpiCard
+            label="Fuel Rate"
+            value={String(kpis.totalFuelRate)}
+            unit="m³/h"
+            icon={<Droplets className="w-5 h-5 text-[#56CDE7]" />}
+          />
+          <KpiCard
+            label="Avg O₂"
+            value={String(kpis.avgO2)}
+            unit="%"
+            icon={<Wind className={`w-5 h-5 ${kpis.avgO2 >= 2 && kpis.avgO2 <= 4 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />}
+          />
+          <KpiCard
+            label="CO Emissions"
+            value={String(kpis.coEmissions)}
+            unit="ppm"
+            icon={<AlertCircle className={`w-5 h-5 ${kpis.coEmissions < 100 ? 'text-[#5CE5A0]' : 'text-[#E53E3E]'}`} />}
+          />
+          <KpiCard
+            label="NOx Emissions"
+            value={String(kpis.noxEmissions)}
+            unit="mg/Nm³"
+            icon={<AlertTriangle className={`w-5 h-5 ${kpis.noxEmissions > 100 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />}
+          />
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+          {/* 1. Boiler Fleet Comparison — Grouped Bar */}
+          <ChartCard title="Boiler Fleet Comparison">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.boilerComparison}>
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+                <XAxis dataKey="boiler" tick={AXIS} />
+                <YAxis tick={AXIS} />
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+                <Bar dataKey="efficiency" fill="#5CE5A0" name="Efficiency" />
+                <Bar dataKey="load" fill="#56CDE7" name="Load" />
+                <Bar dataKey="steamOutput" fill="#4D65FF" name="Steam Output" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          {/* 2. Efficiency Trend (7 days) — Multi Line */}
+          <ChartCard title="Efficiency Trend (7 days)">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data.efficiencyTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+                <XAxis dataKey="date" tick={AXIS} />
+                <YAxis tick={AXIS} domain={[0, 100]} />
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+                <Line type="monotone" dataKey="blr01" stroke="#4D65FF" strokeWidth={2} dot={false} name="BLR-01" />
+                <Line type="monotone" dataKey="blr02" stroke="#56CDE7" strokeWidth={2} dot={false} name="BLR-02" />
+                <Line type="monotone" dataKey="blr03" stroke="#5CE5A0" strokeWidth={2} dot={false} name="BLR-03" />
+                <Line type="monotone" dataKey="blr04" stroke="#F6AD55" strokeWidth={2} dot={false} name="BLR-04" />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          {/* 3. Combustion Analysis — Stacked Bar */}
+          <ChartCard title="Combustion Analysis">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.combustionAnalysis}>
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+                <XAxis dataKey="boiler" tick={AXIS} />
+                <YAxis tick={AXIS} />
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+                <Bar dataKey="o2" stackId="a" fill="#56CDE7" name="O₂" />
+                <Bar dataKey="co2" stackId="a" fill="#4D65FF" name="CO₂" />
+                <Bar dataKey="co" stackId="a" fill="#F6AD55" name="CO" />
+                <Bar dataKey="nox" stackId="a" fill="#E53E3E" name="NOx" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          {/* 4. Steam Output vs Fuel Input (24h) — Dual Axis Area + Line */}
+          <ChartCard title="Steam Output vs Fuel Input (24h)">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data.steamVsFuel}>
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+                <XAxis dataKey="hour" tick={AXIS} />
+                <YAxis yAxisId="left" tick={AXIS} />
+                <YAxis yAxisId="right" orientation="right" tick={AXIS} />
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+                <Area yAxisId="left" type="monotone" dataKey="steam" stroke="#56CDE7" fill="#56CDE7" fillOpacity={0.3} name="Steam (tonnes/h)" />
+                <Line yAxisId="right" type="monotone" dataKey="fuel" stroke="#F6AD55" strokeWidth={2} dot={false} name="Fuel (m³/h)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          {/* 5. Emissions Status — Custom Progress Bars */}
+          <ChartCard title="Emissions Status">
+            <div className="space-y-4 flex flex-col justify-center h-full">
+              {data.emissionsGauges.map((e) => {
+                const ratio = e.current / e.limit;
+                return (
+                  <div key={e.pollutant}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-foreground">{e.pollutant}</span>
+                      <span className="text-muted-foreground">{e.current}/{e.limit} {e.unit}</span>
+                    </div>
+                    <div className="h-3 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.min(100, ratio * 100)}%`,
+                          backgroundColor: ratio < 0.8 ? '#5CE5A0' : ratio < 1 ? '#F6AD55' : '#E53E3E',
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </ChartCard>
+
+          {/* 6. Stack Temperature (24h) — Multi Line with ReferenceLine */}
+          <ChartCard title="Stack Temperature (24h)">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={data.stackTemperature}>
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+                <XAxis dataKey="hour" tick={AXIS} />
+                <YAxis tick={AXIS} domain={[150, 230]} />
+                <Tooltip {...tooltipStyle} />
+                <Legend />
+                <ReferenceLine y={220} stroke="#E53E3E" strokeDasharray="5 5" label={{ value: 'Alarm 220°C', fill: '#E53E3E', fontSize: 10 }} />
+                <Line type="monotone" dataKey="blr01" stroke="#4D65FF" strokeWidth={2} dot={false} name="BLR-01" />
+                <Line type="monotone" dataKey="blr02" stroke="#56CDE7" strokeWidth={2} dot={false} name="BLR-02" />
+                <Line type="monotone" dataKey="blr03" stroke="#5CE5A0" strokeWidth={2} dot={false} name="BLR-03" />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        <ChartCard title="PSI Over Time">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={psiData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
-              <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#454A5F' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#454A5F' }} />
-              <Tooltip {...tooltipStyle} />
-              <Legend />
-              {boilerIds.map((id) => (
-                <Line
-                  key={id}
-                  type="monotone"
-                  dataKey={id}
-                  stroke={BOILER_COLORS[id] ?? '#454A5F'}
-                  strokeWidth={2}
-                  dot={false}
-                  name={id}
-                  connectNulls
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        <ChartCard title="Firing Rate Distribution">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={firingData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
-              <XAxis dataKey="idx" tick={{ fontSize: 11, fill: '#454A5F' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#454A5F' }} />
-              <Tooltip {...tooltipStyle} />
-              <Bar dataKey="firingRate" fill="#F6AD55" name="Firing Rate" />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
-    </div></div>
+    </div>
   );
 }

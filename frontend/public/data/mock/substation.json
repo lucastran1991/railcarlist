@@ -1,0 +1,70 @@
+{
+  "kpis": {
+    "incomingVoltage": 10.95,
+    "totalLoad": 8.2,
+    "transformerTemp": 62,
+    "frequency": 50.02,
+    "thd": 4.8,
+    "breakersClosed": 12,
+    "breakersTotal": 14,
+    "faultEvents24h": 2,
+    "busbarBalance": 5.2
+  },
+  "voltageProfile": [
+    {"time":"00:00","vRY":10.95,"vYB":11.02,"vBR":10.98},
+    {"time":"02:00","vRY":10.98,"vYB":11.04,"vBR":10.96},
+    {"time":"04:00","vRY":11.01,"vYB":11.05,"vBR":10.96},
+    {"time":"06:00","vRY":10.92,"vYB":10.98,"vBR":10.90},
+    {"time":"08:00","vRY":10.88,"vYB":10.92,"vBR":10.85},
+    {"time":"10:00","vRY":10.85,"vYB":10.90,"vBR":10.82},
+    {"time":"12:00","vRY":10.82,"vYB":10.90,"vBR":10.78},
+    {"time":"14:00","vRY":10.86,"vYB":10.92,"vBR":10.83},
+    {"time":"16:00","vRY":10.90,"vYB":10.95,"vBR":10.88},
+    {"time":"18:00","vRY":10.94,"vYB":10.98,"vBR":10.92},
+    {"time":"20:00","vRY":10.98,"vYB":11.00,"vBR":10.95},
+    {"time":"22:00","vRY":10.96,"vYB":11.02,"vBR":10.94}
+  ],
+  "transformerLoading": [
+    {"name":"TR-01 (Main)","loading":72,"capacity":25,"unit":"MVA"},
+    {"name":"TR-02 (Aux)","loading":58,"capacity":15,"unit":"MVA"},
+    {"name":"TR-03 (Process)","loading":85,"capacity":20,"unit":"MVA"},
+    {"name":"TR-04 (Emergency)","loading":12,"capacity":10,"unit":"MVA"}
+  ],
+  "harmonicSpectrum": [
+    {"order":"3rd","magnitude":3.2},
+    {"order":"5th","magnitude":6.8},
+    {"order":"7th","magnitude":4.1},
+    {"order":"9th","magnitude":1.5},
+    {"order":"11th","magnitude":3.8},
+    {"order":"13th","magnitude":2.1}
+  ],
+  "transformerTemperature": [
+    {"time":"00:00","oilTemp":52,"windingTemp":58},
+    {"time":"02:00","oilTemp":50,"windingTemp":55},
+    {"time":"04:00","oilTemp":49,"windingTemp":54},
+    {"time":"06:00","oilTemp":52,"windingTemp":58},
+    {"time":"08:00","oilTemp":58,"windingTemp":65},
+    {"time":"10:00","oilTemp":63,"windingTemp":71},
+    {"time":"12:00","oilTemp":65,"windingTemp":74},
+    {"time":"14:00","oilTemp":67,"windingTemp":76},
+    {"time":"16:00","oilTemp":68,"windingTemp":78},
+    {"time":"18:00","oilTemp":64,"windingTemp":72},
+    {"time":"20:00","oilTemp":60,"windingTemp":68},
+    {"time":"22:00","oilTemp":55,"windingTemp":62}
+  ],
+  "feederDistribution": [
+    {"time":"00:00","feeder1":450,"feeder2":380,"feeder3":520,"feeder4":290,"feeder5":180},
+    {"time":"04:00","feeder1":420,"feeder2":350,"feeder3":480,"feeder4":270,"feeder5":170},
+    {"time":"08:00","feeder1":680,"feeder2":590,"feeder3":750,"feeder4":450,"feeder5":320},
+    {"time":"12:00","feeder1":720,"feeder2":620,"feeder3":800,"feeder4":480,"feeder5":350},
+    {"time":"16:00","feeder1":700,"feeder2":600,"feeder3":780,"feeder4":460,"feeder5":330},
+    {"time":"20:00","feeder1":550,"feeder2":480,"feeder3":620,"feeder4":350,"feeder5":250}
+  ],
+  "faultEvents": [
+    {"day":"Mon","h08":0,"h09":1,"h10":0,"h11":0,"h12":0,"h13":0,"h14":2,"h15":0},
+    {"day":"Tue","h08":0,"h09":0,"h10":3,"h11":0,"h12":0,"h13":1,"h14":0,"h15":0},
+    {"day":"Wed","h08":1,"h09":0,"h10":0,"h11":0,"h12":0,"h13":0,"h14":0,"h15":1},
+    {"day":"Thu","h08":0,"h09":0,"h10":0,"h11":1,"h12":0,"h13":0,"h14":0,"h15":0},
+    {"day":"Fri","h08":0,"h09":0,"h10":0,"h11":1,"h12":0,"h13":0,"h14":2,"h15":0}
+  ]
+}
