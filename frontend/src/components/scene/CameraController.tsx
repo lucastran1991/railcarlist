@@ -63,9 +63,17 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
         animProgress.current = 0;
         animating.current = true;
       } else if (savedState.current) {
-        // Restore
+        // Restore to default config position
+        const angle = sc.camera.default.angle * (Math.PI / 180);
+        const r = sc.camera.default.radius;
+        const defaultPos = new THREE.Vector3(
+          sc.target.x + Math.sin(angle) * r,
+          sc.camera.default.height,
+          sc.target.z + Math.cos(angle) * r,
+        );
+        const defaultTarget = new THREE.Vector3(sc.target.x, sc.target.y, sc.target.z);
         animFrom.current = { pos: camera.position.clone(), target: controlsRef.current.target.clone() };
-        animTo.current = { pos: savedState.current.pos, target: savedState.current.target };
+        animTo.current = { pos: defaultPos, target: defaultTarget };
         animProgress.current = 0;
         animating.current = true;
         savedState.current = null;

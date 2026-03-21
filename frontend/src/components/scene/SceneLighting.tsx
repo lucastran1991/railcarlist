@@ -2,18 +2,34 @@
 
 import { useRef } from 'react';
 import * as THREE from 'three';
-import { Environment } from '@react-three/drei';
+import { Environment, Sky, ContactShadows } from '@react-three/drei';
 
 export default function SceneLighting() {
   const dirLightRef = useRef<THREE.DirectionalLight>(null);
 
   return (
     <>
-      {/* Main directional with shadows */}
+      {/* Procedural sky dome — Preetham sun/atmosphere model */}
+      <Sky
+        distance={4500}
+        sunPosition={[-100, 30, -50]}
+        inclination={0.52}
+        azimuth={0.25}
+        turbidity={8}
+        rayleigh={1.5}
+        mieCoefficient={0.005}
+        mieDirectionalG={0.8}
+      />
+
+      {/* Exponential fog — natural atmospheric haze */}
+      <fogExp2 attach="fog" args={[0xc8d8e8, 0.008]} />
+
+      {/* Main sun light with shadows */}
       <directionalLight
         ref={dirLightRef}
-        position={[-20, 40, 15]}
-        intensity={2.5}
+        position={[-30, 50, 20]}
+        intensity={3.0}
+        color={0xfff5e0}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -22,19 +38,33 @@ export default function SceneLighting() {
         shadow-camera-top={60}
         shadow-camera-bottom={-60}
         shadow-camera-near={1}
-        shadow-camera-far={120}
-        shadow-bias={-0.001}
+        shadow-camera-far={150}
+        shadow-bias={-0.0005}
         shadow-normalBias={0.02}
       />
 
-      {/* Hemisphere ambient */}
-      <hemisphereLight args={[0x88bbff, 0x556633, 1.0]} />
+      {/* Hemisphere — sky blue from above, warm ground bounce */}
+      <hemisphereLight args={[0x88bbff, 0x886644, 0.8]} />
 
-      {/* Fill light */}
-      <directionalLight position={[15, 15, 20]} intensity={0.6} color={0xaaccff} />
+      {/* Ambient fill — soft overall illumination */}
+      <ambientLight intensity={0.3} color={0xddeeff} />
 
-      {/* Environment map for reflections */}
-      <Environment preset="city" background={false} />
+      {/* Rim/back light — subtle edge definition */}
+      <directionalLight position={[20, 20, -30]} intensity={0.5} color={0xaaccff} />
+
+      {/* Soft contact shadows on ground plane */}
+      <ContactShadows
+        position={[0, -0.5, 0]}
+        opacity={0.4}
+        scale={100}
+        blur={2}
+        far={20}
+        resolution={512}
+        color="#334455"
+      />
+
+      {/* Environment map for PBR reflections on tanks */}
+      <Environment preset="sunset" background={false} environmentIntensity={0.6} />
     </>
   );
 }

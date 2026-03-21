@@ -8,7 +8,6 @@ import { BlendFunction, KernelSize } from 'postprocessing';
 import * as THREE from 'three';
 import TerminalModel from './TerminalModel';
 import SceneLighting from './SceneLighting';
-import GradientSky from './GradientSky';
 import CameraController, { type CameraControllerHandle } from './CameraController';
 import ObjectPopupContent from './ObjectPopupContent';
 import type { SceneConfig, CameraInfo, ClickedObject, TerminalCameraApi } from '@/lib/three/types';
@@ -65,9 +64,7 @@ function SceneContent({ config, onCameraApiReady, onCameraChange }: { config: Sc
 
   return (
     <Selection>
-      <GradientSky />
       <SceneLighting />
-      <fog attach="fog" args={[0x99bbdd, 50, 200]} />
       <CameraController ref={cameraRef} config={config} selectedTarget={selectedTarget} onCameraChange={onCameraChange} />
 
       <TerminalModel selectedMesh={selectedMesh} onObjectClick={handleObjectClick} onMissed={deselect} />
@@ -98,8 +95,8 @@ export default function TerminalCanvas({ onCameraApiReady, onCameraChange }: Ter
   return (
     <Canvas
       shadows
-      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.2 }}
-      camera={{ fov: 50, near: 0.1, far: 200 }}
+      gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
+      camera={{ fov: 50, near: 0.1, far: 500 }}
       style={{ width: '100%', height: '100%' }}
     >
       <SceneContent config={config} onCameraApiReady={onCameraApiReady} onCameraChange={onCameraChange} />
