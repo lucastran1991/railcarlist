@@ -57,17 +57,17 @@ export default function SubStationPage() {
   };
 
   return (
-    <div className="bg-[#080A11] min-h-[calc(100vh-64px)] p-6 space-y-6">
-      <h1 className="text-2xl font-bold gradient-text">Sub Stations</h1>
+    <div className="bg-[#080A11] min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6"><div className="max-w-6xl mx-auto space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold gradient-text">Sub Stations</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KpiCard label="Total Stations" value={totalStations} icon={<Hash className="w-5 h-5 text-[#5CE5A0]" />} accent />
         <KpiCard label="Total Capacity" value={totalCapacity.toLocaleString()} icon={<Gauge className="w-5 h-5 text-[#56CDE7]" />} />
         <KpiCard label="Active Demand" value={activeDemand.toLocaleString()} icon={<Zap className="w-5 h-5 text-[#F6AD55]" />} />
         <KpiCard label="Active Actual" value={activeActual.toLocaleString()} icon={<Activity className="w-5 h-5 text-[#4D65FF]" />} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         <ChartCard title="Station Capacity vs Actual">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
@@ -94,6 +94,6 @@ export default function SubStationPage() {
           </ResponsiveContainer>
         </ChartCard>
       </div>
-    </div>
+    </div></div>
   );
 }

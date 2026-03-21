@@ -73,17 +73,17 @@ export default function BoilerDetailPage() {
 
   return (
     <div className="bg-[#080A11] min-h-[calc(100vh-64px)]">
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {/* Back + Header */}
         <div className="mb-6">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-[#454A5F] hover:text-[#F5F5F7] mb-3">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-[#454A5F] hover:text-[#F5F5F7] mb-3">
             <ArrowLeft size={14} /> Back to terminal
           </Link>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <div className={cn('w-3 h-3 rounded-full', isActive ? 'bg-[#5CE5A0] shadow-[0_0_8px_rgba(92,229,160,0.6)]' : 'bg-[#454A5F]')} />
               <div>
-                <h1 className="text-2xl font-bold gradient-text">{boiler.boilerId}</h1>
+                <h1 className="text-xl sm:text-2xl font-bold gradient-text">{boiler.boilerId}</h1>
                 <p className="text-sm text-[#454A5F] font-mono">{id}</p>
               </div>
             </div>
@@ -99,7 +99,7 @@ export default function BoilerDetailPage() {
         </div>
 
         {/* Profile Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
           <InfoCard icon={Thermometer} label="Current PSI" value={fmtNum(boiler.currentPSI, 0)} unit="psi" accent={isActive} />
           <InfoCard icon={Gauge} label="Request PSI" value={fmtNum(boiler.requestPSI, 0)} unit="psi" />
           <InfoCard icon={Zap} label="Setpoint" value={fmtNum(boiler.setpointPSI, 0)} unit="psi" />
@@ -109,7 +109,7 @@ export default function BoilerDetailPage() {
         </div>
 
         {/* Extra info row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
           <div className="bg-[#131620] rounded-xl border border-[#2C2E39] p-3 flex items-center gap-2">
             <Radio size={14} className="text-[#454A5F]" />
             <span className="text-xs text-[#454A5F]">Flame Level</span>
@@ -137,7 +137,7 @@ export default function BoilerDetailPage() {
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           <ChartCard title="Pressure (PSI) — Last 24h">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={timeseries.psiData}>

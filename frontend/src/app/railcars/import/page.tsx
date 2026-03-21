@@ -64,7 +64,7 @@ export default function ImportRailcarsPage() {
             <label className={cn(
               'flex flex-col items-center justify-center min-h-[220px] px-6 py-10 mx-5 my-5 cursor-pointer',
               'border-2 border-dashed rounded-xl transition-all',
-              dragActive ? 'bg-brand-50 border-brand-400 scale-[1.01]' : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+              dragActive ? 'bg-[#5CE5A0]/10 border-[#5CE5A0] scale-[1.01]' : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
             )}>
               <input ref={inputRef} type="file" accept=".xlsx,.xls" onChange={handleFileChange} className="absolute w-0 h-0 opacity-0" aria-hidden="true" />
               {file ? (
@@ -82,13 +82,13 @@ export default function ImportRailcarsPage() {
                   </div>
                   <div>
                     <p className="font-medium text-gray-600">Drag & drop your file here</p>
-                    <p className="text-sm text-gray-400 mt-1">or <span className="text-brand-500 font-medium">click to browse</span> (.xlsx, .xls)</p>
+                    <p className="text-sm text-gray-400 mt-1">or <span className="text-[#5CE5A0] font-medium">click to browse</span> (.xlsx, .xls)</p>
                   </div>
                 </div>
               )}
             </label>
             <div className="flex gap-3 px-5 pb-5">
-              <button type="submit" disabled={loading || !file} className="px-5 py-2.5 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-40 shadow-sm flex items-center gap-2 transition-all">
+              <button type="submit" disabled={loading || !file} className="px-5 py-2.5 rounded-lg bg-[#5CE5A0] text-[#080A11] text-sm font-medium hover:bg-[#56CDE7] disabled:opacity-40 shadow-sm flex items-center gap-2 transition-all">
                 {loading && <Loader2 size={14} className="animate-spin" />}
                 {loading ? 'Importing...' : 'Import'}
               </button>

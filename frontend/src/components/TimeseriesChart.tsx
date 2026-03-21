@@ -30,8 +30,8 @@ function formatYAxisValue(value: number): string {
 }
 
 const CHART_COLORS = [
-  '#0969da', '#38A169', '#DD6B20', '#E53E3E',
-  '#805AD5', '#319795', '#D53F8C', '#00B5D8',
+  '#5CE5A0', '#56CDE7', '#F6AD55', '#E53E3E',
+  '#4D65FF', '#319795', '#D53F8C', '#00B5D8',
 ];
 
 function formatTooltipLabel(label: string): string {

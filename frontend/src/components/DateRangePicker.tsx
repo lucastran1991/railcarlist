@@ -37,7 +37,7 @@ export default function DateRangePicker({
           type="datetime-local"
           value={formatForInput(fromDate)}
           onChange={(e) => onFromDateChange(parseFromInput(e.target.value))}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#5CE5A0] focus:outline-none focus:ring-1 focus:ring-[#5CE5A0]"
         />
       </div>
       <div className="flex-1">
@@ -46,7 +46,7 @@ export default function DateRangePicker({
           type="datetime-local"
           value={formatForInput(toDate)}
           onChange={(e) => onToDateChange(parseFromInput(e.target.value))}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#5CE5A0] focus:outline-none focus:ring-1 focus:ring-[#5CE5A0]"
         />
       </div>
     </div>

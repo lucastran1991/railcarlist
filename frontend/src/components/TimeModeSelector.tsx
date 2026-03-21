@@ -18,7 +18,7 @@ export default function TimeModeSelector({ value, onChange }: TimeModeSelectorPr
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as TimeMode)}
-      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[#5CE5A0] focus:outline-none focus:ring-1 focus:ring-[#5CE5A0]"
     >
       <option value="today">Today</option>
       <option value="weekToDate">Week to date</option>

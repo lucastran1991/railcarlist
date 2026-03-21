@@ -75,17 +75,17 @@ export default function ElectricityPage() {
   };
 
   return (
-    <div className="bg-[#080A11] min-h-[calc(100vh-64px)] p-6 space-y-6">
-      <h1 className="text-2xl font-bold gradient-text">Electricity Overview</h1>
+    <div className="bg-[#080A11] min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6"><div className="max-w-6xl mx-auto space-y-6">
+      <h1 className="text-xl sm:text-2xl font-bold gradient-text">Electricity Overview</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <KpiCard label="Peak Planned" value={peakPlanned} unit="kW" icon={<Zap className="w-5 h-5 text-[#5CE5A0]" />} accent />
         <KpiCard label="Peak Actual" value={peakActual} unit="kW" icon={<Activity className="w-5 h-5 text-[#F6AD55]" />} />
         <KpiCard label="Current Load" value={currentLoad} unit="kW" icon={<Gauge className="w-5 h-5 text-[#56CDE7]" />} />
         <KpiCard label="Total Data Points" value={totalPoints} icon={<Hash className="w-5 h-5 text-[#454A5F]" />} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         <ChartCard title="Planned vs Actual Load (kW)">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={mergedData}>
@@ -112,6 +112,6 @@ export default function ElectricityPage() {
           </ResponsiveContainer>
         </ChartCard>
       </div>
-    </div>
+    </div></div>
   );
 }

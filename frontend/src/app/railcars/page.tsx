@@ -110,7 +110,7 @@ export default function RailcarsListPage() {
             <p className="text-sm text-gray-500 mt-1">{total} total railcar(s)</p>
           </div>
           <div className="flex gap-2">
-            <Link href="/railcars/new" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 shadow-sm transition-all hover:shadow">
+            <Link href="/railcars/new" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#5CE5A0] text-[#080A11] text-sm font-medium hover:bg-[#56CDE7] shadow-sm transition-all hover:shadow">
               <Plus size={16} /> Create new
             </Link>
             <Link href="/railcars/import" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-all">
@@ -126,7 +126,7 @@ export default function RailcarsListPage() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {loading ? (
             <div className="py-20 text-center">
-              <Loader2 size={28} className="animate-spin text-brand-500 mx-auto mb-3" />
+              <Loader2 size={28} className="animate-spin text-[#5CE5A0] mx-auto mb-3" />
               <p className="text-sm text-gray-500">Loading railcars...</p>
             </div>
           ) : error ? (
@@ -153,7 +153,7 @@ export default function RailcarsListPage() {
                       <tr>
                         <td colSpan={7} className="text-center py-16">
                           <p className="text-gray-400 text-sm">No railcars yet</p>
-                          <Link href="/railcars/new" className="text-brand-500 text-sm font-medium hover:underline mt-1 inline-block">Create your first railcar</Link>
+                          <Link href="/railcars/new" className="text-[#5CE5A0] text-sm font-medium hover:underline mt-1 inline-block">Create your first railcar</Link>
                         </td>
                       </tr>
                     ) : railcars.map((rc) => (
@@ -202,7 +202,7 @@ export default function RailcarsListPage() {
                     ).map(p => (
                       <button key={p} onClick={() => setPage(p)}
                         className={cn('w-8 h-8 rounded-md text-xs font-medium transition-colors',
-                          p === page ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-200'
+                          p === page ? 'bg-[#5CE5A0] text-[#080A11]' : 'text-gray-600 hover:bg-gray-200'
                         )}>
                         {p}
                       </button>

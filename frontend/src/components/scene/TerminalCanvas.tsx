@@ -80,8 +80,8 @@ function SceneContent({ config, onCameraApiReady, onCameraChange }: { config: Sc
       <EffectComposer multisampling={4} autoClear={false}>
         <Outline
           selection={selectedMeshRef.current}
-          visibleEdgeColor={0x0969da}
-          hiddenEdgeColor={0x0969da}
+          visibleEdgeColor={0x5CE5A0}
+          hiddenEdgeColor={0x5CE5A0}
           edgeStrength={300}
           width={4500}
           blur

@@ -59,7 +59,7 @@ export default function TagSelector({
         <select
           value={selectedTags[0] || ''}
           onChange={(e) => onChange(e.target.value ? [e.target.value] : [])}
-          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-[#5CE5A0] focus:outline-none focus:ring-1 focus:ring-[#5CE5A0]"
         >
           <option value="">{placeholder}</option>
           {tags.map((tag) => (
@@ -76,7 +76,7 @@ export default function TagSelector({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-left hover:border-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+        className="w-full flex items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-left hover:border-gray-400 focus:border-[#5CE5A0] focus:outline-none focus:ring-1 focus:ring-[#5CE5A0]"
       >
         <span className={selectedTags.length === 0 ? 'text-gray-400' : 'text-gray-900'}>
           {selectedTags.length === 0 ? placeholder : `${selectedTags.length} tag(s) selected`}
@@ -93,7 +93,7 @@ export default function TagSelector({
                 placeholder="Search tags..."
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                className="w-full pl-7 pr-2 py-1.5 text-sm border border-gray-200 rounded bg-white focus:border-brand-500 focus:outline-none"
+                className="w-full pl-7 pr-2 py-1.5 text-sm border border-gray-200 rounded bg-white focus:border-[#5CE5A0] focus:outline-none"
               />
             </div>
           </div>
@@ -108,12 +108,12 @@ export default function TagSelector({
                     onClick={() => toggleTag(tag)}
                     className={cn(
                       'w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-50',
-                      selected && 'bg-brand-50 text-brand-700'
+                      selected && 'bg-[#5CE5A0]/10 text-[#5CE5A0]'
                     )}
                   >
                     <div className={cn(
                       'w-4 h-4 rounded border flex items-center justify-center shrink-0',
-                      selected ? 'bg-brand-500 border-brand-500' : 'border-gray-300'
+                      selected ? 'bg-[#5CE5A0] border-[#5CE5A0]' : 'border-gray-300'
                     )}>
                       {selected && <Check size={12} className="text-white" />}
                     </div>

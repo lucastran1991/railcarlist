@@ -15,7 +15,7 @@ export default function CameraInfoPanel({ info }: { info: CameraInfo | null }) {
   if (!info) return null;
 
   return (
-    <div className="fixed right-3 top-16 z-20 w-[180px] p-3 rounded-xl glass border border-[#2C2E39] shadow-[0_4px_32px_rgba(0,0,0,0.8)] pointer-events-auto">
+    <div className="hidden sm:block fixed right-3 top-16 z-20 w-[180px] p-3 rounded-xl glass border border-[#2C2E39] shadow-[0_4px_32px_rgba(0,0,0,0.8)] pointer-events-auto">
       <p className="text-xs font-bold uppercase tracking-wider mb-2 text-[#454A5F]">
         Camera Info
       </p>

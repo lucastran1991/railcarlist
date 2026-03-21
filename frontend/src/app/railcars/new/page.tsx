@@ -19,7 +19,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-const inputCls = 'w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all placeholder:text-gray-400';
+const inputCls = 'w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm bg-white focus:border-[#5CE5A0] focus:outline-none focus:ring-2 focus:ring-[#5CE5A0]/20 transition-all placeholder:text-gray-400';
 
 export default function NewRailcarPage() {
   const [name, setName] = useState('');
@@ -92,7 +92,7 @@ export default function NewRailcarPage() {
             </div>
 
             <div className="flex gap-3 pt-6 mt-6 border-t border-gray-100">
-              <button type="submit" disabled={loading} className="px-5 py-2.5 rounded-lg bg-brand-500 text-white text-sm font-medium hover:bg-brand-600 disabled:opacity-50 shadow-sm flex items-center gap-2 transition-all">
+              <button type="submit" disabled={loading} className="px-5 py-2.5 rounded-lg bg-[#5CE5A0] text-[#080A11] text-sm font-medium hover:bg-[#56CDE7] disabled:opacity-50 shadow-sm flex items-center gap-2 transition-all">
                 {loading && <Loader2 size={14} className="animate-spin" />}
                 {loading ? 'Creating...' : 'Create railcar'}
               </button>

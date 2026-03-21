@@ -48,7 +48,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
       <div className="px-4 py-2.5 border-b border-white/5">
         <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{title}</h3>
       </div>
-      <div className="px-3 py-3 h-[140px]">
+      <div className="px-3 py-3 h-[120px] sm:h-[140px]">
         {children}
       </div>
     </div>
@@ -75,8 +75,8 @@ export default function HomeBottomCharts() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-20 pointer-events-auto">
-      <div className="bg-gradient-to-t from-black/60 to-transparent pt-8 pb-4 px-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-4 gap-3">
+      <div className="bg-gradient-to-t from-black/60 to-transparent pt-8 pb-4 px-2 sm:px-4">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           {/* Steam Production */}
           <ChartCard title="Steam Production (lb/hr)">
             <ResponsiveContainer width="100%" height="100%">
