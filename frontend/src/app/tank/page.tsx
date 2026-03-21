@@ -61,26 +61,32 @@ export default function TankPage() {
   const levelData = tanks.map((t) => ({ name: t.name, level: t.level }));
   const tempData = tanks.map((t) => ({ name: t.name, temperature: t.temperature }));
 
+  const tooltipStyle = {
+    contentStyle: { backgroundColor: '#1B1E27', border: '1px solid #2C2E39', borderRadius: '8px', color: '#F5F5F7' },
+    itemStyle: { color: '#F5F5F7' },
+    labelStyle: { color: '#454A5F' },
+  };
+
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Tank Overview</h1>
+    <div className="bg-[#080A11] min-h-[calc(100vh-64px)] p-6 space-y-6">
+      <h1 className="text-2xl font-bold gradient-text">Tank Overview</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Tanks" value="20" icon={<Droplets className="w-5 h-5 text-blue-600" />} accent />
-        <KpiCard label="Active" value={activeCount.toString()} icon={<Activity className="w-5 h-5 text-green-600" />} />
-        <KpiCard label="Avg Temperature" value={avgTemp} unit="°F" icon={<Thermometer className="w-5 h-5 text-red-600" />} />
-        <KpiCard label="Avg Level" value={avgLevel} unit="%" icon={<Gauge className="w-5 h-5 text-purple-600" />} />
+        <KpiCard label="Total Tanks" value="20" icon={<Droplets className="w-5 h-5 text-[#5CE5A0]" />} accent />
+        <KpiCard label="Active" value={activeCount.toString()} icon={<Activity className="w-5 h-5 text-[#56CDE7]" />} />
+        <KpiCard label="Avg Temperature" value={avgTemp} unit="°F" icon={<Thermometer className="w-5 h-5 text-[#E53E3E]" />} />
+        <KpiCard label="Avg Level" value={avgLevel} unit="%" icon={<Gauge className="w-5 h-5 text-[#4D65FF]" />} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard title="Tank Levels (%)">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={levelData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
-              <Tooltip />
-              <Bar dataKey="level" fill="#3b82f6" name="Level (%)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#454A5F' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#454A5F' }} domain={[0, 100]} />
+              <Tooltip {...tooltipStyle} />
+              <Bar dataKey="level" fill="#56CDE7" name="Level (%)" />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -88,11 +94,11 @@ export default function TankPage() {
         <ChartCard title="Tank Temperatures (°F)">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={tempData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="temperature" fill="#ef4444" name="Temperature (°F)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#454A5F' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <Tooltip {...tooltipStyle} />
+              <Bar dataKey="temperature" fill="#E53E3E" name="Temperature (°F)" />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>

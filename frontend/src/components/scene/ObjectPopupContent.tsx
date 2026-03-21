@@ -79,7 +79,7 @@ export default function ObjectPopupContent({ obj }: { obj: ClickedObject }) {
             )}
             <button
               onClick={() => { window.location.href = `/boiler/${obj.name}`; }}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-brand-500/20 text-brand-400 text-[10px] font-medium hover:bg-brand-500/30 transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#5CE5A0]/20 text-[#5CE5A0] text-[10px] font-medium hover:bg-[#5CE5A0]/30 transition-colors"
             >
               <ExternalLink size={10} />
               Details

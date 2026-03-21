@@ -29,11 +29,11 @@ interface BoilerReading {
 }
 
 const BOILER_COLORS: Record<string, string> = {
-  Boiler1: '#3b82f6',
-  Boiler2: '#f97316',
-  Boiler3: '#10b981',
-  Boiler4: '#8b5cf6',
-  Boiler5: '#ef4444',
+  Boiler1: '#5CE5A0',
+  Boiler2: '#F6AD55',
+  Boiler3: '#56CDE7',
+  Boiler4: '#4D65FF',
+  Boiler5: '#E53E3E',
 };
 
 export default function BoilerPage() {
@@ -84,32 +84,38 @@ export default function BoilerPage() {
     boilerId: r.boilerId,
   }));
 
+  const tooltipStyle = {
+    contentStyle: { backgroundColor: '#1B1E27', border: '1px solid #2C2E39', borderRadius: '8px', color: '#F5F5F7' },
+    itemStyle: { color: '#F5F5F7' },
+    labelStyle: { color: '#454A5F' },
+  };
+
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Boilers Overview</h1>
+    <div className="bg-[#080A11] min-h-[calc(100vh-64px)] p-6 space-y-6">
+      <h1 className="text-2xl font-bold gradient-text">Boilers Overview</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Readings" value={totalReadings} icon={<Hash className="w-5 h-5 text-blue-600" />} accent />
-        <KpiCard label="Unique Boilers" value={uniqueBoilers} icon={<Flame className="w-5 h-5 text-orange-600" />} />
-        <KpiCard label="Avg PSI" value={avgPSI} unit="PSI" icon={<Gauge className="w-5 h-5 text-green-600" />} />
-        <KpiCard label="Total Gas" value={totalGasStr} icon={<Activity className="w-5 h-5 text-purple-600" />} />
+        <KpiCard label="Total Readings" value={totalReadings} icon={<Hash className="w-5 h-5 text-[#5CE5A0]" />} accent />
+        <KpiCard label="Unique Boilers" value={uniqueBoilers} icon={<Flame className="w-5 h-5 text-[#F6AD55]" />} />
+        <KpiCard label="Avg PSI" value={avgPSI} unit="PSI" icon={<Gauge className="w-5 h-5 text-[#56CDE7]" />} />
+        <KpiCard label="Total Gas" value={totalGasStr} icon={<Activity className="w-5 h-5 text-[#4D65FF]" />} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard title="PSI Over Time">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={psiData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+              <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <Tooltip {...tooltipStyle} />
               <Legend />
               {boilerIds.map((id) => (
                 <Line
                   key={id}
                   type="monotone"
                   dataKey={id}
-                  stroke={BOILER_COLORS[id] ?? '#6b7280'}
+                  stroke={BOILER_COLORS[id] ?? '#454A5F'}
                   strokeWidth={2}
                   dot={false}
                   name={id}
@@ -123,11 +129,11 @@ export default function BoilerPage() {
         <ChartCard title="Firing Rate Distribution">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={firingData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="idx" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="firingRate" fill="#f97316" name="Firing Rate" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+              <XAxis dataKey="idx" tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <Tooltip {...tooltipStyle} />
+              <Bar dataKey="firingRate" fill="#F6AD55" name="Firing Rate" />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>

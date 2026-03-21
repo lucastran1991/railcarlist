@@ -50,28 +50,34 @@ export default function SubStationPage() {
     demand: st.demandValue,
   }));
 
+  const tooltipStyle = {
+    contentStyle: { backgroundColor: '#1B1E27', border: '1px solid #2C2E39', borderRadius: '8px', color: '#F5F5F7' },
+    itemStyle: { color: '#F5F5F7' },
+    labelStyle: { color: '#454A5F' },
+  };
+
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Sub Stations</h1>
+    <div className="bg-[#080A11] min-h-[calc(100vh-64px)] p-6 space-y-6">
+      <h1 className="text-2xl font-bold gradient-text">Sub Stations</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Stations" value={totalStations} icon={<Hash className="w-5 h-5 text-blue-600" />} accent />
-        <KpiCard label="Total Capacity" value={totalCapacity.toLocaleString()} icon={<Gauge className="w-5 h-5 text-green-600" />} />
-        <KpiCard label="Active Demand" value={activeDemand.toLocaleString()} icon={<Zap className="w-5 h-5 text-orange-600" />} />
-        <KpiCard label="Active Actual" value={activeActual.toLocaleString()} icon={<Activity className="w-5 h-5 text-purple-600" />} />
+        <KpiCard label="Total Stations" value={totalStations} icon={<Hash className="w-5 h-5 text-[#5CE5A0]" />} accent />
+        <KpiCard label="Total Capacity" value={totalCapacity.toLocaleString()} icon={<Gauge className="w-5 h-5 text-[#56CDE7]" />} />
+        <KpiCard label="Active Demand" value={activeDemand.toLocaleString()} icon={<Zap className="w-5 h-5 text-[#F6AD55]" />} />
+        <KpiCard label="Active Actual" value={activeActual.toLocaleString()} icon={<Activity className="w-5 h-5 text-[#4D65FF]" />} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard title="Station Capacity vs Actual">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#454A5F' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <Tooltip {...tooltipStyle} />
               <Legend />
-              <Bar dataKey="capacity" fill="#3b82f6" name="Capacity" />
-              <Bar dataKey="actual" fill="#f97316" name="Actual" />
+              <Bar dataKey="capacity" fill="#56CDE7" name="Capacity" />
+              <Bar dataKey="actual" fill="#F6AD55" name="Actual" />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -79,11 +85,11 @@ export default function SubStationPage() {
         <ChartCard title="Demand Overview">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="demand" fill="#8b5cf6" name="Demand" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#454A5F' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <Tooltip {...tooltipStyle} />
+              <Bar dataKey="demand" fill="#4D65FF" name="Demand" />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>

@@ -83,15 +83,15 @@ export default function HomeBottomCharts() {
               <AreaChart data={steamData}>
                 <defs>
                   <linearGradient id="steamGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#38b2ac" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#38b2ac" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#5CE5A0" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#5CE5A0" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#666' }} interval={5} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} width={30} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+                <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#454A5F' }} interval={5} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 9, fill: '#454A5F' }} axisLine={false} tickLine={false} width={30} />
                 <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="value" stroke="#38b2ac" strokeWidth={2} fill="url(#steamGrad)" name="Steam" />
+                <Area type="monotone" dataKey="value" stroke="#5CE5A0" strokeWidth={2} fill="url(#steamGrad)" name="Steam" />
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -100,11 +100,11 @@ export default function HomeBottomCharts() {
           <ChartCard title="Avg. Pressure (PSI)">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={psiData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#666' }} interval={5} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} width={30} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+                <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#454A5F' }} interval={5} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 9, fill: '#454A5F' }} axisLine={false} tickLine={false} width={30} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="value" stroke="#f6ad55" strokeWidth={2} dot={false} name="PSI" />
+                <Line type="monotone" dataKey="value" stroke="#56CDE7" strokeWidth={2} dot={false} name="PSI" />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -113,11 +113,11 @@ export default function HomeBottomCharts() {
           <ChartCard title="Daily Throughput (bbl)">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={throughputData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="day" tick={{ fontSize: 9, fill: '#666' }} interval={2} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} width={30} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+                <XAxis dataKey="day" tick={{ fontSize: 9, fill: '#454A5F' }} interval={2} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 9, fill: '#454A5F' }} axisLine={false} tickLine={false} width={30} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="throughput" fill="#4299e1" radius={[2, 2, 0, 0]} name="Throughput" />
+                <Bar dataKey="throughput" fill="#4D65FF" radius={[2, 2, 0, 0]} name="Throughput" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -126,11 +126,11 @@ export default function HomeBottomCharts() {
           <ChartCard title="Tank Levels (%)">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={tankLevels} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
-                <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 9, fill: '#666' }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#999' }} axisLine={false} tickLine={false} width={35} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 9, fill: '#454A5F' }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#454A5F' }} axisLine={false} tickLine={false} width={35} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="level" fill="#48bb78" radius={[0, 2, 2, 0]} name="Level" />
+                <Bar dataKey="level" fill="#5CE5A0" radius={[0, 2, 2, 0]} name="Level" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>

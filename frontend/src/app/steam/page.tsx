@@ -67,26 +67,32 @@ export default function SteamPage() {
     demand: parseFloat(total.toFixed(2)),
   }));
 
+  const tooltipStyle = {
+    contentStyle: { backgroundColor: '#1B1E27', border: '1px solid #2C2E39', borderRadius: '8px', color: '#F5F5F7' },
+    itemStyle: { color: '#F5F5F7' },
+    labelStyle: { color: '#454A5F' },
+  };
+
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Steam Demand</h1>
+    <div className="bg-[#080A11] min-h-[calc(100vh-64px)] p-6 space-y-6">
+      <h1 className="text-2xl font-bold gradient-text">Steam Demand</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Records" value={totalRecords} icon={<Hash className="w-5 h-5 text-blue-600" />} accent />
-        <KpiCard label="Peak Demand" value={peakDemand} icon={<Gauge className="w-5 h-5 text-red-600" />} />
-        <KpiCard label="Avg Demand" value={avgDemand} icon={<Activity className="w-5 h-5 text-orange-600" />} />
-        <KpiCard label="Tanks Monitored" value={uniqueTanks} icon={<Droplets className="w-5 h-5 text-cyan-600" />} />
+        <KpiCard label="Total Records" value={totalRecords} icon={<Hash className="w-5 h-5 text-[#5CE5A0]" />} accent />
+        <KpiCard label="Peak Demand" value={peakDemand} icon={<Gauge className="w-5 h-5 text-[#E53E3E]" />} />
+        <KpiCard label="Avg Demand" value={avgDemand} icon={<Activity className="w-5 h-5 text-[#F6AD55]" />} />
+        <KpiCard label="Tanks Monitored" value={uniqueTanks} icon={<Droplets className="w-5 h-5 text-[#56CDE7]" />} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard title="Steam Demand Over Time">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={lineData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="demand" stroke="#3b82f6" strokeWidth={2} dot={false} name="Demand" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+              <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <Tooltip {...tooltipStyle} />
+              <Line type="monotone" dataKey="demand" stroke="#5CE5A0" strokeWidth={2} dot={false} name="Demand" />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -94,11 +100,11 @@ export default function SteamPage() {
         <ChartCard title="Demand by Tank">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={tankBarData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="tank" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="demand" fill="#06b6d4" name="Total Demand" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
+              <XAxis dataKey="tank" tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <YAxis tick={{ fontSize: 11, fill: '#454A5F' }} />
+              <Tooltip {...tooltipStyle} />
+              <Bar dataKey="demand" fill="#56CDE7" name="Total Demand" />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>

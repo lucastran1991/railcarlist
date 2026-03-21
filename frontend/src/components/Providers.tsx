@@ -19,7 +19,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             ? ''
             : isHome
               ? 'bg-transparent min-h-screen pointer-events-none'
-              : 'bg-gray-50 min-h-[calc(100vh-64px)] pointer-events-auto'
+              : 'bg-[#080A11] min-h-[calc(100vh-64px)] pointer-events-auto'
         }`}
       >
         {children}
