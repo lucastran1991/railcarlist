@@ -2028,8 +2028,8 @@ func (db *DB) migrate() error {
 		`CREATE TABLE IF NOT EXISTS railcars (
 		id TEXT PRIMARY KEY,
 		name TEXT NOT NULL,
-		start_time TEXT NOT NULL,
-		end_time TEXT NOT NULL,
+		start_time TEXT NOT NULL DEFAULT '',
+		end_time TEXT NOT NULL DEFAULT '',
 		spot TEXT,
 		product TEXT,
 		tank TEXT
@@ -2037,7 +2037,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_load_profiles (
 		id %s,
-		hour TEXT NOT NULL,
+		hour TEXT NOT NULL DEFAULT '',
 		actual REAL NOT NULL DEFAULT 0,
 		planned REAL NOT NULL DEFAULT 0,
 		threshold REAL NOT NULL DEFAULT 0,
@@ -2046,7 +2046,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_weekly_consumption (
 		id %s,
-		day TEXT NOT NULL,
+		day TEXT NOT NULL DEFAULT '',
 		this_week REAL NOT NULL DEFAULT 0,
 		last_week REAL NOT NULL DEFAULT 0,
 		recorded_at BIGINT DEFAULT 0
@@ -2054,7 +2054,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_power_factor (
 		id %s,
-		time TEXT NOT NULL,
+		time TEXT NOT NULL DEFAULT '',
 		value REAL NOT NULL DEFAULT 0,
 		recorded_at BIGINT DEFAULT 0
 	)`, autoInc),
@@ -2068,14 +2068,14 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_peak_demand (
 		id %s,
-		date TEXT NOT NULL,
+		date TEXT NOT NULL DEFAULT '',
 		peak REAL NOT NULL DEFAULT 0,
 		recorded_at BIGINT DEFAULT 0
 	)`, autoInc),
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_phase_balance (
 		id %s,
-		time TEXT NOT NULL,
+		time TEXT NOT NULL DEFAULT '',
 		phase_a REAL NOT NULL DEFAULT 0,
 		phase_b REAL NOT NULL DEFAULT 0,
 		phase_c REAL NOT NULL DEFAULT 0,
@@ -2097,7 +2097,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_balance (
 		id %s,
-		hour TEXT NOT NULL,
+		hour TEXT NOT NULL DEFAULT '',
 		boiler1 REAL NOT NULL DEFAULT 0,
 		boiler2 REAL NOT NULL DEFAULT 0,
 		boiler3 REAL NOT NULL DEFAULT 0,
@@ -2107,7 +2107,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_header_pressure (
 		id %s,
-		time TEXT NOT NULL,
+		time TEXT NOT NULL DEFAULT '',
 		hp REAL NOT NULL DEFAULT 0,
 		mp REAL NOT NULL DEFAULT 0,
 		lp REAL NOT NULL DEFAULT 0,
@@ -2123,14 +2123,14 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_condensate (
 		id %s,
-		hour TEXT NOT NULL,
+		hour TEXT NOT NULL DEFAULT '',
 		recovery REAL NOT NULL DEFAULT 0,
 		recorded_at BIGINT DEFAULT 0
 	)`, autoInc),
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_fuel_ratio (
 		id %s,
-		hour TEXT NOT NULL,
+		hour TEXT NOT NULL DEFAULT '',
 		fuel REAL NOT NULL DEFAULT 0,
 		steam REAL NOT NULL DEFAULT 0,
 		recorded_at BIGINT DEFAULT 0
@@ -2167,7 +2167,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS boiler_efficiency_trend (
 		id %s,
-		date TEXT NOT NULL,
+		date TEXT NOT NULL DEFAULT '',
 		blr01 REAL NOT NULL DEFAULT 0,
 		blr02 REAL NOT NULL DEFAULT 0,
 		blr03 REAL NOT NULL DEFAULT 0,
@@ -2186,7 +2186,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS boiler_steam_fuel (
 		id %s,
-		hour TEXT NOT NULL,
+		hour TEXT NOT NULL DEFAULT '',
 		steam REAL NOT NULL DEFAULT 0,
 		fuel REAL NOT NULL DEFAULT 0,
 		recorded_at BIGINT DEFAULT 0
@@ -2202,7 +2202,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS boiler_stack_temp (
 		id %s,
-		hour TEXT NOT NULL,
+		hour TEXT NOT NULL DEFAULT '',
 		blr01 REAL NOT NULL DEFAULT 0,
 		blr02 REAL NOT NULL DEFAULT 0,
 		blr03 REAL NOT NULL DEFAULT 0,
@@ -2235,7 +2235,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS tank_inventory_trend (
 		id %s,
-		date TEXT NOT NULL,
+		date TEXT NOT NULL DEFAULT '',
 		gasoline REAL NOT NULL DEFAULT 0,
 		diesel REAL NOT NULL DEFAULT 0,
 		crude REAL NOT NULL DEFAULT 0,
@@ -2245,7 +2245,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS tank_throughput (
 		id %s,
-		date TEXT NOT NULL,
+		date TEXT NOT NULL DEFAULT '',
 		receipts REAL NOT NULL DEFAULT 0,
 		dispatches REAL NOT NULL DEFAULT 0,
 		recorded_at BIGINT DEFAULT 0
@@ -2289,7 +2289,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_voltage_profile (
 		id %s,
-		time TEXT NOT NULL,
+		time TEXT NOT NULL DEFAULT '',
 		v_ry REAL NOT NULL DEFAULT 0,
 		v_yb REAL NOT NULL DEFAULT 0,
 		v_br REAL NOT NULL DEFAULT 0,
@@ -2312,7 +2312,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_transformer_temp (
 		id %s,
-		time TEXT NOT NULL,
+		time TEXT NOT NULL DEFAULT '',
 		oil_temp REAL NOT NULL DEFAULT 0,
 		winding_temp REAL NOT NULL DEFAULT 0,
 		recorded_at BIGINT DEFAULT 0
@@ -2320,7 +2320,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_feeder_distribution (
 		id %s,
-		time TEXT NOT NULL,
+		time TEXT NOT NULL DEFAULT '',
 		feeder1 REAL NOT NULL DEFAULT 0,
 		feeder2 REAL NOT NULL DEFAULT 0,
 		feeder3 REAL NOT NULL DEFAULT 0,
@@ -2331,7 +2331,7 @@ func (db *DB) migrate() error {
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_fault_events (
 		id %s,
-		day TEXT NOT NULL,
+		day TEXT NOT NULL DEFAULT '',
 		h08 INTEGER NOT NULL DEFAULT 0,
 		h09 INTEGER NOT NULL DEFAULT 0,
 		h10 INTEGER NOT NULL DEFAULT 0,
