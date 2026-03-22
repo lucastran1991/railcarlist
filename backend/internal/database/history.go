@@ -106,6 +106,10 @@ func (d *DB) queryAggregated(table, timeCol string, valueCols []ColumnDef, agg, 
 		timeBucket = fmt.Sprintf("strftime('%%Y-W%%W', datetime(recorded_at/1000, 'unixepoch'))")
 	case "monthly":
 		timeBucket = fmt.Sprintf("strftime('%%Y-%%m', datetime(recorded_at/1000, 'unixepoch'))")
+	case "quarterly":
+		timeBucket = fmt.Sprintf("strftime('%%Y-Q', datetime(recorded_at/1000, 'unixepoch')) || CASE WHEN CAST(strftime('%%m', datetime(recorded_at/1000, 'unixepoch')) AS INTEGER) <= 3 THEN '1' WHEN CAST(strftime('%%m', datetime(recorded_at/1000, 'unixepoch')) AS INTEGER) <= 6 THEN '2' WHEN CAST(strftime('%%m', datetime(recorded_at/1000, 'unixepoch')) AS INTEGER) <= 9 THEN '3' ELSE '4' END")
+	case "yearly":
+		timeBucket = fmt.Sprintf("strftime('%%Y', datetime(recorded_at/1000, 'unixepoch'))")
 	default:
 		return nil, fmt.Errorf("unknown aggregate mode: %s", agg)
 	}

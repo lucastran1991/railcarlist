@@ -6,7 +6,7 @@ import type { QueryParams } from '@/lib/api-dashboard';
 
 // --- Types ---
 
-type Frequency = 'raw' | 'daily' | 'monthly' | 'quarterly';
+type Frequency = 'daily' | 'monthly' | 'quarterly' | 'yearly';
 type TimePreset = 'today' | 'wtd' | 'mtd' | 'ytd' | 'last12m' | 'custom';
 
 interface FilterBarProps {
@@ -16,10 +16,10 @@ interface FilterBarProps {
 // --- Helpers ---
 
 const FREQUENCY_OPTIONS: { value: Frequency; label: string }[] = [
-  { value: 'raw', label: 'Raw' },
   { value: 'daily', label: 'Daily' },
   { value: 'monthly', label: 'Monthly' },
   { value: 'quarterly', label: 'Quarterly' },
+  { value: 'yearly', label: 'Annual' },
 ];
 
 const TIME_PRESETS: { value: TimePreset; label: string }[] = [
@@ -123,14 +123,14 @@ function Dropdown<T extends string>({
 // --- FilterBar ---
 
 export default function FilterBar({ onChange }: FilterBarProps) {
-  const [frequency, setFrequency] = useState<Frequency>('raw');
+  const [frequency, setFrequency] = useState<Frequency>('daily');
   const [timePreset, setTimePreset] = useState<TimePreset>('last12m');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
 
   const params = useMemo<QueryParams>(() => {
     const p: QueryParams = {};
-    if (frequency !== 'raw') p.aggregate = frequency;
+    p.aggregate = frequency;
 
     if (timePreset === 'custom') {
       if (customFrom) p.start = `${customFrom}T00:00:00`;
