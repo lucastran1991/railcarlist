@@ -36,13 +36,17 @@ func main() {
 	}
 
 	// Initialize database
-	db, err := database.NewDB(cfg.Database.Path)
+	db, err := database.NewDB(cfg.Database)
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer db.Close()
 
-	log.Printf("Database initialized at: %s", cfg.Database.Path)
+	if db.DBType() == "postgres" {
+		log.Printf("Database initialized: PostgreSQL")
+	} else {
+		log.Printf("Database initialized at: %s", cfg.Database.Path)
+	}
 
 	// Initialize services
 	loader := services.NewLoader(db)

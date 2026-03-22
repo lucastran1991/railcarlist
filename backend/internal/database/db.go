@@ -6,24 +6,121 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 
+	"railcarlist/internal/config"
 	"railcarlist/internal/models"
 )
 
 // DB wraps the database connection
 type DB struct {
-	conn *sql.DB
+	conn   *sql.DB
+	dbType string // "sqlite" or "postgres"
+}
+
+// ph returns ? for sqlite, $n for postgres
+func (d *DB) ph(n int) string {
+	if d.dbType == "postgres" {
+		return fmt.Sprintf("$%d", n)
+	}
+	return "?"
+}
+
+// placeholders returns "?, ?, ?" for sqlite, "$1, $2, $3" for postgres
+func (d *DB) placeholders(count int) string {
+	parts := make([]string, count)
+	for i := range parts {
+		parts[i] = d.ph(i + 1)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// placeholdersFrom returns placeholders starting from a given offset (1-based).
+// E.g. placeholdersFrom(3, 2) returns "$3, $4" for postgres or "?, ?" for sqlite.
+func (d *DB) placeholdersFrom(start, count int) string {
+	parts := make([]string, count)
+	for i := range parts {
+		parts[i] = d.ph(start + i)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// autoIncrement returns the appropriate auto-increment syntax
+func (d *DB) autoIncrement() string {
+	if d.dbType == "postgres" {
+		return "SERIAL PRIMARY KEY"
+	}
+	return "INTEGER PRIMARY KEY AUTOINCREMENT"
+}
+
+// nowExpr returns the SQL expression for current timestamp
+func (d *DB) nowExpr() string {
+	if d.dbType == "postgres" {
+		return "NOW()"
+	}
+	return "datetime('now')"
+}
+
+// upsertSQL builds an INSERT ... ON CONFLICT (for postgres) or INSERT OR REPLACE (for sqlite) statement.
+func (d *DB) upsertSQL(table string, cols []string, conflictCol string) string {
+	ph := make([]string, len(cols))
+	updates := make([]string, 0)
+	for i, col := range cols {
+		ph[i] = d.ph(i + 1)
+		if col != conflictCol {
+			updates = append(updates, fmt.Sprintf("%s = EXCLUDED.%s", col, col))
+		}
+	}
+	if d.dbType == "postgres" {
+		return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET %s",
+			table, strings.Join(cols, ", "), strings.Join(ph, ", "),
+			conflictCol, strings.Join(updates, ", "))
+	}
+	return fmt.Sprintf("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
+		table, strings.Join(cols, ", "), strings.Join(ph, ", "))
+}
+
+// insertIgnoreSQL builds an INSERT ... ON CONFLICT DO NOTHING (postgres) or INSERT OR IGNORE (sqlite) statement.
+func (d *DB) insertIgnoreSQL(table string, cols []string) string {
+	ph := make([]string, len(cols))
+	for i := range cols {
+		ph[i] = d.ph(i + 1)
+	}
+	if d.dbType == "postgres" {
+		return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ON CONFLICT DO NOTHING",
+			table, strings.Join(cols, ", "), strings.Join(ph, ", "))
+	}
+	return fmt.Sprintf("INSERT OR IGNORE INTO %s (%s) VALUES (%s)",
+		table, strings.Join(cols, ", "), strings.Join(ph, ", "))
 }
 
 // NewDB creates a new database connection and runs migrations
-func NewDB(dbPath string) (*DB, error) {
-	conn, err := sql.Open("sqlite3", dbPath)
+func NewDB(cfg config.DatabaseConfig) (*DB, error) {
+	dbType := cfg.DBType
+	if dbType == "" {
+		dbType = "sqlite"
+	}
+
+	var conn *sql.DB
+	var err error
+
+	switch dbType {
+	case "postgres":
+		conn, err = sql.Open("postgres", cfg.PostgresConnString())
+	default:
+		dbType = "sqlite"
+		path := cfg.Path
+		if path == "" {
+			path = "railcarlist.db"
+		}
+		conn, err = sql.Open("sqlite3", path)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	db := &DB{conn: conn}
+	db := &DB{conn: conn, dbType: dbType}
 
 	if err := db.migrate(); err != nil {
 		conn.Close()
@@ -31,6 +128,11 @@ func NewDB(dbPath string) (*DB, error) {
 	}
 
 	return db, nil
+}
+
+// DBType returns the database type ("sqlite" or "postgres")
+func (db *DB) DBType() string {
+	return db.dbType
 }
 
 // Close closes the database connection
@@ -54,7 +156,7 @@ func (db *DB) DeleteAllRecords() error {
 
 // DeleteTagRecords deletes all records for a specific tag
 func (db *DB) DeleteTagRecords(tag string) error {
-	_, err := db.conn.Exec("DELETE FROM railcarlist_raws WHERE tag = ?", tag)
+	_, err := db.conn.Exec("DELETE FROM railcarlist_raws WHERE tag = "+db.ph(1), tag)
 	if err != nil {
 		return fmt.Errorf("failed to delete records for tag %s: %w", tag, err)
 	}
@@ -139,15 +241,8 @@ func (db *DB) ListTagsLastRecordForTags(tags []string) ([]TagLastRecord, error) 
 	for i, t := range tags {
 		args[i] = t
 	}
-	placeholders := ""
-	for i := range tags {
-		if i > 0 {
-			placeholders += ",?"
-		} else {
-			placeholders = "?"
-		}
-	}
-	query := "SELECT tag, MAX(timestamp) as max_ts FROM railcarlist_raws WHERE tag IN (" + placeholders + ") GROUP BY tag"
+	ph := db.placeholders(len(tags))
+	query := "SELECT tag, MAX(timestamp) as max_ts FROM railcarlist_raws WHERE tag IN (" + ph + ") GROUP BY tag"
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tags last record for tags: %w", err)
@@ -174,7 +269,8 @@ type TagRow struct {
 
 // InsertTag inserts a tag into the tags table
 func (db *DB) InsertTag(tag, createdAt, updatedAt, source string) error {
-	_, err := db.conn.Exec("INSERT INTO tags (tag, created_at, updated_at, source) VALUES (?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tags (tag, created_at, updated_at, source) VALUES (%s, %s, %s, %s)",
+		db.ph(1), db.ph(2), db.ph(3), db.ph(4)),
 		tag, createdAt, updatedAt, source)
 	if err != nil {
 		return fmt.Errorf("insert tag: %w", err)
@@ -184,8 +280,8 @@ func (db *DB) InsertTag(tag, createdAt, updatedAt, source string) error {
 
 // InsertTagIfNotExists inserts a tag into the tags table if it does not already exist (for upload/load)
 func (db *DB) InsertTagIfNotExists(tag, createdAt, updatedAt, source string) error {
-	_, err := db.conn.Exec("INSERT OR IGNORE INTO tags (tag, created_at, updated_at, source) VALUES (?, ?, ?, ?)",
-		tag, createdAt, updatedAt, source)
+	q := db.insertIgnoreSQL("tags", []string{"tag", "created_at", "updated_at", "source"})
+	_, err := db.conn.Exec(q, tag, createdAt, updatedAt, source)
 	if err != nil {
 		return fmt.Errorf("insert tag if not exists: %w", err)
 	}
@@ -194,7 +290,7 @@ func (db *DB) InsertTagIfNotExists(tag, createdAt, updatedAt, source string) err
 
 // UpdateTagUpdatedAt sets updated_at for a tag
 func (db *DB) UpdateTagUpdatedAt(tag, updatedAt string) error {
-	_, err := db.conn.Exec("UPDATE tags SET updated_at = ? WHERE tag = ?", updatedAt, tag)
+	_, err := db.conn.Exec(fmt.Sprintf("UPDATE tags SET updated_at = %s WHERE tag = %s", db.ph(1), db.ph(2)), updatedAt, tag)
 	if err != nil {
 		return fmt.Errorf("update tag: %w", err)
 	}
@@ -203,7 +299,7 @@ func (db *DB) UpdateTagUpdatedAt(tag, updatedAt string) error {
 
 // DeleteTag removes a tag from the tags table
 func (db *DB) DeleteTag(tag string) error {
-	_, err := db.conn.Exec("DELETE FROM tags WHERE tag = ?", tag)
+	_, err := db.conn.Exec("DELETE FROM tags WHERE tag = "+db.ph(1), tag)
 	if err != nil {
 		return fmt.Errorf("delete tag: %w", err)
 	}
@@ -212,7 +308,7 @@ func (db *DB) DeleteTag(tag string) error {
 
 // ListTagsPaginated returns a page of rows from the tags table
 func (db *DB) ListTagsPaginated(offset, limit int) ([]TagRow, error) {
-	rows, err := db.conn.Query("SELECT tag, created_at, updated_at, source FROM tags ORDER BY tag LIMIT ? OFFSET ?", limit, offset)
+	rows, err := db.conn.Query(fmt.Sprintf("SELECT tag, created_at, updated_at, source FROM tags ORDER BY tag LIMIT %s OFFSET %s", db.ph(1), db.ph(2)), limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
 	}
@@ -242,7 +338,7 @@ func (db *DB) CountTags() (int, error) {
 func (db *DB) CountTagsWithSearch(search string) (int, error) {
 	pattern := "%" + search + "%"
 	var n int
-	err := db.conn.QueryRow("SELECT COUNT(*) FROM tags WHERE LOWER(tag) LIKE LOWER(?)", pattern).Scan(&n)
+	err := db.conn.QueryRow("SELECT COUNT(*) FROM tags WHERE LOWER(tag) LIKE LOWER("+db.ph(1)+")", pattern).Scan(&n)
 	if err != nil {
 		return 0, fmt.Errorf("count tags with search: %w", err)
 	}
@@ -252,7 +348,8 @@ func (db *DB) CountTagsWithSearch(search string) (int, error) {
 // ListTagsPaginatedWithSearch returns a page of tag rows filtered by search term (case-insensitive)
 func (db *DB) ListTagsPaginatedWithSearch(offset, limit int, search string) ([]TagRow, error) {
 	pattern := "%" + search + "%"
-	rows, err := db.conn.Query("SELECT tag, created_at, updated_at, source FROM tags WHERE LOWER(tag) LIKE LOWER(?) ORDER BY tag LIMIT ? OFFSET ?", pattern, limit, offset)
+	rows, err := db.conn.Query(fmt.Sprintf("SELECT tag, created_at, updated_at, source FROM tags WHERE LOWER(tag) LIKE LOWER(%s) ORDER BY tag LIMIT %s OFFSET %s",
+		db.ph(1), db.ph(2), db.ph(3)), pattern, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list tags with search: %w", err)
 	}
@@ -299,7 +396,8 @@ type RailcarRow struct {
 
 // InsertRailcar inserts a railcar into the railcars table
 func (db *DB) InsertRailcar(id, name, startTime, endTime, spot, product, tank string) error {
-	_, err := db.conn.Exec("INSERT INTO railcars (id, name, start_time, end_time, spot, product, tank) VALUES (?, ?, ?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO railcars (id, name, start_time, end_time, spot, product, tank) VALUES (%s)",
+		db.placeholders(7)),
 		id, name, startTime, endTime, spot, product, tank)
 	if err != nil {
 		return fmt.Errorf("insert railcar: %w", err)
@@ -310,7 +408,7 @@ func (db *DB) InsertRailcar(id, name, startTime, endTime, spot, product, tank st
 // GetRailcarByID returns a single railcar by id or nil if not found
 func (db *DB) GetRailcarByID(id string) (*RailcarRow, error) {
 	var r RailcarRow
-	err := db.conn.QueryRow("SELECT id, name, start_time, end_time, COALESCE(spot,''), COALESCE(product,''), COALESCE(tank,'') FROM railcars WHERE id = ?", id).
+	err := db.conn.QueryRow("SELECT id, name, start_time, end_time, COALESCE(spot,''), COALESCE(product,''), COALESCE(tank,'') FROM railcars WHERE id = "+db.ph(1), id).
 		Scan(&r.ID, &r.Name, &r.StartTime, &r.EndTime, &r.Spot, &r.Product, &r.Tank)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -358,7 +456,7 @@ func (db *DB) ListRailcarsPaginated(offset, limit int, orderBy string) ([]Railca
 	default:
 		col = "start_time"
 	}
-	query := "SELECT id, name, start_time, end_time, COALESCE(spot,''), COALESCE(product,''), COALESCE(tank,'') FROM railcars ORDER BY " + col + " LIMIT ? OFFSET ?"
+	query := fmt.Sprintf("SELECT id, name, start_time, end_time, COALESCE(spot,''), COALESCE(product,''), COALESCE(tank,'') FROM railcars ORDER BY %s LIMIT %s OFFSET %s", col, db.ph(1), db.ph(2))
 	rows, err := db.conn.Query(query, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list railcars paginated: %w", err)
@@ -377,7 +475,8 @@ func (db *DB) ListRailcarsPaginated(offset, limit int, orderBy string) ([]Railca
 
 // UpdateRailcar updates a railcar by id; returns false if not found
 func (db *DB) UpdateRailcar(id, name, startTime, endTime, spot, product, tank string) error {
-	res, err := db.conn.Exec("UPDATE railcars SET name = ?, start_time = ?, end_time = ?, spot = ?, product = ?, tank = ? WHERE id = ?",
+	res, err := db.conn.Exec(fmt.Sprintf("UPDATE railcars SET name = %s, start_time = %s, end_time = %s, spot = %s, product = %s, tank = %s WHERE id = %s",
+		db.ph(1), db.ph(2), db.ph(3), db.ph(4), db.ph(5), db.ph(6), db.ph(7)),
 		name, startTime, endTime, spot, product, tank, id)
 	if err != nil {
 		return fmt.Errorf("update railcar: %w", err)
@@ -391,7 +490,7 @@ func (db *DB) UpdateRailcar(id, name, startTime, endTime, spot, product, tank st
 
 // DeleteRailcar deletes a railcar by id; returns false if not found
 func (db *DB) DeleteRailcar(id string) error {
-	res, err := db.conn.Exec("DELETE FROM railcars WHERE id = ?", id)
+	res, err := db.conn.Exec("DELETE FROM railcars WHERE id = "+db.ph(1), id)
 	if err != nil {
 		return fmt.Errorf("delete railcar: %w", err)
 	}
@@ -413,7 +512,7 @@ func (db *DB) DeleteAllRailcars() (int64, error) {
 }
 
 // buildHistoryWhere builds a WHERE clause for recorded_at range filtering.
-func buildHistoryWhere(params models.HistoryParams) (string, []interface{}) {
+func (db *DB) buildHistoryWhere(params models.HistoryParams) (string, []interface{}) {
 	var args []interface{}
 	if params.Start == "" && params.End == "" {
 		return "", args
@@ -421,13 +520,13 @@ func buildHistoryWhere(params models.HistoryParams) (string, []interface{}) {
 	conditions := []string{}
 	if params.Start != "" {
 		t, _ := time.Parse("2006-01-02T15:04:05", params.Start)
-		conditions = append(conditions, "recorded_at >= ?")
 		args = append(args, t.UnixMilli())
+		conditions = append(conditions, "recorded_at >= "+db.ph(len(args)))
 	}
 	if params.End != "" {
 		t, _ := time.Parse("2006-01-02T15:04:05", params.End)
-		conditions = append(conditions, "recorded_at <= ?")
 		args = append(args, t.UnixMilli())
+		conditions = append(conditions, "recorded_at <= "+db.ph(len(args)))
 	}
 	return " WHERE " + strings.Join(conditions, " AND "), args
 }
@@ -448,13 +547,13 @@ func applyPagination(query string, params models.HistoryParams) string {
 // --- Electricity DB Methods ---
 
 func (db *DB) InsertElectricityLoadProfile(lp models.ElectricityLoadProfile, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO electricity_load_profiles (hour, actual, planned, threshold, recorded_at) VALUES (?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO electricity_load_profiles (hour, actual, planned, threshold, recorded_at) VALUES (%s)", db.placeholders(5)),
 		lp.Hour, lp.Actual, lp.Planned, lp.Threshold, recordedAt)
 	return err
 }
 
 func (db *DB) ListElectricityLoadProfiles(params models.HistoryParams) ([]models.ElectricityLoadProfile, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM electricity_load_profiles"+where, args...).Scan(&total)
 	query := "SELECT id, hour, actual, planned, threshold FROM electricity_load_profiles" + where + " ORDER BY id"
@@ -481,13 +580,13 @@ func (db *DB) DeleteAllElectricityLoadProfiles() error {
 }
 
 func (db *DB) InsertElectricityWeeklyConsumption(wc models.ElectricityWeeklyConsumption, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO electricity_weekly_consumption (day, this_week, last_week, recorded_at) VALUES (?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO electricity_weekly_consumption (day, this_week, last_week, recorded_at) VALUES (%s)", db.placeholders(4)),
 		wc.Day, wc.ThisWeek, wc.LastWeek, recordedAt)
 	return err
 }
 
 func (db *DB) ListElectricityWeeklyConsumption(params models.HistoryParams) ([]models.ElectricityWeeklyConsumption, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM electricity_weekly_consumption"+where, args...).Scan(&total)
 	query := "SELECT id, day, this_week, last_week FROM electricity_weekly_consumption" + where + " ORDER BY id"
@@ -514,12 +613,12 @@ func (db *DB) DeleteAllElectricityWeeklyConsumption() error {
 }
 
 func (db *DB) InsertElectricityPowerFactor(pf models.ElectricityPowerFactor, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO electricity_power_factor (time, value, recorded_at) VALUES (?, ?, ?)", pf.Time, pf.Value, recordedAt)
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO electricity_power_factor (time, value, recorded_at) VALUES (%s)", db.placeholders(3)), pf.Time, pf.Value, recordedAt)
 	return err
 }
 
 func (db *DB) ListElectricityPowerFactor(params models.HistoryParams) ([]models.ElectricityPowerFactor, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM electricity_power_factor"+where, args...).Scan(&total)
 	query := "SELECT id, time, value FROM electricity_power_factor" + where + " ORDER BY id"
@@ -546,7 +645,7 @@ func (db *DB) DeleteAllElectricityPowerFactor() error {
 }
 
 func (db *DB) InsertElectricityCostBreakdown(cb models.ElectricityCostBreakdown) error {
-	_, err := db.conn.Exec("INSERT INTO electricity_cost_breakdown (source, cost, color) VALUES (?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO electricity_cost_breakdown (source, cost, color) VALUES (%s)", db.placeholders(3)),
 		cb.Source, cb.Cost, cb.Color)
 	return err
 }
@@ -574,12 +673,12 @@ func (db *DB) DeleteAllElectricityCostBreakdown() error {
 }
 
 func (db *DB) InsertElectricityPeakDemand(pd models.ElectricityPeakDemand, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO electricity_peak_demand (date, peak, recorded_at) VALUES (?, ?, ?)", pd.Date, pd.Peak, recordedAt)
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO electricity_peak_demand (date, peak, recorded_at) VALUES (%s)", db.placeholders(3)), pd.Date, pd.Peak, recordedAt)
 	return err
 }
 
 func (db *DB) ListElectricityPeakDemand(params models.HistoryParams) ([]models.ElectricityPeakDemand, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM electricity_peak_demand"+where, args...).Scan(&total)
 	query := "SELECT id, date, peak FROM electricity_peak_demand" + where + " ORDER BY id"
@@ -606,13 +705,13 @@ func (db *DB) DeleteAllElectricityPeakDemand() error {
 }
 
 func (db *DB) InsertElectricityPhaseBalance(pb models.ElectricityPhaseBalance, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO electricity_phase_balance (time, phase_a, phase_b, phase_c, recorded_at) VALUES (?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO electricity_phase_balance (time, phase_a, phase_b, phase_c, recorded_at) VALUES (%s)", db.placeholders(5)),
 		pb.Time, pb.PhaseA, pb.PhaseB, pb.PhaseC, recordedAt)
 	return err
 }
 
 func (db *DB) ListElectricityPhaseBalance(params models.HistoryParams) ([]models.ElectricityPhaseBalance, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM electricity_phase_balance"+where, args...).Scan(&total)
 	query := "SELECT id, time, phase_a, phase_b, phase_c FROM electricity_phase_balance" + where + " ORDER BY id"
@@ -639,11 +738,12 @@ func (db *DB) DeleteAllElectricityPhaseBalance() error {
 }
 
 func (db *DB) UpsertElectricityKPIs(kpis models.ElectricityKPIs) error {
-	_, err := db.conn.Exec(`INSERT OR REPLACE INTO electricity_kpis
-		(id, total_consumption, real_time_demand, peak_demand, power_factor, energy_cost, carbon_emissions, grid_availability, transformer_load, updated_at)
-		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-		kpis.TotalConsumption, kpis.RealTimeDemand, kpis.PeakDemand, kpis.PowerFactor,
-		kpis.EnergyCost, kpis.CarbonEmissions, kpis.GridAvailability, kpis.TransformerLoad)
+	q := db.upsertSQL("electricity_kpis",
+		[]string{"id", "total_consumption", "real_time_demand", "peak_demand", "power_factor", "energy_cost", "carbon_emissions", "grid_availability", "transformer_load", "updated_at"},
+		"id")
+	_, err := db.conn.Exec(q,
+		1, kpis.TotalConsumption, kpis.RealTimeDemand, kpis.PeakDemand, kpis.PowerFactor,
+		kpis.EnergyCost, kpis.CarbonEmissions, kpis.GridAvailability, kpis.TransformerLoad, time.Now().UTC().Format("2006-01-02T15:04:05"))
 	return err
 }
 
@@ -661,13 +761,13 @@ func (db *DB) GetElectricityKPIs() (*models.ElectricityKPIs, error) {
 // --- Steam DB Methods ---
 
 func (db *DB) InsertSteamBalance(item models.SteamBalance, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO steam_balance (hour, boiler1, boiler2, boiler3, demand, recorded_at) VALUES (?, ?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO steam_balance (hour, boiler1, boiler2, boiler3, demand, recorded_at) VALUES (%s)", db.placeholders(6)),
 		item.Hour, item.Boiler1, item.Boiler2, item.Boiler3, item.Demand, recordedAt)
 	return err
 }
 
 func (db *DB) ListSteamBalance(params models.HistoryParams) ([]models.SteamBalance, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM steam_balance"+where, args...).Scan(&total)
 	query := "SELECT id, hour, boiler1, boiler2, boiler3, demand FROM steam_balance" + where + " ORDER BY id"
@@ -694,13 +794,13 @@ func (db *DB) DeleteAllSteamBalance() error {
 }
 
 func (db *DB) InsertSteamHeaderPressure(item models.SteamHeaderPressure, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO steam_header_pressure (time, hp, mp, lp, recorded_at) VALUES (?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO steam_header_pressure (time, hp, mp, lp, recorded_at) VALUES (%s)", db.placeholders(5)),
 		item.Time, item.HP, item.MP, item.LP, recordedAt)
 	return err
 }
 
 func (db *DB) ListSteamHeaderPressure(params models.HistoryParams) ([]models.SteamHeaderPressure, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM steam_header_pressure"+where, args...).Scan(&total)
 	query := "SELECT id, time, hp, mp, lp FROM steam_header_pressure" + where + " ORDER BY id"
@@ -727,7 +827,7 @@ func (db *DB) DeleteAllSteamHeaderPressure() error {
 }
 
 func (db *DB) InsertSteamDistribution(item models.SteamDistribution) error {
-	_, err := db.conn.Exec("INSERT INTO steam_distribution (consumer, value, color) VALUES (?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO steam_distribution (consumer, value, color) VALUES (%s)", db.placeholders(3)),
 		item.Consumer, item.Value, item.Color)
 	return err
 }
@@ -755,13 +855,13 @@ func (db *DB) DeleteAllSteamDistribution() error {
 }
 
 func (db *DB) InsertSteamCondensate(item models.SteamCondensate, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO steam_condensate (hour, recovery, recorded_at) VALUES (?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO steam_condensate (hour, recovery, recorded_at) VALUES (%s)", db.placeholders(3)),
 		item.Hour, item.Recovery, recordedAt)
 	return err
 }
 
 func (db *DB) ListSteamCondensate(params models.HistoryParams) ([]models.SteamCondensate, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM steam_condensate"+where, args...).Scan(&total)
 	query := "SELECT id, hour, recovery FROM steam_condensate" + where + " ORDER BY id"
@@ -788,13 +888,13 @@ func (db *DB) DeleteAllSteamCondensate() error {
 }
 
 func (db *DB) InsertSteamFuelRatio(item models.SteamFuelRatio, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO steam_fuel_ratio (hour, fuel, steam, recorded_at) VALUES (?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO steam_fuel_ratio (hour, fuel, steam, recorded_at) VALUES (%s)", db.placeholders(4)),
 		item.Hour, item.Fuel, item.Steam, recordedAt)
 	return err
 }
 
 func (db *DB) ListSteamFuelRatio(params models.HistoryParams) ([]models.SteamFuelRatio, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM steam_fuel_ratio"+where, args...).Scan(&total)
 	query := "SELECT id, hour, fuel, steam FROM steam_fuel_ratio" + where + " ORDER BY id"
@@ -821,7 +921,7 @@ func (db *DB) DeleteAllSteamFuelRatio() error {
 }
 
 func (db *DB) InsertSteamLoss(item models.SteamLoss) error {
-	_, err := db.conn.Exec("INSERT INTO steam_loss (location, loss, traps_total, traps_failed) VALUES (?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO steam_loss (location, loss, traps_total, traps_failed) VALUES (%s)", db.placeholders(4)),
 		item.Location, item.Loss, item.TrapsTotal, item.TrapsFailed)
 	return err
 }
@@ -849,11 +949,12 @@ func (db *DB) DeleteAllSteamLoss() error {
 }
 
 func (db *DB) UpsertSteamKPIs(kpis models.SteamKPIs) error {
-	_, err := db.conn.Exec(`INSERT OR REPLACE INTO steam_kpis
-		(id, total_production, total_demand, header_pressure, steam_temperature, system_efficiency, condensate_recovery, makeup_water_flow, fuel_consumption, updated_at)
-		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-		kpis.TotalProduction, kpis.TotalDemand, kpis.HeaderPressure, kpis.SteamTemperature,
-		kpis.SystemEfficiency, kpis.CondensateRecovery, kpis.MakeupWaterFlow, kpis.FuelConsumption)
+	q := db.upsertSQL("steam_kpis",
+		[]string{"id", "total_production", "total_demand", "header_pressure", "steam_temperature", "system_efficiency", "condensate_recovery", "makeup_water_flow", "fuel_consumption", "updated_at"},
+		"id")
+	_, err := db.conn.Exec(q,
+		1, kpis.TotalProduction, kpis.TotalDemand, kpis.HeaderPressure, kpis.SteamTemperature,
+		kpis.SystemEfficiency, kpis.CondensateRecovery, kpis.MakeupWaterFlow, kpis.FuelConsumption, time.Now().UTC().Format("2006-01-02T15:04:05"))
 	return err
 }
 
@@ -871,7 +972,7 @@ func (db *DB) GetSteamKPIs() (*models.SteamKPIs, error) {
 // --- Boiler DB Methods ---
 
 func (db *DB) InsertBoilerReading(item models.BoilerReading) error {
-	_, err := db.conn.Exec("INSERT INTO boiler_readings (boiler_id, efficiency, load, steam_output) VALUES (?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO boiler_readings (boiler_id, efficiency, load, steam_output) VALUES (%s)", db.placeholders(4)),
 		item.BoilerID, item.Efficiency, item.Load, item.SteamOutput)
 	return err
 }
@@ -899,13 +1000,13 @@ func (db *DB) DeleteAllBoilerReadings() error {
 }
 
 func (db *DB) InsertBoilerEfficiencyTrend(item models.BoilerEfficiencyTrend, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO boiler_efficiency_trend (date, blr01, blr02, blr03, blr04, recorded_at) VALUES (?, ?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO boiler_efficiency_trend (date, blr01, blr02, blr03, blr04, recorded_at) VALUES (%s)", db.placeholders(6)),
 		item.Date, item.Blr01, item.Blr02, item.Blr03, item.Blr04, recordedAt)
 	return err
 }
 
 func (db *DB) ListBoilerEfficiencyTrend(params models.HistoryParams) ([]models.BoilerEfficiencyTrend, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM boiler_efficiency_trend"+where, args...).Scan(&total)
 	query := "SELECT id, date, blr01, blr02, blr03, blr04 FROM boiler_efficiency_trend" + where + " ORDER BY id"
@@ -932,7 +1033,7 @@ func (db *DB) DeleteAllBoilerEfficiencyTrend() error {
 }
 
 func (db *DB) InsertBoilerCombustion(item models.BoilerCombustion) error {
-	_, err := db.conn.Exec("INSERT INTO boiler_combustion (boiler_id, o2, co2, co, nox) VALUES (?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO boiler_combustion (boiler_id, o2, co2, co, nox) VALUES (%s)", db.placeholders(5)),
 		item.BoilerID, item.O2, item.CO2, item.CO, item.NOx)
 	return err
 }
@@ -960,13 +1061,13 @@ func (db *DB) DeleteAllBoilerCombustion() error {
 }
 
 func (db *DB) InsertBoilerSteamFuel(item models.BoilerSteamFuel, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO boiler_steam_fuel (hour, steam, fuel, recorded_at) VALUES (?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO boiler_steam_fuel (hour, steam, fuel, recorded_at) VALUES (%s)", db.placeholders(4)),
 		item.Hour, item.Steam, item.Fuel, recordedAt)
 	return err
 }
 
 func (db *DB) ListBoilerSteamFuel(params models.HistoryParams) ([]models.BoilerSteamFuel, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM boiler_steam_fuel"+where, args...).Scan(&total)
 	query := "SELECT id, hour, steam, fuel FROM boiler_steam_fuel" + where + " ORDER BY id"
@@ -993,7 +1094,7 @@ func (db *DB) DeleteAllBoilerSteamFuel() error {
 }
 
 func (db *DB) InsertBoilerEmission(item models.BoilerEmission) error {
-	_, err := db.conn.Exec("INSERT INTO boiler_emissions (pollutant, current_val, limit_val, unit) VALUES (?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO boiler_emissions (pollutant, current_val, limit_val, unit) VALUES (%s)", db.placeholders(4)),
 		item.Pollutant, item.Current, item.Limit, item.Unit)
 	return err
 }
@@ -1021,13 +1122,13 @@ func (db *DB) DeleteAllBoilerEmissions() error {
 }
 
 func (db *DB) InsertBoilerStackTemp(item models.BoilerStackTemp, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO boiler_stack_temp (hour, blr01, blr02, blr03, recorded_at) VALUES (?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO boiler_stack_temp (hour, blr01, blr02, blr03, recorded_at) VALUES (%s)", db.placeholders(5)),
 		item.Hour, item.Blr01, item.Blr02, item.Blr03, recordedAt)
 	return err
 }
 
 func (db *DB) ListBoilerStackTemp(params models.HistoryParams) ([]models.BoilerStackTemp, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM boiler_stack_temp"+where, args...).Scan(&total)
 	query := "SELECT id, hour, blr01, blr02, blr03 FROM boiler_stack_temp" + where + " ORDER BY id"
@@ -1054,11 +1155,12 @@ func (db *DB) DeleteAllBoilerStackTemp() error {
 }
 
 func (db *DB) UpsertBoilerKPIs(kpis models.BoilerKPIs) error {
-	_, err := db.conn.Exec(`INSERT OR REPLACE INTO boiler_kpis
-		(id, boilers_online, boilers_total, total_steam_output, fleet_efficiency, avg_stack_temp, total_fuel_rate, avg_o2, co_emissions, nox_emissions, updated_at)
-		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-		kpis.BoilersOnline, kpis.BoilersTotal, kpis.TotalSteamOutput, kpis.FleetEfficiency,
-		kpis.AvgStackTemp, kpis.TotalFuelRate, kpis.AvgO2, kpis.CoEmissions, kpis.NoxEmissions)
+	q := db.upsertSQL("boiler_kpis",
+		[]string{"id", "boilers_online", "boilers_total", "total_steam_output", "fleet_efficiency", "avg_stack_temp", "total_fuel_rate", "avg_o2", "co_emissions", "nox_emissions", "updated_at"},
+		"id")
+	_, err := db.conn.Exec(q,
+		1, kpis.BoilersOnline, kpis.BoilersTotal, kpis.TotalSteamOutput, kpis.FleetEfficiency,
+		kpis.AvgStackTemp, kpis.TotalFuelRate, kpis.AvgO2, kpis.CoEmissions, kpis.NoxEmissions, time.Now().UTC().Format("2006-01-02T15:04:05"))
 	return err
 }
 
@@ -1076,7 +1178,7 @@ func (db *DB) GetBoilerKPIs() (*models.BoilerKPIs, error) {
 // --- Tank DB Methods ---
 
 func (db *DB) InsertTankLevel(item models.TankLevel) error {
-	_, err := db.conn.Exec("INSERT INTO tank_levels (tank_id, product, level, volume, capacity, color) VALUES (?, ?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tank_levels (tank_id, product, level, volume, capacity, color) VALUES (%s)", db.placeholders(6)),
 		item.TankID, item.Product, item.Level, item.Volume, item.Capacity, item.Color)
 	return err
 }
@@ -1104,13 +1206,13 @@ func (db *DB) DeleteAllTankLevels() error {
 }
 
 func (db *DB) InsertTankInventoryTrend(item models.TankInventoryTrend, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO tank_inventory_trend (date, gasoline, diesel, crude, ethanol, recorded_at) VALUES (?, ?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tank_inventory_trend (date, gasoline, diesel, crude, ethanol, recorded_at) VALUES (%s)", db.placeholders(6)),
 		item.Date, item.Gasoline, item.Diesel, item.Crude, item.Ethanol, recordedAt)
 	return err
 }
 
 func (db *DB) ListTankInventoryTrend(params models.HistoryParams) ([]models.TankInventoryTrend, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM tank_inventory_trend"+where, args...).Scan(&total)
 	query := "SELECT id, date, gasoline, diesel, crude, ethanol FROM tank_inventory_trend" + where + " ORDER BY id"
@@ -1137,13 +1239,13 @@ func (db *DB) DeleteAllTankInventoryTrend() error {
 }
 
 func (db *DB) InsertTankThroughput(item models.TankThroughput, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO tank_throughput (date, receipts, dispatches, recorded_at) VALUES (?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tank_throughput (date, receipts, dispatches, recorded_at) VALUES (%s)", db.placeholders(4)),
 		item.Date, item.Receipts, item.Dispatches, recordedAt)
 	return err
 }
 
 func (db *DB) ListTankThroughput(params models.HistoryParams) ([]models.TankThroughput, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM tank_throughput"+where, args...).Scan(&total)
 	query := "SELECT id, date, receipts, dispatches FROM tank_throughput" + where + " ORDER BY id"
@@ -1170,7 +1272,7 @@ func (db *DB) DeleteAllTankThroughput() error {
 }
 
 func (db *DB) InsertTankProductDistribution(item models.TankProductDistribution) error {
-	_, err := db.conn.Exec("INSERT INTO tank_product_distribution (product, volume, color) VALUES (?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tank_product_distribution (product, volume, color) VALUES (%s)", db.placeholders(3)),
 		item.Product, item.Volume, item.Color)
 	return err
 }
@@ -1198,7 +1300,7 @@ func (db *DB) DeleteAllTankProductDistribution() error {
 }
 
 func (db *DB) InsertTankLevelChange(item models.TankLevelChange) error {
-	_, err := db.conn.Exec("INSERT INTO tank_level_changes (tank_id, change_val) VALUES (?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tank_level_changes (tank_id, change_val) VALUES (%s)", db.placeholders(2)),
 		item.TankID, item.Change)
 	return err
 }
@@ -1226,7 +1328,7 @@ func (db *DB) DeleteAllTankLevelChanges() error {
 }
 
 func (db *DB) InsertTankTemperature(item models.TankTemperature) error {
-	_, err := db.conn.Exec("INSERT INTO tank_temperatures (tank_id, t00, t06, t12, t18) VALUES (?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tank_temperatures (tank_id, t00, t06, t12, t18) VALUES (%s)", db.placeholders(5)),
 		item.TankID, item.T00, item.T06, item.T12, item.T18)
 	return err
 }
@@ -1254,11 +1356,12 @@ func (db *DB) DeleteAllTankTemperatures() error {
 }
 
 func (db *DB) UpsertTankKPIs(kpis models.TankKPIs) error {
-	_, err := db.conn.Exec(`INSERT OR REPLACE INTO tank_kpis
-		(id, total_inventory, available_capacity, tanks_in_operation, tanks_total, current_throughput, avg_temperature, active_alarms, daily_receipts, daily_dispatches, updated_at)
-		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-		kpis.TotalInventory, kpis.AvailableCapacity, kpis.TanksInOperation, kpis.TanksTotal,
-		kpis.CurrentThroughput, kpis.AvgTemperature, kpis.ActiveAlarms, kpis.DailyReceipts, kpis.DailyDispatches)
+	q := db.upsertSQL("tank_kpis",
+		[]string{"id", "total_inventory", "available_capacity", "tanks_in_operation", "tanks_total", "current_throughput", "avg_temperature", "active_alarms", "daily_receipts", "daily_dispatches", "updated_at"},
+		"id")
+	_, err := db.conn.Exec(q,
+		1, kpis.TotalInventory, kpis.AvailableCapacity, kpis.TanksInOperation, kpis.TanksTotal,
+		kpis.CurrentThroughput, kpis.AvgTemperature, kpis.ActiveAlarms, kpis.DailyReceipts, kpis.DailyDispatches, time.Now().UTC().Format("2006-01-02T15:04:05"))
 	return err
 }
 
@@ -1276,13 +1379,13 @@ func (db *DB) GetTankKPIs() (*models.TankKPIs, error) {
 // --- SubStation DB Methods ---
 
 func (db *DB) InsertSubStationVoltageProfile(item models.SubStationVoltageProfile, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO substation_voltage_profile (time, v_ry, v_yb, v_br, recorded_at) VALUES (?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO substation_voltage_profile (time, v_ry, v_yb, v_br, recorded_at) VALUES (%s)", db.placeholders(5)),
 		item.Time, item.VRY, item.VYB, item.VBR, recordedAt)
 	return err
 }
 
 func (db *DB) ListSubStationVoltageProfile(params models.HistoryParams) ([]models.SubStationVoltageProfile, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM substation_voltage_profile"+where, args...).Scan(&total)
 	query := "SELECT id, time, v_ry, v_yb, v_br FROM substation_voltage_profile" + where + " ORDER BY id"
@@ -1309,7 +1412,7 @@ func (db *DB) DeleteAllSubStationVoltageProfile() error {
 }
 
 func (db *DB) InsertSubStationTransformer(item models.SubStationTransformer) error {
-	_, err := db.conn.Exec("INSERT INTO substation_transformers (name, loading, capacity, unit) VALUES (?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO substation_transformers (name, loading, capacity, unit) VALUES (%s)", db.placeholders(4)),
 		item.Name, item.Loading, item.Capacity, item.Unit)
 	return err
 }
@@ -1337,7 +1440,7 @@ func (db *DB) DeleteAllSubStationTransformers() error {
 }
 
 func (db *DB) InsertSubStationHarmonic(item models.SubStationHarmonic) error {
-	_, err := db.conn.Exec("INSERT INTO substation_harmonics (harmonic_order, magnitude) VALUES (?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO substation_harmonics (harmonic_order, magnitude) VALUES (%s)", db.placeholders(2)),
 		item.Order, item.Magnitude)
 	return err
 }
@@ -1365,13 +1468,13 @@ func (db *DB) DeleteAllSubStationHarmonics() error {
 }
 
 func (db *DB) InsertSubStationTransformerTemp(item models.SubStationTransformerTemp, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO substation_transformer_temp (time, oil_temp, winding_temp, recorded_at) VALUES (?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO substation_transformer_temp (time, oil_temp, winding_temp, recorded_at) VALUES (%s)", db.placeholders(4)),
 		item.Time, item.OilTemp, item.WindTemp, recordedAt)
 	return err
 }
 
 func (db *DB) ListSubStationTransformerTemp(params models.HistoryParams) ([]models.SubStationTransformerTemp, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM substation_transformer_temp"+where, args...).Scan(&total)
 	query := "SELECT id, time, oil_temp, winding_temp FROM substation_transformer_temp" + where + " ORDER BY id"
@@ -1398,13 +1501,13 @@ func (db *DB) DeleteAllSubStationTransformerTemp() error {
 }
 
 func (db *DB) InsertSubStationFeederDistribution(item models.SubStationFeederDistribution, recordedAt int64) error {
-	_, err := db.conn.Exec("INSERT INTO substation_feeder_distribution (time, feeder1, feeder2, feeder3, feeder4, feeder5, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO substation_feeder_distribution (time, feeder1, feeder2, feeder3, feeder4, feeder5, recorded_at) VALUES (%s)", db.placeholders(7)),
 		item.Time, item.Feeder1, item.Feeder2, item.Feeder3, item.Feeder4, item.Feeder5, recordedAt)
 	return err
 }
 
 func (db *DB) ListSubStationFeederDistribution(params models.HistoryParams) ([]models.SubStationFeederDistribution, int, error) {
-	where, args := buildHistoryWhere(params)
+	where, args := db.buildHistoryWhere(params)
 	var total int
 	db.conn.QueryRow("SELECT COUNT(*) FROM substation_feeder_distribution"+where, args...).Scan(&total)
 	query := "SELECT id, time, feeder1, feeder2, feeder3, feeder4, feeder5 FROM substation_feeder_distribution" + where + " ORDER BY id"
@@ -1431,7 +1534,7 @@ func (db *DB) DeleteAllSubStationFeederDistribution() error {
 }
 
 func (db *DB) InsertSubStationFaultEvent(item models.SubStationFaultEvent) error {
-	_, err := db.conn.Exec("INSERT INTO substation_fault_events (day, h08, h09, h10, h11, h12, h13, h14, h15) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO substation_fault_events (day, h08, h09, h10, h11, h12, h13, h14, h15) VALUES (%s)", db.placeholders(9)),
 		item.Day, item.H08, item.H09, item.H10, item.H11, item.H12, item.H13, item.H14, item.H15)
 	return err
 }
@@ -1459,11 +1562,12 @@ func (db *DB) DeleteAllSubStationFaultEvents() error {
 }
 
 func (db *DB) UpsertSubStationKPIs(kpis models.SubStationKPIs) error {
-	_, err := db.conn.Exec(`INSERT OR REPLACE INTO substation_kpis
-		(id, incoming_voltage, total_load, transformer_temp, frequency, thd, breakers_closed, breakers_total, fault_events_24h, busbar_balance, updated_at)
-		VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-		kpis.IncomingVoltage, kpis.TotalLoad, kpis.TransformerTemp, kpis.Frequency,
-		kpis.THD, kpis.BreakersClosed, kpis.BreakersTotal, kpis.FaultEvents24h, kpis.BusbarBalance)
+	q := db.upsertSQL("substation_kpis",
+		[]string{"id", "incoming_voltage", "total_load", "transformer_temp", "frequency", "thd", "breakers_closed", "breakers_total", "fault_events_24h", "busbar_balance", "updated_at"},
+		"id")
+	_, err := db.conn.Exec(q,
+		1, kpis.IncomingVoltage, kpis.TotalLoad, kpis.TransformerTemp, kpis.Frequency,
+		kpis.THD, kpis.BreakersClosed, kpis.BreakersTotal, kpis.FaultEvents24h, kpis.BusbarBalance, time.Now().UTC().Format("2006-01-02T15:04:05"))
 	return err
 }
 
@@ -1480,26 +1584,30 @@ func (db *DB) GetSubStationKPIs() (*models.SubStationKPIs, error) {
 
 // migrate creates the necessary tables if they don't exist
 func (db *DB) migrate() error {
-	query := `
-	CREATE TABLE IF NOT EXISTS railcarlist_raws (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+	autoInc := db.autoIncrement()
+
+	// For PostgreSQL, REAL maps to DOUBLE PRECISION but both accept REAL in DDL.
+	// We use separate Exec calls so PostgreSQL doesn't choke on multi-statement strings.
+	ddlStatements := []string{
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS railcarlist_raws (
+		id %s,
 		tag TEXT NOT NULL,
-		timestamp INTEGER NOT NULL,
+		timestamp BIGINT NOT NULL,
 		value REAL NOT NULL,
 		quality INTEGER NOT NULL,
 		UNIQUE(tag, timestamp)
-	);
+	)`, autoInc),
 
-	CREATE INDEX IF NOT EXISTS idx_tag_timestamp ON railcarlist_raws(tag, timestamp);
+		`CREATE INDEX IF NOT EXISTS idx_tag_timestamp ON railcarlist_raws(tag, timestamp)`,
 
-	CREATE TABLE IF NOT EXISTS tags (
+		`CREATE TABLE IF NOT EXISTS tags (
 		tag TEXT PRIMARY KEY,
 		created_at TEXT NOT NULL,
 		updated_at TEXT NOT NULL,
 		source TEXT NOT NULL DEFAULT 'custom'
-	);
+	)`,
 
-	CREATE TABLE IF NOT EXISTS railcars (
+		`CREATE TABLE IF NOT EXISTS railcars (
 		id TEXT PRIMARY KEY,
 		name TEXT NOT NULL,
 		start_time TEXT NOT NULL,
@@ -1507,57 +1615,57 @@ func (db *DB) migrate() error {
 		spot TEXT,
 		product TEXT,
 		tank TEXT
-	);
+	)`,
 
-	CREATE TABLE IF NOT EXISTS electricity_load_profiles (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_load_profiles (
+		id %s,
 		hour TEXT NOT NULL,
 		actual REAL NOT NULL DEFAULT 0,
 		planned REAL NOT NULL DEFAULT 0,
 		threshold REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS electricity_weekly_consumption (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_weekly_consumption (
+		id %s,
 		day TEXT NOT NULL,
 		this_week REAL NOT NULL DEFAULT 0,
 		last_week REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS electricity_power_factor (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_power_factor (
+		id %s,
 		time TEXT NOT NULL,
 		value REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS electricity_cost_breakdown (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_cost_breakdown (
+		id %s,
 		source TEXT NOT NULL,
 		cost REAL NOT NULL DEFAULT 0,
 		color TEXT NOT NULL DEFAULT '#FFFFFF'
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS electricity_peak_demand (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_peak_demand (
+		id %s,
 		date TEXT NOT NULL,
 		peak REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS electricity_phase_balance (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_phase_balance (
+		id %s,
 		time TEXT NOT NULL,
 		phase_a REAL NOT NULL DEFAULT 0,
 		phase_b REAL NOT NULL DEFAULT 0,
 		phase_c REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS electricity_kpis (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS electricity_kpis (
+		id %s,
 		total_consumption REAL NOT NULL DEFAULT 0,
 		real_time_demand REAL NOT NULL DEFAULT 0,
 		peak_demand REAL NOT NULL DEFAULT 0,
@@ -1567,60 +1675,59 @@ func (db *DB) migrate() error {
 		grid_availability REAL NOT NULL DEFAULT 0,
 		transformer_load REAL NOT NULL DEFAULT 0,
 		updated_at TEXT
-	);
+	)`, autoInc),
 
-	-- Steam tables
-	CREATE TABLE IF NOT EXISTS steam_balance (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_balance (
+		id %s,
 		hour TEXT NOT NULL,
 		boiler1 REAL NOT NULL DEFAULT 0,
 		boiler2 REAL NOT NULL DEFAULT 0,
 		boiler3 REAL NOT NULL DEFAULT 0,
 		demand REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS steam_header_pressure (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_header_pressure (
+		id %s,
 		time TEXT NOT NULL,
 		hp REAL NOT NULL DEFAULT 0,
 		mp REAL NOT NULL DEFAULT 0,
 		lp REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS steam_distribution (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_distribution (
+		id %s,
 		consumer TEXT NOT NULL,
 		value REAL NOT NULL DEFAULT 0,
 		color TEXT NOT NULL DEFAULT '#FFFFFF'
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS steam_condensate (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_condensate (
+		id %s,
 		hour TEXT NOT NULL,
 		recovery REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS steam_fuel_ratio (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_fuel_ratio (
+		id %s,
 		hour TEXT NOT NULL,
 		fuel REAL NOT NULL DEFAULT 0,
 		steam REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS steam_loss (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_loss (
+		id %s,
 		location TEXT NOT NULL,
 		loss REAL NOT NULL DEFAULT 0,
 		traps_total INTEGER NOT NULL DEFAULT 0,
 		traps_failed INTEGER NOT NULL DEFAULT 0
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS steam_kpis (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS steam_kpis (
+		id %s,
 		total_production REAL NOT NULL DEFAULT 0,
 		total_demand REAL NOT NULL DEFAULT 0,
 		header_pressure REAL NOT NULL DEFAULT 0,
@@ -1630,63 +1737,62 @@ func (db *DB) migrate() error {
 		makeup_water_flow REAL NOT NULL DEFAULT 0,
 		fuel_consumption REAL NOT NULL DEFAULT 0,
 		updated_at TEXT
-	);
+	)`, autoInc),
 
-	-- Boiler tables
-	CREATE TABLE IF NOT EXISTS boiler_readings (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS boiler_readings (
+		id %s,
 		boiler_id TEXT NOT NULL,
 		efficiency REAL NOT NULL DEFAULT 0,
 		load REAL NOT NULL DEFAULT 0,
 		steam_output REAL NOT NULL DEFAULT 0
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS boiler_efficiency_trend (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS boiler_efficiency_trend (
+		id %s,
 		date TEXT NOT NULL,
 		blr01 REAL NOT NULL DEFAULT 0,
 		blr02 REAL NOT NULL DEFAULT 0,
 		blr03 REAL NOT NULL DEFAULT 0,
 		blr04 REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS boiler_combustion (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS boiler_combustion (
+		id %s,
 		boiler_id TEXT NOT NULL,
 		o2 REAL NOT NULL DEFAULT 0,
 		co2 REAL NOT NULL DEFAULT 0,
 		co REAL NOT NULL DEFAULT 0,
 		nox REAL NOT NULL DEFAULT 0
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS boiler_steam_fuel (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS boiler_steam_fuel (
+		id %s,
 		hour TEXT NOT NULL,
 		steam REAL NOT NULL DEFAULT 0,
 		fuel REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS boiler_emissions (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS boiler_emissions (
+		id %s,
 		pollutant TEXT NOT NULL,
 		current_val REAL NOT NULL DEFAULT 0,
 		limit_val REAL NOT NULL DEFAULT 0,
 		unit TEXT NOT NULL DEFAULT ''
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS boiler_stack_temp (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS boiler_stack_temp (
+		id %s,
 		hour TEXT NOT NULL,
 		blr01 REAL NOT NULL DEFAULT 0,
 		blr02 REAL NOT NULL DEFAULT 0,
 		blr03 REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS boiler_kpis (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS boiler_kpis (
+		id %s,
 		boilers_online INTEGER NOT NULL DEFAULT 0,
 		boilers_total INTEGER NOT NULL DEFAULT 0,
 		total_steam_output REAL NOT NULL DEFAULT 0,
@@ -1697,61 +1803,60 @@ func (db *DB) migrate() error {
 		co_emissions REAL NOT NULL DEFAULT 0,
 		nox_emissions REAL NOT NULL DEFAULT 0,
 		updated_at TEXT
-	);
+	)`, autoInc),
 
-	-- Tank tables
-	CREATE TABLE IF NOT EXISTS tank_levels (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS tank_levels (
+		id %s,
 		tank_id TEXT NOT NULL,
 		product TEXT NOT NULL,
 		level REAL NOT NULL DEFAULT 0,
 		volume REAL NOT NULL DEFAULT 0,
 		capacity REAL NOT NULL DEFAULT 0,
 		color TEXT NOT NULL DEFAULT '#FFFFFF'
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS tank_inventory_trend (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS tank_inventory_trend (
+		id %s,
 		date TEXT NOT NULL,
 		gasoline REAL NOT NULL DEFAULT 0,
 		diesel REAL NOT NULL DEFAULT 0,
 		crude REAL NOT NULL DEFAULT 0,
 		ethanol REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS tank_throughput (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS tank_throughput (
+		id %s,
 		date TEXT NOT NULL,
 		receipts REAL NOT NULL DEFAULT 0,
 		dispatches REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS tank_product_distribution (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS tank_product_distribution (
+		id %s,
 		product TEXT NOT NULL,
 		volume REAL NOT NULL DEFAULT 0,
 		color TEXT NOT NULL DEFAULT '#FFFFFF'
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS tank_level_changes (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS tank_level_changes (
+		id %s,
 		tank_id TEXT NOT NULL,
 		change_val REAL NOT NULL DEFAULT 0
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS tank_temperatures (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS tank_temperatures (
+		id %s,
 		tank_id TEXT NOT NULL,
 		t00 REAL NOT NULL DEFAULT 0,
 		t06 REAL NOT NULL DEFAULT 0,
 		t12 REAL NOT NULL DEFAULT 0,
 		t18 REAL NOT NULL DEFAULT 0
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS tank_kpis (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS tank_kpis (
+		id %s,
 		total_inventory REAL NOT NULL DEFAULT 0,
 		available_capacity REAL NOT NULL DEFAULT 0,
 		tanks_in_operation INTEGER NOT NULL DEFAULT 0,
@@ -1762,53 +1867,52 @@ func (db *DB) migrate() error {
 		daily_receipts REAL NOT NULL DEFAULT 0,
 		daily_dispatches REAL NOT NULL DEFAULT 0,
 		updated_at TEXT
-	);
+	)`, autoInc),
 
-	-- SubStation tables
-	CREATE TABLE IF NOT EXISTS substation_voltage_profile (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_voltage_profile (
+		id %s,
 		time TEXT NOT NULL,
 		v_ry REAL NOT NULL DEFAULT 0,
 		v_yb REAL NOT NULL DEFAULT 0,
 		v_br REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS substation_transformers (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_transformers (
+		id %s,
 		name TEXT NOT NULL,
 		loading REAL NOT NULL DEFAULT 0,
 		capacity REAL NOT NULL DEFAULT 0,
 		unit TEXT NOT NULL DEFAULT ''
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS substation_harmonics (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_harmonics (
+		id %s,
 		harmonic_order TEXT NOT NULL,
 		magnitude REAL NOT NULL DEFAULT 0
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS substation_transformer_temp (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_transformer_temp (
+		id %s,
 		time TEXT NOT NULL,
 		oil_temp REAL NOT NULL DEFAULT 0,
 		winding_temp REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS substation_feeder_distribution (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_feeder_distribution (
+		id %s,
 		time TEXT NOT NULL,
 		feeder1 REAL NOT NULL DEFAULT 0,
 		feeder2 REAL NOT NULL DEFAULT 0,
 		feeder3 REAL NOT NULL DEFAULT 0,
 		feeder4 REAL NOT NULL DEFAULT 0,
 		feeder5 REAL NOT NULL DEFAULT 0,
-		recorded_at INTEGER DEFAULT 0
-	);
+		recorded_at BIGINT DEFAULT 0
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS substation_fault_events (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_fault_events (
+		id %s,
 		day TEXT NOT NULL,
 		h08 INTEGER NOT NULL DEFAULT 0,
 		h09 INTEGER NOT NULL DEFAULT 0,
@@ -1818,10 +1922,10 @@ func (db *DB) migrate() error {
 		h13 INTEGER NOT NULL DEFAULT 0,
 		h14 INTEGER NOT NULL DEFAULT 0,
 		h15 INTEGER NOT NULL DEFAULT 0
-	);
+	)`, autoInc),
 
-	CREATE TABLE IF NOT EXISTS substation_kpis (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS substation_kpis (
+		id %s,
 		incoming_voltage REAL NOT NULL DEFAULT 0,
 		total_load REAL NOT NULL DEFAULT 0,
 		transformer_temp REAL NOT NULL DEFAULT 0,
@@ -1832,41 +1936,46 @@ func (db *DB) migrate() error {
 		fault_events_24h INTEGER NOT NULL DEFAULT 0,
 		busbar_balance REAL NOT NULL DEFAULT 0,
 		updated_at TEXT
-	);
-	`
+	)`, autoInc),
+	}
 
-	_, err := db.conn.Exec(query)
-	if err != nil {
-		return fmt.Errorf("failed to create table: %w", err)
+	for _, stmt := range ddlStatements {
+		if _, err := db.conn.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to create table: %w", err)
+		}
 	}
 
 	// Migrate existing railcars table: add Savana columns if missing
 	for _, col := range []string{"spot", "product", "tank"} {
 		_, err := db.conn.Exec("ALTER TABLE railcars ADD COLUMN " + col + " TEXT")
-		if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
-			return fmt.Errorf("add column %s: %w", col, err)
+		if err != nil {
+			errMsg := err.Error()
+			// SQLite: "duplicate column name", PostgreSQL: "already exists"
+			if !strings.Contains(errMsg, "duplicate column name") && !strings.Contains(errMsg, "already exists") {
+				return fmt.Errorf("add column %s: %w", col, err)
+			}
 		}
 	}
 
 	// Add recorded_at columns to all 17 history tables (ignore errors if already exists)
 	alterStmts := []string{
-		"ALTER TABLE electricity_load_profiles ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE electricity_weekly_consumption ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE electricity_power_factor ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE electricity_peak_demand ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE electricity_phase_balance ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE steam_balance ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE steam_header_pressure ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE steam_condensate ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE steam_fuel_ratio ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE boiler_efficiency_trend ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE boiler_steam_fuel ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE boiler_stack_temp ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE tank_inventory_trend ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE tank_throughput ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE substation_voltage_profile ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE substation_transformer_temp ADD COLUMN recorded_at INTEGER DEFAULT 0",
-		"ALTER TABLE substation_feeder_distribution ADD COLUMN recorded_at INTEGER DEFAULT 0",
+		"ALTER TABLE electricity_load_profiles ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE electricity_weekly_consumption ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE electricity_power_factor ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE electricity_peak_demand ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE electricity_phase_balance ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE steam_balance ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE steam_header_pressure ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE steam_condensate ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE steam_fuel_ratio ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE boiler_efficiency_trend ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE boiler_steam_fuel ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE boiler_stack_temp ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE tank_inventory_trend ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE tank_throughput ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE substation_voltage_profile ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE substation_transformer_temp ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE substation_feeder_distribution ADD COLUMN recorded_at BIGINT DEFAULT 0",
 	}
 	for _, stmt := range alterStmts {
 		db.conn.Exec(stmt) // ignore error — column may already exist

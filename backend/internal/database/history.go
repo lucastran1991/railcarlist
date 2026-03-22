@@ -21,6 +21,43 @@ type HistoryQueryResult struct {
 	Total int
 }
 
+// timeBucketExpr returns a SQL expression that groups recorded_at into time buckets,
+// appropriate for the current database dialect (sqlite or postgres).
+func (d *DB) timeBucketExpr(mode string) (string, error) {
+	if d.dbType == "postgres" {
+		switch mode {
+		case "hourly":
+			return "to_char(to_timestamp(recorded_at/1000.0), 'YYYY-MM-DD HH24:00')", nil
+		case "daily":
+			return "to_char(to_timestamp(recorded_at/1000.0), 'YYYY-MM-DD')", nil
+		case "weekly":
+			return "to_char(to_timestamp(recorded_at/1000.0), 'IYYY-\"W\"IW')", nil
+		case "monthly":
+			return "to_char(to_timestamp(recorded_at/1000.0), 'YYYY-MM')", nil
+		case "quarterly":
+			return "'Q' || EXTRACT(QUARTER FROM to_timestamp(recorded_at/1000.0))::text || '-' || EXTRACT(YEAR FROM to_timestamp(recorded_at/1000.0))::text", nil
+		case "yearly":
+			return "to_char(to_timestamp(recorded_at/1000.0), 'YYYY')", nil
+		}
+	} else {
+		switch mode {
+		case "hourly":
+			return "strftime('%Y-%m-%d %H:00', datetime(recorded_at/1000, 'unixepoch'))", nil
+		case "daily":
+			return "strftime('%Y-%m-%d', datetime(recorded_at/1000, 'unixepoch'))", nil
+		case "weekly":
+			return "strftime('%Y-W%W', datetime(recorded_at/1000, 'unixepoch'))", nil
+		case "monthly":
+			return "strftime('%Y-%m', datetime(recorded_at/1000, 'unixepoch'))", nil
+		case "quarterly":
+			return "strftime('%Y', datetime(recorded_at/1000, 'unixepoch')) || '-Q' || CASE WHEN CAST(strftime('%m', datetime(recorded_at/1000, 'unixepoch')) AS INTEGER) <= 3 THEN '1' WHEN CAST(strftime('%m', datetime(recorded_at/1000, 'unixepoch')) AS INTEGER) <= 6 THEN '2' WHEN CAST(strftime('%m', datetime(recorded_at/1000, 'unixepoch')) AS INTEGER) <= 9 THEN '3' ELSE '4' END", nil
+		case "yearly":
+			return "strftime('%Y', datetime(recorded_at/1000, 'unixepoch'))", nil
+		}
+	}
+	return "", fmt.Errorf("unknown aggregate mode: %s", mode)
+}
+
 // QueryHistory executes a paginated + aggregated query on a history table.
 // timeCol is the column containing the time label (hour, time, date, etc.).
 // recordedAtCol is the timestamp column for range filtering (recorded_at).
@@ -40,16 +77,16 @@ func (d *DB) QueryHistory(table string, timeCol string, valueCols []ColumnDef, p
 			if err != nil {
 				return nil, fmt.Errorf("invalid start time: %w", err)
 			}
-			conditions = append(conditions, "recorded_at >= ?")
 			args = append(args, t)
+			conditions = append(conditions, "recorded_at >= "+d.ph(len(args)))
 		}
 		if params.End != "" {
 			t, err := parseISO(params.End)
 			if err != nil {
 				return nil, fmt.Errorf("invalid end time: %w", err)
 			}
-			conditions = append(conditions, "recorded_at <= ?")
 			args = append(args, t)
+			conditions = append(conditions, "recorded_at <= "+d.ph(len(args)))
 		}
 		whereClause = " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -95,23 +132,10 @@ func (d *DB) queryRaw(table, whereClause string, args []interface{}, params mode
 }
 
 func (d *DB) queryAggregated(table, timeCol string, valueCols []ColumnDef, agg, whereClause string, args []interface{}, params models.HistoryParams) (*HistoryQueryResult, error) {
-	// Build time bucket expression
-	var timeBucket string
-	switch agg {
-	case "hourly":
-		timeBucket = fmt.Sprintf("strftime('%%Y-%%m-%%d %%H:00', datetime(recorded_at/1000, 'unixepoch'))")
-	case "daily":
-		timeBucket = fmt.Sprintf("strftime('%%Y-%%m-%%d', datetime(recorded_at/1000, 'unixepoch'))")
-	case "weekly":
-		timeBucket = fmt.Sprintf("strftime('%%Y-W%%W', datetime(recorded_at/1000, 'unixepoch'))")
-	case "monthly":
-		timeBucket = fmt.Sprintf("strftime('%%Y-%%m', datetime(recorded_at/1000, 'unixepoch'))")
-	case "quarterly":
-		timeBucket = fmt.Sprintf("strftime('%%Y-Q', datetime(recorded_at/1000, 'unixepoch')) || CASE WHEN CAST(strftime('%%m', datetime(recorded_at/1000, 'unixepoch')) AS INTEGER) <= 3 THEN '1' WHEN CAST(strftime('%%m', datetime(recorded_at/1000, 'unixepoch')) AS INTEGER) <= 6 THEN '2' WHEN CAST(strftime('%%m', datetime(recorded_at/1000, 'unixepoch')) AS INTEGER) <= 9 THEN '3' ELSE '4' END")
-	case "yearly":
-		timeBucket = fmt.Sprintf("strftime('%%Y', datetime(recorded_at/1000, 'unixepoch'))")
-	default:
-		return nil, fmt.Errorf("unknown aggregate mode: %s", agg)
+	// Build time bucket expression using dialect-aware helper
+	timeBucket, err := d.timeBucketExpr(agg)
+	if err != nil {
+		return nil, err
 	}
 
 	// Build column expressions

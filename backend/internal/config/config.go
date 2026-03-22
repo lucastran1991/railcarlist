@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+
+
 // Config represents the application configuration
 type Config struct {
 	Server   ServerConfig   `json:"server"`
@@ -28,7 +30,38 @@ type ServerConfig struct {
 
 // DatabaseConfig represents database configuration
 type DatabaseConfig struct {
-	Path string `json:"path"`
+	Path   string `json:"path"`
+	DBType string `json:"db_type"` // "sqlite" or "postgres"
+	Host   string `json:"host"`    // postgres host
+	Port   int    `json:"port"`    // postgres port (default 5432)
+	User   string `json:"user"`    // postgres user
+	Pass   string `json:"password"` // postgres password
+	DBName string `json:"dbname"`  // postgres database name
+}
+
+// PostgresConnString builds a PostgreSQL connection string from the config fields.
+func (c DatabaseConfig) PostgresConnString() string {
+	host := c.Host
+	if host == "" {
+		host = "localhost"
+	}
+	port := c.Port
+	if port == 0 {
+		port = 5432
+	}
+	user := c.User
+	if user == "" {
+		user = "mac"
+	}
+	dbname := c.DBName
+	if dbname == "" {
+		dbname = "railcarlist"
+	}
+	connStr := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable", host, port, user, dbname)
+	if c.Pass != "" {
+		connStr += fmt.Sprintf(" password=%s", c.Pass)
+	}
+	return connStr
 }
 
 // DataConfig represents data configuration
