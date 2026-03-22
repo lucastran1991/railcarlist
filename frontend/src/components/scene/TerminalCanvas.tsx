@@ -3,11 +3,12 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import { EffectComposer, Outline } from '@react-three/postprocessing';
+import { EffectComposer, Outline, SSAO } from '@react-three/postprocessing';
 import { BlendFunction, KernelSize } from 'postprocessing';
 import * as THREE from 'three';
 import TerminalModel from './TerminalModel';
 import SceneLighting from './SceneLighting';
+import TankLabels from './TankLabels';
 import CameraController, { type CameraControllerHandle } from './CameraController';
 import ObjectPopupContent from './ObjectPopupContent';
 import type { SceneConfig, CameraInfo, ClickedObject, TerminalCameraApi } from '@/lib/three/types';
@@ -75,9 +76,22 @@ function SceneContent({ config, onCameraApiReady, onCameraChange }: { config: Sc
 
       <TerminalModel selectedMesh={selectedMesh} onObjectClick={handleObjectClick} onMissed={deselect} />
 
+      {/* Tank ID labels — hidden for selected tank (popup shows instead) */}
+      <TankLabels selectedOsmId={clickedObj?.name ?? null} />
+
       {selectedMesh && clickedObj && <ObjectPopup3D mesh={selectedMesh} clickedObj={clickedObj} />}
 
-      <EffectComposer multisampling={4} autoClear={false}>
+      <EffectComposer multisampling={4} autoClear={false} enableNormalPass>
+        {/* SSAO — ambient occlusion for depth between tanks/buildings */}
+        <SSAO
+          samples={21}
+          radius={5}
+          intensity={25}
+          luminanceInfluence={0.5}
+          color={new THREE.Color(0x000000)}
+        />
+
+        {/* Selection outline */}
         <Outline
           selection={selectedMeshRef.current}
           visibleEdgeColor={0x5CE5A0}
