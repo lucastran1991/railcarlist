@@ -173,12 +173,14 @@ func (s *SystemGeneratorService) generateElectricity(start, end time.Time, rng *
 		wf := weekdayFactor(d)
 		dailyPeak := 0.0
 		dailyTotal := 0.0
+		dayIndex := d.Sub(start).Hours() / 24
+		drift := 1.0 + 0.15*math.Sin(dayIndex*2*math.Pi/7) // 7-day cycle
 
 		// Hourly load profiles
 		for h := 0; h < 24; h++ {
 			t := time.Date(d.Year(), d.Month(), d.Day(), h, 0, 0, 0, time.UTC)
 			hf := hourFactor(h)
-			actual := noise(rng, baseLoad*sf*wf*hf, 0.03)
+			actual := noise(rng, baseLoad*sf*wf*hf*drift, 0.08)
 			planned := baseLoad * sf * wf * hf * 1.02 // planned slightly higher
 			threshold := 4000.0 * sf
 
@@ -202,23 +204,23 @@ func (s *SystemGeneratorService) generateElectricity(start, end time.Time, rng *
 		}, d.UnixMilli())
 		count++
 
-		// Phase balance (every 4 hours = 6 per day)
-		for h := 0; h < 24; h += 4 {
+		// Phase balance (hourly = 24 per day)
+		for h := 0; h < 24; h += 1 {
 			t := time.Date(d.Year(), d.Month(), d.Day(), h, 0, 0, 0, time.UTC)
 			hf := hourFactor(h)
 			baseV := 245.0
 			// Voltage sags slightly during peak hours
 			sag := (1.0 - hf) * 5.0
 			s.db.InsertElectricityPhaseBalance(models.ElectricityPhaseBalance{
-				PhaseA: math.Round(noise(rng, baseV-sag, 0.005)*10) / 10,
-				PhaseB: math.Round(noise(rng, baseV-sag-2, 0.005)*10) / 10,
-				PhaseC: math.Round(noise(rng, baseV-sag+1, 0.005)*10) / 10,
+				PhaseA: math.Round(noise(rng, baseV-sag, 0.01)*10) / 10,
+				PhaseB: math.Round(noise(rng, baseV-sag-2, 0.01)*10) / 10,
+				PhaseC: math.Round(noise(rng, baseV-sag+1, 0.01)*10) / 10,
 			}, t.UnixMilli())
 			count++
 		}
 
-		// Power factor (every 2 hours = 12 per day)
-		for h := 0; h < 24; h += 2 {
+		// Power factor (hourly = 24 per day)
+		for h := 0; h < 24; h += 1 {
 			t := time.Date(d.Year(), d.Month(), d.Day(), h, 0, 0, 0, time.UTC)
 			hf := hourFactor(h)
 			// PF drops during peak load (more reactive power)
@@ -253,11 +255,13 @@ func (s *SystemGeneratorService) generateSteam(start, end time.Time, rng *rand.R
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
 		sf := seasonFactor(d, "steam")
 		wf := weekdayFactor(d)
+		dayIndex := d.Sub(start).Hours() / 24
+		drift := 1.0 + 0.12*math.Sin(dayIndex*2*math.Pi/5) // 5-day cycle
 
-		for h := 0; h < 24; h += 2 { // every 2 hours
+		for h := 0; h < 24; h += 1 { // hourly
 			t := time.Date(d.Year(), d.Month(), d.Day(), h, 0, 0, 0, time.UTC)
 			hf := hourFactor(h)
-			totalDemand := noise(rng, 55.0*sf*wf*hf, 0.04)
+			totalDemand := noise(rng, 55.0*sf*wf*hf*drift, 0.10)
 			totalDemand = clamp(totalDemand, 5, 80)
 
 			// 3 boilers share the load
@@ -277,9 +281,9 @@ func (s *SystemGeneratorService) generateSteam(start, end time.Time, rng *rand.R
 
 			// Header pressure: inversely correlated with demand spikes
 			demandRatio := totalDemand / 55.0
-			hp := clamp(noise(rng, 40.5-demandRatio*2.0, 0.01), 37, 43)
-			mp := clamp(noise(rng, 14.0-demandRatio*0.5, 0.01), 12, 16)
-			lp := clamp(noise(rng, 3.8-demandRatio*0.3, 0.01), 3, 5)
+			hp := clamp(noise(rng, 40.5-demandRatio*2.0, 0.02), 37, 43)
+			mp := clamp(noise(rng, 14.0-demandRatio*0.5, 0.02), 12, 16)
+			lp := clamp(noise(rng, 3.8-demandRatio*0.3, 0.02), 3, 5)
 
 			s.db.InsertSteamHeaderPressure(models.SteamHeaderPressure{
 				HP:   math.Round(hp*10) / 10,
@@ -288,7 +292,7 @@ func (s *SystemGeneratorService) generateSteam(start, end time.Time, rng *rand.R
 			}, t.UnixMilli())
 
 			// Condensate recovery: drops during high demand
-			recovery := clamp(noise(rng, 88.0-demandRatio*8.0, 0.02), 72, 95)
+			recovery := clamp(noise(rng, 88.0-demandRatio*8.0, 0.04), 72, 95)
 			s.db.InsertSteamCondensate(models.SteamCondensate{
 				Recovery: math.Round(recovery*10) / 10,
 			}, t.UnixMilli())
@@ -326,20 +330,22 @@ func (s *SystemGeneratorService) generateBoiler(start, end time.Time, rng *rand.
 		baseEff := []float64{91.0, 87.0, 93.0, 86.0} // per boiler base
 
 		s.db.InsertBoilerEfficiencyTrend(models.BoilerEfficiencyTrend{
-			Blr01: math.Round(clamp(noise(rng, baseEff[0]-degradation, 0.005), 80, 95)*10) / 10,
-			Blr02: math.Round(clamp(noise(rng, baseEff[1]-degradation, 0.005), 78, 93)*10) / 10,
-			Blr03: math.Round(clamp(noise(rng, baseEff[2]-degradation, 0.005), 82, 96)*10) / 10,
-			Blr04: math.Round(clamp(noise(rng, baseEff[3]-degradation, 0.005), 76, 92)*10) / 10,
+			Blr01: math.Round(clamp(noise(rng, baseEff[0]-degradation, 0.01), 80, 95)*10) / 10,
+			Blr02: math.Round(clamp(noise(rng, baseEff[1]-degradation, 0.01), 78, 93)*10) / 10,
+			Blr03: math.Round(clamp(noise(rng, baseEff[2]-degradation, 0.01), 82, 96)*10) / 10,
+			Blr04: math.Round(clamp(noise(rng, baseEff[3]-degradation, 0.01), 76, 92)*10) / 10,
 		}, d.UnixMilli())
 		count++
 
 		// Hourly steam-fuel and stack temp
 		sf := seasonFactor(d, "steam")
 		wf := weekdayFactor(d)
-		for h := 0; h < 24; h += 2 {
+		dayIndex := d.Sub(start).Hours() / 24
+		drift := 1.0 + 0.10*math.Sin(dayIndex*2*math.Pi/6) // 6-day cycle
+		for h := 0; h < 24; h += 1 {
 			t := time.Date(d.Year(), d.Month(), d.Day(), h, 0, 0, 0, time.UTC)
 			hf := hourFactor(h)
-			steamOut := noise(rng, 55.0*sf*wf*hf, 0.04)
+			steamOut := noise(rng, 55.0*sf*wf*hf*drift, 0.08)
 			steamOut = clamp(steamOut, 5, 80)
 			fuelIn := steamOut / (0.87 + rng.Float64()*0.04)
 
@@ -351,9 +357,9 @@ func (s *SystemGeneratorService) generateBoiler(start, end time.Time, rng *rand.
 			// Stack temp rises with load
 			loadFactor := hf * wf
 			s.db.InsertBoilerStackTemp(models.BoilerStackTemp{
-				Blr01: math.Round(noise(rng, 170+loadFactor*20, 0.02)),
-				Blr02: math.Round(noise(rng, 185+loadFactor*25, 0.02)),
-				Blr03: math.Round(noise(rng, 165+loadFactor*18, 0.02)),
+				Blr01: math.Round(noise(rng, 170+loadFactor*20, 0.04)),
+				Blr02: math.Round(noise(rng, 185+loadFactor*25, 0.04)),
+				Blr03: math.Round(noise(rng, 165+loadFactor*18, 0.04)),
 			}, t.UnixMilli())
 			count += 2
 		}
@@ -417,37 +423,39 @@ func (s *SystemGeneratorService) generateSubStation(start, end time.Time, rng *r
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
 		sf := seasonFactor(d, "electricity")
 		wf := weekdayFactor(d)
+		dayIndex := d.Sub(start).Hours() / 24
+		drift := 1.0 + 0.12*math.Sin(dayIndex*2*math.Pi/8) // 8-day cycle
 
-		for h := 0; h < 24; h += 2 {
+		for h := 0; h < 24; h += 1 { // hourly
 			t := time.Date(d.Year(), d.Month(), d.Day(), h, 0, 0, 0, time.UTC)
 			hf := hourFactor(h)
-			loadFactor := sf * wf * hf
+			loadFactor := sf * wf * hf * drift
 
 			// Voltage: sags under load
 			baseV := 11.0
 			sag := loadFactor * 0.2
 			s.db.InsertSubStationVoltageProfile(models.SubStationVoltageProfile{
-				VRY:  math.Round(noise(rng, baseV-sag, 0.003)*100) / 100,
-				VYB:  math.Round(noise(rng, baseV-sag+0.05, 0.003)*100) / 100,
-				VBR:  math.Round(noise(rng, baseV-sag-0.03, 0.003)*100) / 100,
+				VRY:  math.Round(noise(rng, baseV-sag, 0.006)*100) / 100,
+				VYB:  math.Round(noise(rng, baseV-sag+0.05, 0.006)*100) / 100,
+				VBR:  math.Round(noise(rng, baseV-sag-0.03, 0.006)*100) / 100,
 			}, t.UnixMilli())
 
 			// Transformer temp: follows load with thermal lag (simplified)
 			baseOilTemp := 50.0 + loadFactor*20.0
 			s.db.InsertSubStationTransformerTemp(models.SubStationTransformerTemp{
-				OilTemp:  math.Round(noise(rng, baseOilTemp, 0.02)*10) / 10,
-				WindTemp: math.Round(noise(rng, baseOilTemp+8, 0.02)*10) / 10,
+				OilTemp:  math.Round(noise(rng, baseOilTemp, 0.04)*10) / 10,
+				WindTemp: math.Round(noise(rng, baseOilTemp+8, 0.04)*10) / 10,
 			}, t.UnixMilli())
 
 			// Feeder distribution: 5 feeders with different base loads
 			totalLoad := 3200.0 * loadFactor
 			shares := []float64{0.25, 0.20, 0.28, 0.15, 0.12}
 			s.db.InsertSubStationFeederDistribution(models.SubStationFeederDistribution{
-				Feeder1: math.Round(noise(rng, totalLoad*shares[0], 0.05)),
-				Feeder2: math.Round(noise(rng, totalLoad*shares[1], 0.05)),
-				Feeder3: math.Round(noise(rng, totalLoad*shares[2], 0.05)),
-				Feeder4: math.Round(noise(rng, totalLoad*shares[3], 0.05)),
-				Feeder5: math.Round(noise(rng, totalLoad*shares[4], 0.05)),
+				Feeder1: math.Round(noise(rng, totalLoad*shares[0], 0.10)),
+				Feeder2: math.Round(noise(rng, totalLoad*shares[1], 0.10)),
+				Feeder3: math.Round(noise(rng, totalLoad*shares[2], 0.10)),
+				Feeder4: math.Round(noise(rng, totalLoad*shares[3], 0.10)),
+				Feeder5: math.Round(noise(rng, totalLoad*shares[4], 0.10)),
 			}, t.UnixMilli())
 
 			count += 3
