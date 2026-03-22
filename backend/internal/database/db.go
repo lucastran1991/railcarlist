@@ -568,6 +568,49 @@ func applyPagination(query string, params models.HistoryParams) string {
 	return query
 }
 
+// buildAggregatedQuery wraps a history table query with GROUP BY time bucket.
+// valueCols are the numeric columns to aggregate (AVG).
+// Returns: query selecting (0 as id, bucket_epoch as recorded_at, AVG(col1), AVG(col2), ...)
+// with the same column order as the raw query so the scan doesn't change.
+func (db *DB) buildAggregatedQuery(table string, valueCols []string, where string, args []interface{}, params models.HistoryParams) (string, []interface{}, int, error) {
+	agg := strings.ToLower(params.Aggregate)
+	bucket, err := db.timeBucketExpr(agg)
+	if err != nil {
+		return "", nil, 0, err
+	}
+
+	// Build epoch expression from time bucket for the recorded_at column
+	var epochExpr string
+	if db.dbType == "postgres" {
+		// Convert the bucket string back to epoch ms
+		epochExpr = fmt.Sprintf("(EXTRACT(EPOCH FROM MIN(to_timestamp(recorded_at/1000.0))) * 1000)::bigint")
+	} else {
+		epochExpr = "MIN(recorded_at)"
+	}
+
+	// Build column aggregates
+	aggCols := make([]string, len(valueCols))
+	for i, col := range valueCols {
+		aggCols[i] = fmt.Sprintf("ROUND(AVG(%s)::numeric, 2) AS %s", col, col)
+		if db.dbType != "postgres" {
+			aggCols[i] = fmt.Sprintf("ROUND(AVG(%s), 2) AS %s", col, col)
+		}
+	}
+
+	// Count total buckets
+	countSQL := fmt.Sprintf("SELECT COUNT(DISTINCT %s) FROM %s%s", bucket, table, where)
+	var total int
+	db.conn.QueryRow(countSQL, args...).Scan(&total)
+
+	// Build main query
+	selectCols := fmt.Sprintf("0 AS id, %s AS recorded_at, %s", epochExpr, strings.Join(aggCols, ", "))
+	query := fmt.Sprintf("SELECT %s FROM %s%s GROUP BY %s ORDER BY %s",
+		selectCols, table, where, bucket, bucket)
+	query = applyPagination(query, params)
+
+	return query, args, total, nil
+}
+
 // --- Electricity DB Methods ---
 
 func (db *DB) InsertElectricityLoadProfile(lp models.ElectricityLoadProfile, recordedAt int64) error {
@@ -578,10 +621,22 @@ func (db *DB) InsertElectricityLoadProfile(lp models.ElectricityLoadProfile, rec
 
 func (db *DB) ListElectricityLoadProfiles(params models.HistoryParams) ([]models.ElectricityLoadProfile, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM electricity_load_profiles"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, actual, planned, threshold FROM electricity_load_profiles" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("electricity_load_profiles",
+			[]string{"actual", "planned", "threshold"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM electricity_load_profiles"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, actual, planned, threshold FROM electricity_load_profiles" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
+
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -611,10 +666,21 @@ func (db *DB) InsertElectricityWeeklyConsumption(wc models.ElectricityWeeklyCons
 
 func (db *DB) ListElectricityWeeklyConsumption(params models.HistoryParams) ([]models.ElectricityWeeklyConsumption, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM electricity_weekly_consumption"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, this_week, last_week FROM electricity_weekly_consumption" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("electricity_weekly_consumption",
+			[]string{"this_week", "last_week"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM electricity_weekly_consumption"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, this_week, last_week FROM electricity_weekly_consumption" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -643,10 +709,21 @@ func (db *DB) InsertElectricityPowerFactor(pf models.ElectricityPowerFactor, rec
 
 func (db *DB) ListElectricityPowerFactor(params models.HistoryParams) ([]models.ElectricityPowerFactor, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM electricity_power_factor"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, value FROM electricity_power_factor" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("electricity_power_factor",
+			[]string{"value"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM electricity_power_factor"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, value FROM electricity_power_factor" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -703,10 +780,21 @@ func (db *DB) InsertElectricityPeakDemand(pd models.ElectricityPeakDemand, recor
 
 func (db *DB) ListElectricityPeakDemand(params models.HistoryParams) ([]models.ElectricityPeakDemand, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM electricity_peak_demand"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, peak FROM electricity_peak_demand" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("electricity_peak_demand",
+			[]string{"peak"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM electricity_peak_demand"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, peak FROM electricity_peak_demand" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -736,10 +824,21 @@ func (db *DB) InsertElectricityPhaseBalance(pb models.ElectricityPhaseBalance, r
 
 func (db *DB) ListElectricityPhaseBalance(params models.HistoryParams) ([]models.ElectricityPhaseBalance, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM electricity_phase_balance"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, phase_a, phase_b, phase_c FROM electricity_phase_balance" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("electricity_phase_balance",
+			[]string{"phase_a", "phase_b", "phase_c"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM electricity_phase_balance"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, phase_a, phase_b, phase_c FROM electricity_phase_balance" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -792,10 +891,21 @@ func (db *DB) InsertSteamBalance(item models.SteamBalance, recordedAt int64) err
 
 func (db *DB) ListSteamBalance(params models.HistoryParams) ([]models.SteamBalance, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM steam_balance"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, boiler1, boiler2, boiler3, demand FROM steam_balance" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("steam_balance",
+			[]string{"boiler1", "boiler2", "boiler3", "demand"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM steam_balance"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, boiler1, boiler2, boiler3, demand FROM steam_balance" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -825,10 +935,21 @@ func (db *DB) InsertSteamHeaderPressure(item models.SteamHeaderPressure, recorde
 
 func (db *DB) ListSteamHeaderPressure(params models.HistoryParams) ([]models.SteamHeaderPressure, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM steam_header_pressure"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, hp, mp, lp FROM steam_header_pressure" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("steam_header_pressure",
+			[]string{"hp", "mp", "lp"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM steam_header_pressure"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, hp, mp, lp FROM steam_header_pressure" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -886,10 +1007,21 @@ func (db *DB) InsertSteamCondensate(item models.SteamCondensate, recordedAt int6
 
 func (db *DB) ListSteamCondensate(params models.HistoryParams) ([]models.SteamCondensate, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM steam_condensate"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, recovery FROM steam_condensate" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("steam_condensate",
+			[]string{"recovery"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM steam_condensate"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, recovery FROM steam_condensate" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -919,10 +1051,21 @@ func (db *DB) InsertSteamFuelRatio(item models.SteamFuelRatio, recordedAt int64)
 
 func (db *DB) ListSteamFuelRatio(params models.HistoryParams) ([]models.SteamFuelRatio, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM steam_fuel_ratio"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, fuel, steam FROM steam_fuel_ratio" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("steam_fuel_ratio",
+			[]string{"fuel", "steam"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM steam_fuel_ratio"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, fuel, steam FROM steam_fuel_ratio" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -1031,10 +1174,21 @@ func (db *DB) InsertBoilerEfficiencyTrend(item models.BoilerEfficiencyTrend, rec
 
 func (db *DB) ListBoilerEfficiencyTrend(params models.HistoryParams) ([]models.BoilerEfficiencyTrend, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM boiler_efficiency_trend"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, blr01, blr02, blr03, blr04 FROM boiler_efficiency_trend" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("boiler_efficiency_trend",
+			[]string{"blr01", "blr02", "blr03", "blr04"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM boiler_efficiency_trend"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, blr01, blr02, blr03, blr04 FROM boiler_efficiency_trend" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -1092,10 +1246,21 @@ func (db *DB) InsertBoilerSteamFuel(item models.BoilerSteamFuel, recordedAt int6
 
 func (db *DB) ListBoilerSteamFuel(params models.HistoryParams) ([]models.BoilerSteamFuel, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM boiler_steam_fuel"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, steam, fuel FROM boiler_steam_fuel" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("boiler_steam_fuel",
+			[]string{"steam", "fuel"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM boiler_steam_fuel"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, steam, fuel FROM boiler_steam_fuel" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -1153,10 +1318,21 @@ func (db *DB) InsertBoilerStackTemp(item models.BoilerStackTemp, recordedAt int6
 
 func (db *DB) ListBoilerStackTemp(params models.HistoryParams) ([]models.BoilerStackTemp, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM boiler_stack_temp"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, blr01, blr02, blr03 FROM boiler_stack_temp" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("boiler_stack_temp",
+			[]string{"blr01", "blr02", "blr03"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM boiler_stack_temp"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, blr01, blr02, blr03 FROM boiler_stack_temp" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -1237,10 +1413,21 @@ func (db *DB) InsertTankInventoryTrend(item models.TankInventoryTrend, recordedA
 
 func (db *DB) ListTankInventoryTrend(params models.HistoryParams) ([]models.TankInventoryTrend, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM tank_inventory_trend"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, gasoline, diesel, crude, ethanol FROM tank_inventory_trend" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("tank_inventory_trend",
+			[]string{"gasoline", "diesel", "crude", "ethanol"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM tank_inventory_trend"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, gasoline, diesel, crude, ethanol FROM tank_inventory_trend" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -1270,10 +1457,21 @@ func (db *DB) InsertTankThroughput(item models.TankThroughput, recordedAt int64)
 
 func (db *DB) ListTankThroughput(params models.HistoryParams) ([]models.TankThroughput, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM tank_throughput"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, receipts, dispatches FROM tank_throughput" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("tank_throughput",
+			[]string{"receipts", "dispatches"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM tank_throughput"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, receipts, dispatches FROM tank_throughput" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -1410,10 +1608,21 @@ func (db *DB) InsertSubStationVoltageProfile(item models.SubStationVoltageProfil
 
 func (db *DB) ListSubStationVoltageProfile(params models.HistoryParams) ([]models.SubStationVoltageProfile, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM substation_voltage_profile"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, v_ry, v_yb, v_br FROM substation_voltage_profile" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("substation_voltage_profile",
+			[]string{"v_ry", "v_yb", "v_br"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM substation_voltage_profile"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, v_ry, v_yb, v_br FROM substation_voltage_profile" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -1499,10 +1708,21 @@ func (db *DB) InsertSubStationTransformerTemp(item models.SubStationTransformerT
 
 func (db *DB) ListSubStationTransformerTemp(params models.HistoryParams) ([]models.SubStationTransformerTemp, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM substation_transformer_temp"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, oil_temp, winding_temp FROM substation_transformer_temp" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("substation_transformer_temp",
+			[]string{"oil_temp", "winding_temp"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM substation_transformer_temp"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, oil_temp, winding_temp FROM substation_transformer_temp" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
@@ -1532,10 +1752,21 @@ func (db *DB) InsertSubStationFeederDistribution(item models.SubStationFeederDis
 
 func (db *DB) ListSubStationFeederDistribution(params models.HistoryParams) ([]models.SubStationFeederDistribution, int, error) {
 	where, args := db.buildHistoryWhere(params)
+	var query string
 	var total int
-	db.conn.QueryRow("SELECT COUNT(*) FROM substation_feeder_distribution"+where, args...).Scan(&total)
-	query := "SELECT id, recorded_at, feeder1, feeder2, feeder3, feeder4, feeder5 FROM substation_feeder_distribution" + where + " ORDER BY recorded_at"
-	query = applyPagination(query, params)
+
+	if params.Aggregate != "" && params.Aggregate != "raw" {
+		var err error
+		query, args, total, err = db.buildAggregatedQuery("substation_feeder_distribution",
+			[]string{"feeder1", "feeder2", "feeder3", "feeder4", "feeder5"}, where, args, params)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		db.conn.QueryRow("SELECT COUNT(*) FROM substation_feeder_distribution"+where, args...).Scan(&total)
+		query = "SELECT id, recorded_at, feeder1, feeder2, feeder3, feeder4, feeder5 FROM substation_feeder_distribution" + where + " ORDER BY recorded_at"
+		query = applyPagination(query, params)
+	}
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
