@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronDown, Calendar, Clock, X } from 'lucide-react';
 import type { QueryParams } from '@/lib/api-dashboard';
 
@@ -60,6 +60,21 @@ function getDateRange(preset: TimePreset): { start: string; end: string } | null
     case 'custom':
       return null;
   }
+}
+
+function buildParams(frequency: Frequency, timePreset: TimePreset, customFrom: string, customTo: string): QueryParams {
+  const p: QueryParams = { aggregate: frequency };
+  if (timePreset === 'custom') {
+    if (customFrom) p.start = `${customFrom}T00:00:00`;
+    if (customTo) p.end = `${customTo}T23:59:59`;
+  } else {
+    const range = getDateRange(timePreset);
+    if (range) {
+      p.start = range.start;
+      p.end = range.end;
+    }
+  }
+  return p;
 }
 
 // --- Dropdown component ---
@@ -124,30 +139,48 @@ function Dropdown<T extends string>({
 
 export default function FilterBar({ onChange }: FilterBarProps) {
   const [frequency, setFrequency] = useState<Frequency>('daily');
-  const [timePreset, setTimePreset] = useState<TimePreset>('last12m');
+  const [timePreset, setTimePreset] = useState<TimePreset>('mtd');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
 
-  const params = useMemo<QueryParams>(() => {
-    const p: QueryParams = {};
-    p.aggregate = frequency;
+  // Use ref to avoid onChange identity causing re-render loops
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
-    if (timePreset === 'custom') {
-      if (customFrom) p.start = `${customFrom}T00:00:00`;
-      if (customTo) p.end = `${customTo}T23:59:59`;
-    } else {
-      const range = getDateRange(timePreset);
-      if (range) {
-        p.start = range.start;
-        p.end = range.end;
-      }
-    }
-    return p;
-  }, [frequency, timePreset, customFrom, customTo]);
-
+  // Fire on initial mount
+  const initialFired = useRef(false);
   useEffect(() => {
-    onChange(params);
-  }, [params, onChange]);
+    if (!initialFired.current) {
+      initialFired.current = true;
+      onChangeRef.current(buildParams('daily', 'mtd', '', ''));
+    }
+  }, []);
+
+  const handleFrequencyChange = useCallback((v: Frequency) => {
+    setFrequency(v);
+    onChangeRef.current(buildParams(v, timePreset, customFrom, customTo));
+  }, [timePreset, customFrom, customTo]);
+
+  const handleTimePresetChange = useCallback((v: TimePreset) => {
+    setTimePreset(v);
+    onChangeRef.current(buildParams(frequency, v, customFrom, customTo));
+  }, [frequency, customFrom, customTo]);
+
+  const handleCustomFromChange = useCallback((val: string) => {
+    setCustomFrom(val);
+    onChangeRef.current(buildParams(frequency, 'custom', val, customTo));
+  }, [frequency, customTo]);
+
+  const handleCustomToChange = useCallback((val: string) => {
+    setCustomTo(val);
+    onChangeRef.current(buildParams(frequency, 'custom', customFrom, val));
+  }, [frequency, customFrom]);
+
+  const handleClearCustom = useCallback(() => {
+    setCustomFrom('');
+    setCustomTo('');
+    onChangeRef.current(buildParams(frequency, 'custom', '', ''));
+  }, [frequency]);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -156,7 +189,7 @@ export default function FilterBar({ onChange }: FilterBarProps) {
         icon={<Clock size={13} className="text-muted-foreground" />}
         value={frequency}
         options={FREQUENCY_OPTIONS}
-        onChange={setFrequency}
+        onChange={handleFrequencyChange}
       />
 
       <Dropdown
@@ -164,7 +197,7 @@ export default function FilterBar({ onChange }: FilterBarProps) {
         icon={<Calendar size={13} className="text-muted-foreground" />}
         value={timePreset}
         options={TIME_PRESETS}
-        onChange={setTimePreset}
+        onChange={handleTimePresetChange}
       />
 
       {timePreset === 'custom' && (
@@ -172,19 +205,19 @@ export default function FilterBar({ onChange }: FilterBarProps) {
           <input
             type="date"
             value={customFrom}
-            onChange={(e) => setCustomFrom(e.target.value)}
+            onChange={(e) => handleCustomFromChange(e.target.value)}
             className="px-2 py-1 rounded-lg border border-border bg-card text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           />
           <span className="text-muted-foreground text-xs">to</span>
           <input
             type="date"
             value={customTo}
-            onChange={(e) => setCustomTo(e.target.value)}
+            onChange={(e) => handleCustomToChange(e.target.value)}
             className="px-2 py-1 rounded-lg border border-border bg-card text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           />
           {(customFrom || customTo) && (
             <button
-              onClick={() => { setCustomFrom(''); setCustomTo(''); }}
+              onClick={handleClearCustom}
               className="p-1 rounded hover:bg-muted text-muted-foreground"
             >
               <X size={12} />

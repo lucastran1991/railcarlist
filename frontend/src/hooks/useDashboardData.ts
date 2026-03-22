@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { fetchAllDomainData, type QueryParams } from '@/lib/api-dashboard';
 
 type Domain = 'electricity' | 'steam' | 'boiler' | 'tank' | 'substation';
@@ -10,6 +10,11 @@ interface DashboardState<K> {
   error: string | null;
 }
 
+function paramsKey(p?: QueryParams): string {
+  if (!p) return '';
+  return `${p.start || ''}_${p.end || ''}_${p.aggregate || ''}_${p.page || ''}_${p.limit || ''}`;
+}
+
 export function useDashboardData<K>(domain: Domain, params?: QueryParams) {
   const [state, setState] = useState<DashboardState<K>>({
     kpis: null,
@@ -18,7 +23,14 @@ export function useDashboardData<K>(domain: Domain, params?: QueryParams) {
     error: null,
   });
 
+  const lastKey = useRef('');
+  const key = paramsKey(params);
+
   useEffect(() => {
+    // Skip if params haven't actually changed
+    if (key === lastKey.current && state.kpis !== null) return;
+    lastKey.current = key;
+
     let cancelled = false;
     setState((s) => ({ ...s, loading: true, error: null }));
 
@@ -35,8 +47,7 @@ export function useDashboardData<K>(domain: Domain, params?: QueryParams) {
       });
 
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [domain, params?.start, params?.end, params?.aggregate, params?.page, params?.limit]);
+  }, [domain, key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return state;
 }
