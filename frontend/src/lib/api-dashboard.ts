@@ -5,7 +5,7 @@ import { API_BASE_URL, API_ENDPOINTS } from './config';
 export interface QueryParams {
   start?: string;
   end?: string;
-  aggregate?: 'raw' | 'hourly' | 'daily' | 'weekly' | 'monthly';
+  aggregate?: 'raw' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'quarterly';
   page?: number;
   limit?: number;
 }
