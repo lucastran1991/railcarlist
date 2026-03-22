@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"railcarlist/internal/database"
 	"railcarlist/internal/models"
@@ -31,8 +32,8 @@ func (s *BoilerService) ListReadings() ([]models.BoilerReading, error) {
 
 // --- Efficiency Trend ---
 
-func (s *BoilerService) ListEfficiencyTrend() ([]models.BoilerEfficiencyTrend, error) {
-	return s.db.ListBoilerEfficiencyTrend()
+func (s *BoilerService) ListEfficiencyTrend(params models.HistoryParams) ([]models.BoilerEfficiencyTrend, int, error) {
+	return s.db.ListBoilerEfficiencyTrend(params)
 }
 
 // --- Combustion ---
@@ -43,8 +44,8 @@ func (s *BoilerService) ListCombustion() ([]models.BoilerCombustion, error) {
 
 // --- Steam vs Fuel ---
 
-func (s *BoilerService) ListSteamFuel() ([]models.BoilerSteamFuel, error) {
-	return s.db.ListBoilerSteamFuel()
+func (s *BoilerService) ListSteamFuel(params models.HistoryParams) ([]models.BoilerSteamFuel, int, error) {
+	return s.db.ListBoilerSteamFuel(params)
 }
 
 // --- Emissions ---
@@ -55,8 +56,8 @@ func (s *BoilerService) ListEmissions() ([]models.BoilerEmission, error) {
 
 // --- Stack Temperature ---
 
-func (s *BoilerService) ListStackTemp() ([]models.BoilerStackTemp, error) {
-	return s.db.ListBoilerStackTemp()
+func (s *BoilerService) ListStackTemp(params models.HistoryParams) ([]models.BoilerStackTemp, int, error) {
+	return s.db.ListBoilerStackTemp(params)
 }
 
 // --- Ingest from JSON feed ---
@@ -78,6 +79,7 @@ func (s *BoilerService) IngestFromJSON(r io.Reader) (int, error) {
 	}
 
 	total := 0
+	now := time.Now().UnixMilli()
 
 	// KPIs
 	if err := s.db.UpsertBoilerKPIs(feed.KPIs); err != nil {
@@ -101,7 +103,7 @@ func (s *BoilerService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear efficiency trend: %w", err)
 	}
 	for _, item := range feed.EfficiencyTrend {
-		if err := s.db.InsertBoilerEfficiencyTrend(item); err != nil {
+		if err := s.db.InsertBoilerEfficiencyTrend(item, now); err != nil {
 			return total, fmt.Errorf("insert efficiency trend: %w", err)
 		}
 		total++
@@ -123,7 +125,7 @@ func (s *BoilerService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear steam fuel: %w", err)
 	}
 	for _, item := range feed.SteamVsFuel {
-		if err := s.db.InsertBoilerSteamFuel(item); err != nil {
+		if err := s.db.InsertBoilerSteamFuel(item, now); err != nil {
 			return total, fmt.Errorf("insert steam fuel: %w", err)
 		}
 		total++
@@ -145,7 +147,7 @@ func (s *BoilerService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear stack temp: %w", err)
 	}
 	for _, item := range feed.StackTemperature {
-		if err := s.db.InsertBoilerStackTemp(item); err != nil {
+		if err := s.db.InsertBoilerStackTemp(item, now); err != nil {
 			return total, fmt.Errorf("insert stack temp: %w", err)
 		}
 		total++

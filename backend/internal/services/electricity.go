@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"railcarlist/internal/database"
 	"railcarlist/internal/models"
@@ -25,20 +26,20 @@ func (s *ElectricityService) GetKPIs() (*models.ElectricityKPIs, error) {
 
 // --- Load Profiles ---
 
-func (s *ElectricityService) ListLoadProfiles() ([]models.ElectricityLoadProfile, error) {
-	return s.db.ListElectricityLoadProfiles()
+func (s *ElectricityService) ListLoadProfiles(params models.HistoryParams) ([]models.ElectricityLoadProfile, int, error) {
+	return s.db.ListElectricityLoadProfiles(params)
 }
 
 // --- Weekly Consumption ---
 
-func (s *ElectricityService) ListWeeklyConsumption() ([]models.ElectricityWeeklyConsumption, error) {
-	return s.db.ListElectricityWeeklyConsumption()
+func (s *ElectricityService) ListWeeklyConsumption(params models.HistoryParams) ([]models.ElectricityWeeklyConsumption, int, error) {
+	return s.db.ListElectricityWeeklyConsumption(params)
 }
 
 // --- Power Factor ---
 
-func (s *ElectricityService) ListPowerFactor() ([]models.ElectricityPowerFactor, error) {
-	return s.db.ListElectricityPowerFactor()
+func (s *ElectricityService) ListPowerFactor(params models.HistoryParams) ([]models.ElectricityPowerFactor, int, error) {
+	return s.db.ListElectricityPowerFactor(params)
 }
 
 // --- Cost Breakdown ---
@@ -49,14 +50,14 @@ func (s *ElectricityService) ListCostBreakdown() ([]models.ElectricityCostBreakd
 
 // --- Peak Demand ---
 
-func (s *ElectricityService) ListPeakDemand() ([]models.ElectricityPeakDemand, error) {
-	return s.db.ListElectricityPeakDemand()
+func (s *ElectricityService) ListPeakDemand(params models.HistoryParams) ([]models.ElectricityPeakDemand, int, error) {
+	return s.db.ListElectricityPeakDemand(params)
 }
 
 // --- Phase Balance ---
 
-func (s *ElectricityService) ListPhaseBalance() ([]models.ElectricityPhaseBalance, error) {
-	return s.db.ListElectricityPhaseBalance()
+func (s *ElectricityService) ListPhaseBalance(params models.HistoryParams) ([]models.ElectricityPhaseBalance, int, error) {
+	return s.db.ListElectricityPhaseBalance(params)
 }
 
 // --- Ingest from JSON feed ---
@@ -78,6 +79,7 @@ func (s *ElectricityService) IngestFromJSON(r io.Reader) (int, error) {
 	}
 
 	total := 0
+	now := time.Now().UnixMilli()
 
 	// KPIs
 	if err := s.db.UpsertElectricityKPIs(feed.KPIs); err != nil {
@@ -90,7 +92,7 @@ func (s *ElectricityService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear load profiles: %w", err)
 	}
 	for _, lp := range feed.LoadProfile {
-		if err := s.db.InsertElectricityLoadProfile(lp); err != nil {
+		if err := s.db.InsertElectricityLoadProfile(lp, now); err != nil {
 			return total, fmt.Errorf("insert load profile: %w", err)
 		}
 		total++
@@ -101,7 +103,7 @@ func (s *ElectricityService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear weekly: %w", err)
 	}
 	for _, wc := range feed.WeeklyConsumption {
-		if err := s.db.InsertElectricityWeeklyConsumption(wc); err != nil {
+		if err := s.db.InsertElectricityWeeklyConsumption(wc, now); err != nil {
 			return total, fmt.Errorf("insert weekly: %w", err)
 		}
 		total++
@@ -112,7 +114,7 @@ func (s *ElectricityService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear power factor: %w", err)
 	}
 	for _, pf := range feed.PowerFactorTrend {
-		if err := s.db.InsertElectricityPowerFactor(pf); err != nil {
+		if err := s.db.InsertElectricityPowerFactor(pf, now); err != nil {
 			return total, fmt.Errorf("insert power factor: %w", err)
 		}
 		total++
@@ -134,7 +136,7 @@ func (s *ElectricityService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear peak: %w", err)
 	}
 	for _, pd := range feed.PeakDemandHistory {
-		if err := s.db.InsertElectricityPeakDemand(pd); err != nil {
+		if err := s.db.InsertElectricityPeakDemand(pd, now); err != nil {
 			return total, fmt.Errorf("insert peak: %w", err)
 		}
 		total++
@@ -145,7 +147,7 @@ func (s *ElectricityService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear phase: %w", err)
 	}
 	for _, pb := range feed.PhaseBalance {
-		if err := s.db.InsertElectricityPhaseBalance(pb); err != nil {
+		if err := s.db.InsertElectricityPhaseBalance(pb, now); err != nil {
 			return total, fmt.Errorf("insert phase: %w", err)
 		}
 		total++

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"railcarlist/internal/httputil"
+	"railcarlist/internal/models"
 	"railcarlist/internal/services"
 )
 
@@ -34,12 +35,34 @@ func (h *BoilerHandler) HandleGetReadings(w http.ResponseWriter, r *http.Request
 }
 
 func (h *BoilerHandler) HandleGetEfficiencyTrend(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListEfficiencyTrend()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListEfficiencyTrend(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list efficiency trend: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.BoilerEfficiencyTrend{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *BoilerHandler) HandleGetCombustion(w http.ResponseWriter, r *http.Request) {
@@ -52,12 +75,34 @@ func (h *BoilerHandler) HandleGetCombustion(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *BoilerHandler) HandleGetSteamFuel(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListSteamFuel()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListSteamFuel(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list steam fuel: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.BoilerSteamFuel{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *BoilerHandler) HandleGetEmissions(w http.ResponseWriter, r *http.Request) {
@@ -70,12 +115,34 @@ func (h *BoilerHandler) HandleGetEmissions(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *BoilerHandler) HandleGetStackTemp(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListStackTemp()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListStackTemp(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list stack temperature: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.BoilerStackTemp{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *BoilerHandler) HandleIngest(w http.ResponseWriter, r *http.Request) {

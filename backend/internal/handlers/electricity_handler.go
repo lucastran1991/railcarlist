@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"railcarlist/internal/httputil"
+	"railcarlist/internal/models"
 	"railcarlist/internal/services"
 )
 
@@ -25,30 +26,96 @@ func (h *ElectricityHandler) HandleGetKPIs(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *ElectricityHandler) HandleGetLoadProfiles(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListLoadProfiles()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListLoadProfiles(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list load profiles: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.ElectricityLoadProfile{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *ElectricityHandler) HandleGetWeeklyConsumption(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListWeeklyConsumption()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListWeeklyConsumption(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list weekly consumption: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.ElectricityWeeklyConsumption{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *ElectricityHandler) HandleGetPowerFactor(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListPowerFactor()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListPowerFactor(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list power factor: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.ElectricityPowerFactor{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *ElectricityHandler) HandleGetCostBreakdown(w http.ResponseWriter, r *http.Request) {
@@ -61,21 +128,65 @@ func (h *ElectricityHandler) HandleGetCostBreakdown(w http.ResponseWriter, r *ht
 }
 
 func (h *ElectricityHandler) HandleGetPeakDemand(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListPeakDemand()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListPeakDemand(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list peak demand: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.ElectricityPeakDemand{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *ElectricityHandler) HandleGetPhaseBalance(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListPhaseBalance()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListPhaseBalance(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list phase balance: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.ElectricityPhaseBalance{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *ElectricityHandler) HandleIngest(w http.ResponseWriter, r *http.Request) {

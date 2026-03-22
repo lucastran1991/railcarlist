@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"railcarlist/internal/database"
 	"railcarlist/internal/models"
@@ -25,8 +26,8 @@ func (s *SubStationService) GetKPIs() (*models.SubStationKPIs, error) {
 
 // --- Voltage Profile ---
 
-func (s *SubStationService) ListVoltageProfile() ([]models.SubStationVoltageProfile, error) {
-	return s.db.ListSubStationVoltageProfile()
+func (s *SubStationService) ListVoltageProfile(params models.HistoryParams) ([]models.SubStationVoltageProfile, int, error) {
+	return s.db.ListSubStationVoltageProfile(params)
 }
 
 // --- Transformers ---
@@ -43,14 +44,14 @@ func (s *SubStationService) ListHarmonics() ([]models.SubStationHarmonic, error)
 
 // --- Transformer Temp ---
 
-func (s *SubStationService) ListTransformerTemp() ([]models.SubStationTransformerTemp, error) {
-	return s.db.ListSubStationTransformerTemp()
+func (s *SubStationService) ListTransformerTemp(params models.HistoryParams) ([]models.SubStationTransformerTemp, int, error) {
+	return s.db.ListSubStationTransformerTemp(params)
 }
 
 // --- Feeder Distribution ---
 
-func (s *SubStationService) ListFeederDistribution() ([]models.SubStationFeederDistribution, error) {
-	return s.db.ListSubStationFeederDistribution()
+func (s *SubStationService) ListFeederDistribution(params models.HistoryParams) ([]models.SubStationFeederDistribution, int, error) {
+	return s.db.ListSubStationFeederDistribution(params)
 }
 
 // --- Fault Events ---
@@ -78,6 +79,7 @@ func (s *SubStationService) IngestFromJSON(r io.Reader) (int, error) {
 	}
 
 	total := 0
+	now := time.Now().UnixMilli()
 
 	// KPIs
 	if err := s.db.UpsertSubStationKPIs(feed.KPIs); err != nil {
@@ -90,7 +92,7 @@ func (s *SubStationService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear voltage profile: %w", err)
 	}
 	for _, item := range feed.VoltageProfile {
-		if err := s.db.InsertSubStationVoltageProfile(item); err != nil {
+		if err := s.db.InsertSubStationVoltageProfile(item, now); err != nil {
 			return total, fmt.Errorf("insert voltage profile: %w", err)
 		}
 		total++
@@ -123,7 +125,7 @@ func (s *SubStationService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear transformer temp: %w", err)
 	}
 	for _, item := range feed.TransformerTemperature {
-		if err := s.db.InsertSubStationTransformerTemp(item); err != nil {
+		if err := s.db.InsertSubStationTransformerTemp(item, now); err != nil {
 			return total, fmt.Errorf("insert transformer temp: %w", err)
 		}
 		total++
@@ -134,7 +136,7 @@ func (s *SubStationService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear feeder distribution: %w", err)
 	}
 	for _, item := range feed.FeederDistribution {
-		if err := s.db.InsertSubStationFeederDistribution(item); err != nil {
+		if err := s.db.InsertSubStationFeederDistribution(item, now); err != nil {
 			return total, fmt.Errorf("insert feeder distribution: %w", err)
 		}
 		total++

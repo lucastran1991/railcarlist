@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"railcarlist/internal/database"
 	"railcarlist/internal/models"
@@ -25,14 +26,14 @@ func (s *SteamService) GetKPIs() (*models.SteamKPIs, error) {
 
 // --- Steam Balance ---
 
-func (s *SteamService) ListBalance() ([]models.SteamBalance, error) {
-	return s.db.ListSteamBalance()
+func (s *SteamService) ListBalance(params models.HistoryParams) ([]models.SteamBalance, int, error) {
+	return s.db.ListSteamBalance(params)
 }
 
 // --- Header Pressure ---
 
-func (s *SteamService) ListHeaderPressure() ([]models.SteamHeaderPressure, error) {
-	return s.db.ListSteamHeaderPressure()
+func (s *SteamService) ListHeaderPressure(params models.HistoryParams) ([]models.SteamHeaderPressure, int, error) {
+	return s.db.ListSteamHeaderPressure(params)
 }
 
 // --- Distribution ---
@@ -43,14 +44,14 @@ func (s *SteamService) ListDistribution() ([]models.SteamDistribution, error) {
 
 // --- Condensate ---
 
-func (s *SteamService) ListCondensate() ([]models.SteamCondensate, error) {
-	return s.db.ListSteamCondensate()
+func (s *SteamService) ListCondensate(params models.HistoryParams) ([]models.SteamCondensate, int, error) {
+	return s.db.ListSteamCondensate(params)
 }
 
 // --- Fuel Ratio ---
 
-func (s *SteamService) ListFuelRatio() ([]models.SteamFuelRatio, error) {
-	return s.db.ListSteamFuelRatio()
+func (s *SteamService) ListFuelRatio(params models.HistoryParams) ([]models.SteamFuelRatio, int, error) {
+	return s.db.ListSteamFuelRatio(params)
 }
 
 // --- Loss ---
@@ -78,6 +79,7 @@ func (s *SteamService) IngestFromJSON(r io.Reader) (int, error) {
 	}
 
 	total := 0
+	now := time.Now().UnixMilli()
 
 	// KPIs
 	if err := s.db.UpsertSteamKPIs(feed.KPIs); err != nil {
@@ -90,7 +92,7 @@ func (s *SteamService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear steam balance: %w", err)
 	}
 	for _, item := range feed.SteamBalance {
-		if err := s.db.InsertSteamBalance(item); err != nil {
+		if err := s.db.InsertSteamBalance(item, now); err != nil {
 			return total, fmt.Errorf("insert steam balance: %w", err)
 		}
 		total++
@@ -101,7 +103,7 @@ func (s *SteamService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear header pressure: %w", err)
 	}
 	for _, item := range feed.HeaderPressureTrend {
-		if err := s.db.InsertSteamHeaderPressure(item); err != nil {
+		if err := s.db.InsertSteamHeaderPressure(item, now); err != nil {
 			return total, fmt.Errorf("insert header pressure: %w", err)
 		}
 		total++
@@ -123,7 +125,7 @@ func (s *SteamService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear condensate: %w", err)
 	}
 	for _, item := range feed.CondensateRecoveryTrend {
-		if err := s.db.InsertSteamCondensate(item); err != nil {
+		if err := s.db.InsertSteamCondensate(item, now); err != nil {
 			return total, fmt.Errorf("insert condensate: %w", err)
 		}
 		total++
@@ -134,7 +136,7 @@ func (s *SteamService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear fuel ratio: %w", err)
 	}
 	for _, item := range feed.FuelVsSteam {
-		if err := s.db.InsertSteamFuelRatio(item); err != nil {
+		if err := s.db.InsertSteamFuelRatio(item, now); err != nil {
 			return total, fmt.Errorf("insert fuel ratio: %w", err)
 		}
 		total++

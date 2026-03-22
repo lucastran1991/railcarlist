@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"railcarlist/internal/database"
 	"railcarlist/internal/models"
@@ -31,14 +32,14 @@ func (s *TankService) ListLevels() ([]models.TankLevel, error) {
 
 // --- Inventory Trend ---
 
-func (s *TankService) ListInventoryTrend() ([]models.TankInventoryTrend, error) {
-	return s.db.ListTankInventoryTrend()
+func (s *TankService) ListInventoryTrend(params models.HistoryParams) ([]models.TankInventoryTrend, int, error) {
+	return s.db.ListTankInventoryTrend(params)
 }
 
 // --- Throughput ---
 
-func (s *TankService) ListThroughput() ([]models.TankThroughput, error) {
-	return s.db.ListTankThroughput()
+func (s *TankService) ListThroughput(params models.HistoryParams) ([]models.TankThroughput, int, error) {
+	return s.db.ListTankThroughput(params)
 }
 
 // --- Product Distribution ---
@@ -78,6 +79,7 @@ func (s *TankService) IngestFromJSON(r io.Reader) (int, error) {
 	}
 
 	total := 0
+	now := time.Now().UnixMilli()
 
 	// KPIs
 	if err := s.db.UpsertTankKPIs(feed.KPIs); err != nil {
@@ -101,7 +103,7 @@ func (s *TankService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear inventory trend: %w", err)
 	}
 	for _, item := range feed.InventoryTrend {
-		if err := s.db.InsertTankInventoryTrend(item); err != nil {
+		if err := s.db.InsertTankInventoryTrend(item, now); err != nil {
 			return total, fmt.Errorf("insert inventory trend: %w", err)
 		}
 		total++
@@ -112,7 +114,7 @@ func (s *TankService) IngestFromJSON(r io.Reader) (int, error) {
 		return total, fmt.Errorf("clear throughput: %w", err)
 	}
 	for _, item := range feed.Throughput {
-		if err := s.db.InsertTankThroughput(item); err != nil {
+		if err := s.db.InsertTankThroughput(item, now); err != nil {
 			return total, fmt.Errorf("insert throughput: %w", err)
 		}
 		total++

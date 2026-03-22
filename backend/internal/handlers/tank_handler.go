@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"railcarlist/internal/httputil"
+	"railcarlist/internal/models"
 	"railcarlist/internal/services"
 )
 
@@ -34,21 +35,65 @@ func (h *TankHandler) HandleGetLevels(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TankHandler) HandleGetInventoryTrend(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListInventoryTrend()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListInventoryTrend(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list inventory trend: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.TankInventoryTrend{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *TankHandler) HandleGetThroughput(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListThroughput()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListThroughput(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list throughput: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.TankThroughput{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *TankHandler) HandleGetProductDistribution(w http.ResponseWriter, r *http.Request) {

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"railcarlist/internal/httputil"
+	"railcarlist/internal/models"
 	"railcarlist/internal/services"
 )
 
@@ -25,21 +26,65 @@ func (h *SteamHandler) HandleGetKPIs(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SteamHandler) HandleGetBalance(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListBalance()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListBalance(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list steam balance: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.SteamBalance{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *SteamHandler) HandleGetHeaderPressure(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListHeaderPressure()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListHeaderPressure(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list header pressure: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.SteamHeaderPressure{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *SteamHandler) HandleGetDistribution(w http.ResponseWriter, r *http.Request) {
@@ -52,21 +97,65 @@ func (h *SteamHandler) HandleGetDistribution(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *SteamHandler) HandleGetCondensate(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListCondensate()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListCondensate(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list condensate: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.SteamCondensate{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *SteamHandler) HandleGetFuelRatio(w http.ResponseWriter, r *http.Request) {
-	data, err := h.svc.ListFuelRatio()
+	params := httputil.ParseHistoryParams(r)
+	data, total, err := h.svc.ListFuelRatio(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to list fuel ratio: "+err.Error())
 		return
 	}
-	httputil.WriteJSON(w, http.StatusOK, data)
+	count := len(data)
+	if data == nil {
+		data = []models.SteamFuelRatio{}
+	}
+	resp := models.PaginatedResponse{
+		Data: data,
+		Meta: models.QueryMeta{
+			Total:     total,
+			Count:     count,
+			Start:     params.Start,
+			End:       params.End,
+			Aggregate: params.Aggregate,
+		},
+	}
+	if params.Page > 0 {
+		resp.Meta.Page = params.Page
+		resp.Meta.Limit = params.Limit
+		if resp.Meta.Limit <= 0 {
+			resp.Meta.Limit = 100
+		}
+	}
+	httputil.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *SteamHandler) HandleGetLoss(w http.ResponseWriter, r *http.Request) {
