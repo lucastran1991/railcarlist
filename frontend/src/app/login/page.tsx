@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react';
 import { login } from '@/lib/auth';
 import { Eye, EyeOff, Lock, User, ArrowRight } from 'lucide-react';
+import WaveBackground from '@/components/WaveBackground';
 
 function GoogleIcon() {
   return (
@@ -59,11 +60,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      {/* Background effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_rgba(92,229,160,0.06)_0%,_transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(86,205,231,0.06)_0%,_transparent_50%)]" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[1px] bg-gradient-to-r from-transparent via-[var(--color-accent,#5CE5A0)]/20 to-transparent" />
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
+      <WaveBackground />
 
       <div className="w-full max-w-[420px] relative z-10">
         {/* Logo / Brand */}
