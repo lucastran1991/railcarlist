@@ -32,5 +32,17 @@
       "z": 5
     },
     "auto_orbit": false
+  },
+  "color": {
+    "accent": "#5CE5A0",
+    "secondary": "#56CDE7",
+    "tertiary": "#4D65FF",
+    "hover": "#5DDFFF",
+    "warning": "#F6AD55",
+    "danger": "#E53E3E",
+    "gradient": {
+      "from": "#5CE5A0",
+      "to": "#56CDE7"
+    }
   }
 }

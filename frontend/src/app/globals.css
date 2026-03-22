@@ -26,7 +26,7 @@ body {
 @layer base {
   /* Light mode */
   :root {
-    --background: 220 20% 97%;       /* #F5F6FA */
+    --background: 220 16% 93%;       /* #E8EAF0 */
     --foreground: 222 27% 10%;       /* #141820 */
     --card: 0 0% 100%;               /* white */
     --card-foreground: 222 27% 10%;
@@ -162,11 +162,11 @@ body {
 }
 
 .gradient-primary {
-  background: linear-gradient(270deg, #5CE5A0 -2.05%, #56CDE7 113.6%);
+  background: linear-gradient(270deg, var(--color-gradient-from, #5CE5A0) -2.05%, var(--color-gradient-to, #56CDE7) 113.6%);
 }
 
 .gradient-primary:hover {
-  background: linear-gradient(270deg, #6FE55C -2.05%, #56E7BB 113.6%);
+  filter: brightness(1.1);
 }
 
 /* ── Animations ── */

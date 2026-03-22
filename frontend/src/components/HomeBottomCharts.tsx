@@ -1,139 +1,111 @@
 'use client';
 
-import { useMemo } from 'react';
-import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts';
+import { Flame, Gauge, BarChart3, Droplets, Zap, Thermometer, TrendingUp, TrendingDown } from 'lucide-react';
 
-// Generate deterministic mock data
-function generateHourlyData(hours: number, baseLine: number, variance: number) {
-  const data = [];
-  let val = baseLine;
-  for (let i = 0; i < hours; i++) {
-    val += (Math.sin(i * 0.5) * variance * 0.3) + (Math.cos(i * 0.3) * variance * 0.2);
-    val = Math.max(baseLine * 0.5, Math.min(baseLine * 1.5, val));
-    data.push({
-      time: `${String(i % 24).padStart(2, '0')}:00`,
-      value: Math.round(val * 10) / 10,
-    });
-  }
-  return data;
+interface HomeKpi {
+  label: string;
+  value: string;
+  unit: string;
+  icon: React.ReactNode;
+  trend: 'up' | 'down' | 'flat';
+  trendValue: string;
+  color: string;
 }
 
-function generateDailyData(days: number) {
-  const data = [];
-  for (let i = 0; i < days; i++) {
-    data.push({
-      day: `Mar ${i + 1}`,
-      throughput: 800 + Math.round(Math.sin(i * 0.8) * 200 + Math.cos(i * 0.4) * 150),
-      target: 900,
-    });
-  }
-  return data;
-}
+const kpis: HomeKpi[] = [
+  {
+    label: 'Steam Production',
+    value: '55.5',
+    unit: 'tonnes/h',
+    icon: <Flame size={16} />,
+    trend: 'up',
+    trendValue: '+3.2%',
+    color: '#5CE5A0',
+  },
+  {
+    label: 'Avg. Pressure',
+    value: '94.2',
+    unit: 'PSI',
+    icon: <Gauge size={16} />,
+    trend: 'down',
+    trendValue: '-1.8%',
+    color: '#56CDE7',
+  },
+  {
+    label: 'Daily Throughput',
+    value: '32,000',
+    unit: 'bbl',
+    icon: <BarChart3 size={16} />,
+    trend: 'up',
+    trendValue: '+5.1%',
+    color: '#4D65FF',
+  },
+  {
+    label: 'Tank Avg Level',
+    value: '62',
+    unit: '%',
+    icon: <Droplets size={16} />,
+    trend: 'flat',
+    trendValue: '0.0%',
+    color: '#5CE5A0',
+  },
+  {
+    label: 'Power Load',
+    value: '3,420',
+    unit: 'kW',
+    icon: <Zap size={16} />,
+    trend: 'up',
+    trendValue: '+2.4%',
+    color: '#F6AD55',
+  },
+  {
+    label: 'Boiler Efficiency',
+    value: '87.5',
+    unit: '%',
+    icon: <Thermometer size={16} />,
+    trend: 'down',
+    trendValue: '-0.5%',
+    color: '#56CDE7',
+  },
+];
 
-function generateTankLevels() {
-  const tanks = ['T-1', 'T-2', 'T-3', 'T-5', 'T-8', 'T-12', 'T-20', 'T-22'];
-  return tanks.map((name, i) => ({
-    name,
-    level: 40 + Math.round(Math.sin(i * 1.2) * 30 + 20),
-    capacity: 100,
-  }));
-}
-
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function TrendBadge({ trend, value }: { trend: 'up' | 'down' | 'flat'; value: string }) {
+  const color = trend === 'up' ? 'text-[#5CE5A0]' : trend === 'down' ? 'text-[#E53E3E]' : 'text-muted-foreground';
+  const Icon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : TrendingUp;
   return (
-    <div className="bg-[rgba(12,15,24,0.85)] backdrop-blur-xl rounded-xl border border-white/10 overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
-      <div className="px-4 py-2.5 border-b border-white/5">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{title}</h3>
-      </div>
-      <div className="px-3 py-3 h-[120px] sm:h-[140px]">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-gray-900 border border-white/10 rounded px-2 py-1.5 text-xs shadow-lg">
-      <p className="text-gray-400 mb-0.5">{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} style={{ color: p.color }} className="font-mono">{p.name}: {p.value}</p>
-      ))}
-    </div>
+    <span className={`flex items-center gap-0.5 text-[10px] font-medium ${color}`}>
+      <Icon size={10} />
+      {value}
+    </span>
   );
 }
 
 export default function HomeBottomCharts() {
-  const steamData = useMemo(() => generateHourlyData(24, 120, 30), []);
-  const psiData = useMemo(() => generateHourlyData(24, 95, 15), []);
-  const throughputData = useMemo(() => generateDailyData(14), []);
-  const tankLevels = useMemo(() => generateTankLevels(), []);
-
   return (
     <div className="fixed bottom-0 left-0 right-0 z-20 pointer-events-auto">
-      <div className="bg-gradient-to-t from-black/60 to-transparent pt-8 pb-4 px-2 sm:px-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-          {/* Steam Production */}
-          <ChartCard title="Steam Production (lb/hr)">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={steamData}>
-                <defs>
-                  <linearGradient id="steamGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#5CE5A0" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#5CE5A0" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
-                <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#454A5F' }} interval={5} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: '#454A5F' }} axisLine={false} tickLine={false} width={30} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="value" stroke="#5CE5A0" strokeWidth={2} fill="url(#steamGrad)" name="Steam" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          {/* PSI Readings */}
-          <ChartCard title="Avg. Pressure (PSI)">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={psiData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
-                <XAxis dataKey="time" tick={{ fontSize: 9, fill: '#454A5F' }} interval={5} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: '#454A5F' }} axisLine={false} tickLine={false} width={30} />
-                <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="value" stroke="#56CDE7" strokeWidth={2} dot={false} name="PSI" />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          {/* Throughput */}
-          <ChartCard title="Daily Throughput (bbl)">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={throughputData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" />
-                <XAxis dataKey="day" tick={{ fontSize: 9, fill: '#454A5F' }} interval={2} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: '#454A5F' }} axisLine={false} tickLine={false} width={30} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="throughput" fill="#4D65FF" radius={[2, 2, 0, 0]} name="Throughput" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          {/* Tank Levels */}
-          <ChartCard title="Tank Levels (%)">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={tankLevels} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#2C2E39" horizontal={false} />
-                <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 9, fill: '#454A5F' }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#454A5F' }} axisLine={false} tickLine={false} width={35} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="level" fill="#5CE5A0" radius={[0, 2, 2, 0]} name="Level" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
+      <div className="bg-gradient-to-t from-background/80 to-transparent pt-6 pb-3 px-2 sm:px-4">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+          {kpis.map((kpi) => (
+            <div
+              key={kpi.label}
+              className="bg-card/90 backdrop-blur-sm rounded-xl border border-border/50 px-3 py-2.5 flex items-center gap-2.5 min-w-0 shadow-sm"
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${kpi.color}15`, color: kpi.color }}
+              >
+                {kpi.icon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] text-muted-foreground truncate">{kpi.label}</p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-sm font-bold text-foreground">{kpi.value}</span>
+                  <span className="text-[9px] text-muted-foreground">{kpi.unit}</span>
+                </div>
+                <TrendBadge trend={kpi.trend} value={kpi.trendValue} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { ChevronDown, LogOut, Zap, Activity, Droplets, Gauge, Flame, Menu, X } from 'lucide-react';
+import { ChevronDown, LogOut, Zap, Activity, Droplets, Gauge, Flame, Menu, X, Bell, AlertTriangle, Info, CheckCircle, Clock } from 'lucide-react';
 import { getUser, logout } from '@/lib/auth';
 import ThemeToggle from './ThemeToggle';
 
@@ -13,9 +13,30 @@ export default function Navigation() {
   const isHome = pathname === '/';
   const isLogin = pathname === '/login';
   const [menuOpen, setMenuOpen] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const alertRef = useRef<HTMLDivElement>(null);
+
+  const alerts = [
+    { id: 1, type: 'critical' as const, title: 'Boiler 3 — High Stack Temperature', desc: 'Stack temp exceeded 220°C alarm threshold', time: '2 min ago' },
+    { id: 2, type: 'warning' as const, title: 'Tank TK-201 — Level Above 90%', desc: 'Diesel tank at 92% capacity, approaching overflow limit', time: '18 min ago' },
+    { id: 3, type: 'warning' as const, title: 'Sub Station TR-03 — High Load', desc: 'Transformer loading at 85%, above 80% warning', time: '45 min ago' },
+    { id: 4, type: 'info' as const, title: 'Scheduled Maintenance — Boiler 4', desc: 'Boiler 4 offline for planned maintenance until Mar 25', time: '2 hrs ago' },
+    { id: 5, type: 'resolved' as const, title: 'Power Factor Restored', desc: 'Power factor returned to 0.94 after capacitor bank switched', time: '3 hrs ago' },
+  ];
+
+  const alertIcon = (type: 'critical' | 'warning' | 'info' | 'resolved') => {
+    switch (type) {
+      case 'critical': return <AlertTriangle size={14} className="text-[var(--color-danger,#E53E3E)] shrink-0" />;
+      case 'warning': return <AlertTriangle size={14} className="text-[var(--color-warning,#F6AD55)] shrink-0" />;
+      case 'info': return <Info size={14} className="text-[var(--color-secondary,#56CDE7)] shrink-0" />;
+      case 'resolved': return <CheckCircle size={14} className="text-[var(--color-accent,#5CE5A0)] shrink-0" />;
+    }
+  };
+
+  const unreadCount = alerts.filter(a => a.type !== 'resolved').length;
 
   useEffect(() => { setUser(getUser()); }, []);
   useEffect(() => { setMobileNavOpen(false); }, [pathname]);
@@ -23,6 +44,7 @@ export default function Navigation() {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      if (alertRef.current && !alertRef.current.contains(e.target as Node)) setAlertOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -106,6 +128,56 @@ export default function Navigation() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Alert bell */}
+              <div className="relative" ref={alertRef}>
+                <button
+                  onClick={() => { setAlertOpen(!alertOpen); setMenuOpen(false); }}
+                  className="relative w-9 h-9 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors"
+                >
+                  <Bell size={16} className="text-foreground/70" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--color-danger,#E53E3E)] text-[9px] font-bold text-white flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                {alertOpen && (
+                  <div className="absolute right-0 mt-2 w-[360px] max-h-[420px] rounded-xl border border-border bg-popover shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-foreground">Alerts</h3>
+                      <span className="text-[10px] text-muted-foreground">{unreadCount} unread</span>
+                    </div>
+                    <div className="overflow-y-auto max-h-[340px] divide-y divide-border">
+                      {alerts.map((alert) => (
+                        <div
+                          key={alert.id}
+                          className={cn(
+                            'px-4 py-3 hover:bg-muted/50 transition cursor-pointer',
+                            alert.type === 'resolved' && 'opacity-60'
+                          )}
+                        >
+                          <div className="flex gap-2.5">
+                            <div className="mt-0.5">{alertIcon(alert.type)}</div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium text-foreground leading-tight">{alert.title}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{alert.desc}</p>
+                              <div className="flex items-center gap-1 mt-1.5">
+                                <Clock size={10} className="text-muted-foreground/50" />
+                                <span className="text-[10px] text-muted-foreground/50">{alert.time}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="px-4 py-2.5 border-t border-border">
+                      <button className="w-full text-xs text-center text-[var(--color-accent,#5CE5A0)] hover:underline font-medium">
+                        View all alerts
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <ThemeToggle />
               {userMenu}
               {/* Mobile hamburger */}
