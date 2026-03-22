@@ -10,9 +10,8 @@ interface DashboardState<K> {
   error: string | null;
 }
 
-function paramsKey(p?: QueryParams): string {
-  if (!p) return '';
-  return `${p.start || ''}_${p.end || ''}_${p.aggregate || ''}_${p.page || ''}_${p.limit || ''}`;
+function paramsKey(domain: string, p?: QueryParams): string {
+  return `${domain}_${p?.start || ''}_${p?.end || ''}_${p?.aggregate || ''}_${p?.page || ''}_${p?.limit || ''}`;
 }
 
 export function useDashboardData<K>(domain: Domain, params?: QueryParams) {
@@ -23,12 +22,11 @@ export function useDashboardData<K>(domain: Domain, params?: QueryParams) {
     error: null,
   });
 
-  const lastKey = useRef('');
-  const key = paramsKey(params);
+  const key = paramsKey(domain, params);
+  const lastKey = useRef<string | null>(null);
 
   useEffect(() => {
-    // Skip if params haven't actually changed
-    if (key === lastKey.current && state.kpis !== null) return;
+    if (key === lastKey.current) return;
     lastKey.current = key;
 
     let cancelled = false;
@@ -47,7 +45,7 @@ export function useDashboardData<K>(domain: Domain, params?: QueryParams) {
       });
 
     return () => { cancelled = true; };
-  }, [domain, key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [domain, key, params]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return state;
 }
