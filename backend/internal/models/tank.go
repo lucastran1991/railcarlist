@@ -25,6 +25,7 @@ type TankInventoryTrend struct {
 	Diesel    float64 `json:"diesel"`
 	Crude     float64 `json:"crude"`
 	Ethanol   float64 `json:"ethanol"`
+	LPG       float64 `json:"lpg"`
 }
 
 type TankThroughput struct {

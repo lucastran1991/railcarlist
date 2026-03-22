@@ -41,7 +41,7 @@ export default function TankPage() {
 
   // Chart data extraction
   const tankLevels = (charts['levels'] ?? []) as { tank: string; product: string; level: number; capacity: number; volume: number; color: string }[];
-  const inventoryTrend = (charts['inventory-trend'] ?? []) as { timestamp: number; gasoline: number; diesel: number; crude: number; ethanol: number }[];
+  const inventoryTrend = (charts['inventory-trend'] ?? []) as { timestamp: number; gasoline: number; diesel: number; crude: number; ethanol: number; lpg: number }[];
   const throughput = (charts['throughput'] ?? []) as { timestamp: number; receipts: number; dispatches: number }[];
   const productDistribution = (charts['product-distribution'] ?? []) as { product: string; volume: number; color: string }[];
   const tankLevelChanges = (charts['level-changes'] ?? []) as { tank: string; change: number }[];
@@ -117,6 +117,7 @@ export default function TankPage() {
                 <Line type="monotone" dataKey="diesel" stroke="#4D65FF" strokeWidth={2} dot={false} name="Diesel" />
                 <Line type="monotone" dataKey="crude" stroke="#56CDE7" strokeWidth={2} dot={false} name="Crude" />
                 <Line type="monotone" dataKey="ethanol" stroke="#5CE5A0" strokeWidth={2} dot={false} name="Ethanol" />
+                <Line type="monotone" dataKey="lpg" stroke="#9F7AEA" strokeWidth={2} dot={false} name="LPG" />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>

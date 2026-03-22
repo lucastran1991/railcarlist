@@ -1508,8 +1508,8 @@ func (db *DB) DeleteAllTankLevels() error {
 }
 
 func (db *DB) InsertTankInventoryTrend(item models.TankInventoryTrend, recordedAt int64) error {
-	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tank_inventory_trend (gasoline, diesel, crude, ethanol, recorded_at) VALUES (%s)", db.placeholders(5)),
-		item.Gasoline, item.Diesel, item.Crude, item.Ethanol, recordedAt)
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tank_inventory_trend (gasoline, diesel, crude, ethanol, lpg, recorded_at) VALUES (%s)", db.placeholders(6)),
+		item.Gasoline, item.Diesel, item.Crude, item.Ethanol, item.LPG, recordedAt)
 	return err
 }
 
@@ -1521,13 +1521,13 @@ func (db *DB) ListTankInventoryTrend(params models.HistoryParams) ([]models.Tank
 	if params.Aggregate != "" && params.Aggregate != "raw" {
 		var err error
 		query, args, total, err = db.buildAggregatedQuery("tank_inventory_trend",
-			[]string{"gasoline", "diesel", "crude", "ethanol"}, where, args, params)
+			[]string{"gasoline", "diesel", "crude", "ethanol", "lpg"}, where, args, params)
 		if err != nil {
 			return nil, 0, err
 		}
 	} else {
 		db.conn.QueryRow("SELECT COUNT(*) FROM tank_inventory_trend"+where, args...).Scan(&total)
-		query = "SELECT id, recorded_at, gasoline, diesel, crude, ethanol FROM tank_inventory_trend" + where + " ORDER BY recorded_at"
+		query = "SELECT id, recorded_at, gasoline, diesel, crude, ethanol, lpg FROM tank_inventory_trend" + where + " ORDER BY recorded_at"
 		query = applyPagination(query, params)
 	}
 	rows, err := db.conn.Query(query, args...)
@@ -1538,7 +1538,7 @@ func (db *DB) ListTankInventoryTrend(params models.HistoryParams) ([]models.Tank
 	var results []models.TankInventoryTrend
 	for rows.Next() {
 		var r models.TankInventoryTrend
-		if err := rows.Scan(&r.ID, &r.Timestamp, &r.Gasoline, &r.Diesel, &r.Crude, &r.Ethanol); err != nil {
+		if err := rows.Scan(&r.ID, &r.Timestamp, &r.Gasoline, &r.Diesel, &r.Crude, &r.Ethanol, &r.LPG); err != nil {
 			return nil, 0, err
 		}
 		results = append(results, r)
@@ -2240,6 +2240,7 @@ func (db *DB) migrate() error {
 		diesel REAL NOT NULL DEFAULT 0,
 		crude REAL NOT NULL DEFAULT 0,
 		ethanol REAL NOT NULL DEFAULT 0,
+		lpg REAL NOT NULL DEFAULT 0,
 		recorded_at BIGINT DEFAULT 0
 	)`, autoInc),
 
@@ -2403,6 +2404,7 @@ func (db *DB) migrate() error {
 		"ALTER TABLE boiler_steam_fuel ADD COLUMN recorded_at BIGINT DEFAULT 0",
 		"ALTER TABLE boiler_stack_temp ADD COLUMN recorded_at BIGINT DEFAULT 0",
 		"ALTER TABLE tank_inventory_trend ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE tank_inventory_trend ADD COLUMN lpg REAL NOT NULL DEFAULT 0",
 		"ALTER TABLE tank_throughput ADD COLUMN recorded_at BIGINT DEFAULT 0",
 		"ALTER TABLE substation_voltage_profile ADD COLUMN recorded_at BIGINT DEFAULT 0",
 		"ALTER TABLE substation_transformer_temp ADD COLUMN recorded_at BIGINT DEFAULT 0",

@@ -379,6 +379,7 @@ func (s *SystemGeneratorService) generateTank(start, end time.Time, rng *rand.Ra
 	diesel := 95000.0
 	crude := 70000.0
 	ethanol := 18000.0
+	lpg := 12000.0
 
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
 		wf := weekdayFactor(d)
@@ -396,16 +397,18 @@ func (s *SystemGeneratorService) generateTank(start, end time.Time, rng *rand.Ra
 
 		// Update inventory based on net flow, distributed across products
 		netFlow := receipts - dispatches
-		gasoline = clamp(gasoline+netFlow*0.25+rng.NormFloat64()*2000, 20000, 140000)
-		diesel = clamp(diesel+netFlow*0.35+rng.NormFloat64()*3000, 30000, 220000)
-		crude = clamp(crude+netFlow*0.30+rng.NormFloat64()*4000, 20000, 280000)
+		gasoline = clamp(gasoline+netFlow*0.22+rng.NormFloat64()*2000, 20000, 140000)
+		diesel = clamp(diesel+netFlow*0.30+rng.NormFloat64()*3000, 30000, 220000)
+		crude = clamp(crude+netFlow*0.25+rng.NormFloat64()*4000, 20000, 280000)
 		ethanol = clamp(ethanol+netFlow*0.10+rng.NormFloat64()*1000, 5000, 55000)
+		lpg = clamp(lpg+netFlow*0.13+rng.NormFloat64()*800, 3000, 40000)
 
 		s.db.InsertTankInventoryTrend(models.TankInventoryTrend{
 			Gasoline: math.Round(gasoline),
 			Diesel:   math.Round(diesel),
 			Crude:    math.Round(crude),
 			Ethanol:  math.Round(ethanol),
+			LPG:      math.Round(lpg),
 		}, d.UnixMilli())
 		count += 2
 	}
@@ -547,15 +550,15 @@ func (s *SystemGeneratorService) updateAllKPIs(now time.Time, rng *rand.Rand) {
 	})
 
 	s.db.UpsertTankKPIs(models.TankKPIs{
-		TotalInventory:    245000,
-		AvailableCapacity: 32,
-		TanksInOperation:  18,
-		TanksTotal:        22,
-		CurrentThroughput: 1850,
-		AvgTemperature:    42,
-		ActiveAlarms:      2,
-		DailyReceipts:     32000,
-		DailyDispatches:   26000,
+		TotalInventory:    1450000,
+		AvailableCapacity: 35,
+		TanksInOperation:  55,
+		TanksTotal:        59,
+		CurrentThroughput: 8500,
+		AvgTemperature:    38,
+		ActiveAlarms:      3,
+		DailyReceipts:     52000,
+		DailyDispatches:   46000,
 	})
 
 	s.db.UpsertSubStationKPIs(models.SubStationKPIs{
@@ -607,55 +610,115 @@ func (s *SystemGeneratorService) generateStaticData(rng *rand.Rand) {
 	s.db.InsertBoilerEmission(models.BoilerEmission{Pollutant: "NOx", Current: 120, Limit: 150, Unit: "mg/Nm3"})
 	s.db.InsertBoilerEmission(models.BoilerEmission{Pollutant: "SOx", Current: 35, Limit: 100, Unit: "mg/Nm3"})
 
-	// Tank levels
-	tanks := []struct {
-		id, prod, color string
-		level, vol, cap float64
-	}{
-		{"TK-101", "Gasoline", "#F6AD55", 78, 39000, 50000},
-		{"TK-102", "Gasoline", "#F6AD55", 45, 22500, 50000},
-		{"TK-103", "Gasoline", "#F6AD55", 62, 31000, 50000},
-		{"TK-201", "Diesel", "#4D65FF", 92, 73600, 80000},
-		{"TK-202", "Diesel", "#4D65FF", 33, 26400, 80000},
-		{"TK-203", "Diesel", "#4D65FF", 71, 56800, 80000},
-		{"TK-301", "Crude", "#56CDE7", 67, 67000, 100000},
-		{"TK-302", "Crude", "#56CDE7", 54, 54000, 100000},
-		{"TK-401", "Ethanol", "#5CE5A0", 55, 16500, 30000},
-		{"TK-402", "Ethanol", "#5CE5A0", 38, 11400, 30000},
+	// Tank levels — all 59 tanks with randomized levels
+	type tankDef struct {
+		id   string
+		prod string
+		color string
+		cap  float64
 	}
-	for _, tk := range tanks {
-		s.db.InsertTankLevel(models.TankLevel{TankID: tk.id, Product: tk.prod, Level: tk.level, Volume: tk.vol, Capacity: tk.cap, Color: tk.color})
+	allTanks := []tankDef{
+		// Crude Oil — capacity 100000
+		{"TK-301", "Crude", "#56CDE7", 100000},
+		{"TK-302", "Crude", "#56CDE7", 100000},
+		{"TK-501", "Crude", "#56CDE7", 100000},
+		{"TK-502", "Crude", "#56CDE7", 100000},
+		{"TK-503", "Crude", "#56CDE7", 100000},
+		{"TK-504", "Crude", "#56CDE7", 100000},
+		// Diesel — existing TK-2xx keep 80000, new TK-5xx series 60000
+		{"TK-201", "Diesel", "#4D65FF", 80000},
+		{"TK-202", "Diesel", "#4D65FF", 80000},
+		{"TK-203", "Diesel", "#4D65FF", 80000},
+		{"TK-505", "Diesel", "#4D65FF", 60000},
+		{"TK-506", "Diesel", "#4D65FF", 60000},
+		{"TK-507", "Diesel", "#4D65FF", 60000},
+		{"TK-508", "Diesel", "#4D65FF", 60000},
+		{"TK-509", "Diesel", "#4D65FF", 60000},
+		{"TK-510", "Diesel", "#4D65FF", 60000},
+		{"TK-511", "Diesel", "#4D65FF", 60000},
+		{"TK-512", "Diesel", "#4D65FF", 60000},
+		{"TK-513", "Diesel", "#4D65FF", 60000},
+		{"TK-514", "Diesel", "#4D65FF", 60000},
+		{"TK-515", "Diesel", "#4D65FF", 60000},
+		{"TK-516", "Diesel", "#4D65FF", 60000},
+		{"TK-517", "Diesel", "#4D65FF", 60000},
+		{"TK-518", "Diesel", "#4D65FF", 60000},
+		{"TK-519", "Diesel", "#4D65FF", 60000},
+		{"TK-520", "Diesel", "#4D65FF", 60000},
+		{"TK-521", "Diesel", "#4D65FF", 60000},
+		{"TK-522", "Diesel", "#4D65FF", 60000},
+		{"TK-523", "Diesel", "#4D65FF", 60000},
+		// Gasoline — existing TK-1xx keep 50000, new TK-524+ series 40000
+		{"TK-101", "Gasoline", "#F6AD55", 50000},
+		{"TK-102", "Gasoline", "#F6AD55", 50000},
+		{"TK-103", "Gasoline", "#F6AD55", 50000},
+		{"TK-524", "Gasoline", "#F6AD55", 40000},
+		{"TK-525", "Gasoline", "#F6AD55", 40000},
+		{"TK-526", "Gasoline", "#F6AD55", 40000},
+		{"TK-527", "Gasoline", "#F6AD55", 40000},
+		{"TK-528", "Gasoline", "#F6AD55", 40000},
+		{"TK-529", "Gasoline", "#F6AD55", 40000},
+		{"TK-530", "Gasoline", "#F6AD55", 40000},
+		{"TK-531", "Gasoline", "#F6AD55", 40000},
+		{"TK-532", "Gasoline", "#F6AD55", 40000},
+		{"TK-533", "Gasoline", "#F6AD55", 40000},
+		{"TK-534", "Gasoline", "#F6AD55", 40000},
+		{"TK-535", "Gasoline", "#F6AD55", 40000},
+		// Ethanol — capacity 30000
+		{"TK-401", "Ethanol", "#5CE5A0", 30000},
+		{"TK-402", "Ethanol", "#5CE5A0", 30000},
+		// LPG — capacity 20000
+		{"TK-536", "LPG", "#5CE5A0", 20000},
+		{"TK-537", "LPG", "#5CE5A0", 20000},
+		{"TK-538", "LPG", "#5CE5A0", 20000},
+		{"TK-539", "LPG", "#5CE5A0", 20000},
+		{"TK-540", "LPG", "#5CE5A0", 20000},
+		{"TK-541", "LPG", "#5CE5A0", 20000},
+		{"TK-542", "LPG", "#5CE5A0", 20000},
+		{"TK-543", "LPG", "#5CE5A0", 20000},
+		{"TK-544", "LPG", "#5CE5A0", 20000},
+		{"TK-545", "LPG", "#5CE5A0", 20000},
+		{"TK-546", "LPG", "#5CE5A0", 20000},
+		{"TK-547", "LPG", "#5CE5A0", 20000},
+		{"TK-548", "LPG", "#5CE5A0", 20000},
+		{"TK-549", "LPG", "#5CE5A0", 20000},
+	}
+	productVolumes := map[string]float64{}
+	for _, tk := range allTanks {
+		level := 15.0 + rng.Float64()*80.0 // 15-95%
+		level = math.Round(level*10) / 10
+		vol := math.Round(level * tk.cap / 100)
+		s.db.InsertTankLevel(models.TankLevel{TankID: tk.id, Product: tk.prod, Level: level, Volume: vol, Capacity: tk.cap, Color: tk.color})
+		productVolumes[tk.prod] += vol
 	}
 
-	// Tank product distribution
-	s.db.InsertTankProductDistribution(models.TankProductDistribution{Product: "Diesel", Volume: 156800, Color: "#4D65FF"})
-	s.db.InsertTankProductDistribution(models.TankProductDistribution{Product: "Crude Oil", Volume: 121000, Color: "#56CDE7"})
-	s.db.InsertTankProductDistribution(models.TankProductDistribution{Product: "Gasoline", Volume: 92500, Color: "#F6AD55"})
-	s.db.InsertTankProductDistribution(models.TankProductDistribution{Product: "Ethanol", Volume: 27900, Color: "#5CE5A0"})
-
-	// Tank level changes
-	changes := []struct {
-		id     string
-		change float64
-	}{
-		{"TK-101", 5200}, {"TK-102", -8500}, {"TK-103", 3200},
-		{"TK-201", 12000}, {"TK-202", -3200}, {"TK-203", -6800},
-		{"TK-301", -15000}, {"TK-302", 8500}, {"TK-401", 2800}, {"TK-402", -1500},
-	}
-	for _, c := range changes {
-		s.db.InsertTankLevelChange(models.TankLevelChange{TankID: c.id, Change: c.change})
+	// Tank product distribution — computed from actual volumes
+	distColors := map[string]string{"Diesel": "#4D65FF", "Crude": "#56CDE7", "Gasoline": "#F6AD55", "Ethanol": "#5CE5A0", "LPG": "#5CE5A0"}
+	distNames := map[string]string{"Crude": "Crude Oil"}
+	for prod, vol := range productVolumes {
+		displayName := prod
+		if n, ok := distNames[prod]; ok {
+			displayName = n
+		}
+		s.db.InsertTankProductDistribution(models.TankProductDistribution{Product: displayName, Volume: math.Round(vol), Color: distColors[prod]})
 	}
 
-	// Tank temperatures
-	temps := []struct {
-		id                     string
-		t00, t06, t12, t18 float64
-	}{
-		{"TK-101", 25, 24, 32, 28}, {"TK-201", 45, 44, 52, 48},
-		{"TK-301", 60, 58, 68, 63}, {"TK-401", 22, 21, 28, 25},
+	// Tank level changes — all 59 tanks with random changes
+	for _, tk := range allTanks {
+		maxChange := tk.cap * 0.20
+		change := (rng.Float64()*2 - 1) * maxChange // -20% to +20% of capacity
+		s.db.InsertTankLevelChange(models.TankLevelChange{TankID: tk.id, Change: math.Round(change)})
 	}
-	for _, t := range temps {
-		s.db.InsertTankTemperature(models.TankTemperature{TankID: t.id, T00: t.t00, T06: t.t06, T12: t.t12, T18: t.t18})
+
+	// Tank temperatures — all 59 tanks
+	baseTemps := map[string]float64{"Crude": 60, "Diesel": 45, "Gasoline": 25, "Ethanol": 22, "LPG": 18}
+	for _, tk := range allTanks {
+		bt := baseTemps[tk.prod]
+		t00 := math.Round(noise(rng, bt, 0.05)*10) / 10
+		t06 := math.Round(noise(rng, bt*0.97, 0.05)*10) / 10
+		t12 := math.Round(noise(rng, bt*1.12, 0.05)*10) / 10
+		t18 := math.Round(noise(rng, bt*1.05, 0.05)*10) / 10
+		s.db.InsertTankTemperature(models.TankTemperature{TankID: tk.id, T00: t00, T06: t06, T12: t12, T18: t18})
 	}
 
 	// SubStation transformers
