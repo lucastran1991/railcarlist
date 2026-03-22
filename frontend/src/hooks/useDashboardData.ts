@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   fetchDomainKPIs,
   fetchDomainChartByName,
@@ -24,19 +24,6 @@ interface DashboardState<K> {
   error: string | null;
 }
 
-function buildKey(domain: string, p: QueryParams): string {
-  return `${domain}_${p.start || ''}_${p.end || ''}_${p.aggregate || ''}_${p.page || ''}_${p.limit || ''}`;
-}
-
-function getDefaults(): { start: string; end: string } {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000);
-  return {
-    start: thirtyDaysAgo.toISOString().split('T')[0],
-    end: now.toISOString().split('T')[0],
-  };
-}
-
 export function useDashboardData<K>(domain: Domain, params?: QueryParams) {
   const [state, setState] = useState<DashboardState<K>>({
     kpis: null,
@@ -46,46 +33,55 @@ export function useDashboardData<K>(domain: Domain, params?: QueryParams) {
     error: null,
   });
 
-  const effectiveParams = useMemo<QueryParams>(() => {
-    if (params?.start || params?.end || params?.page || params?.limit) {
-      return params ?? {};
-    }
-    const defaults = getDefaults();
-    return { ...params, start: defaults.start, end: defaults.end, limit: 500 };
-  }, [params]);
+  // Serialize params to a stable string — always include aggregate default
+  const p = params ?? {};
+  const paramsJson = JSON.stringify({
+    aggregate: p.aggregate || 'daily',
+    start: p.start || '',
+    end: p.end || '',
+    page: p.page || 0,
+    limit: p.limit || 0,
+  });
 
-  const key = useMemo(() => buildKey(domain, effectiveParams), [domain, effectiveParams]);
+  // Keep latest params in ref so effect always reads fresh values
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   useEffect(() => {
     let cancelled = false;
     const chartSlugs = CHART_ENDPOINTS[domain];
 
-    // Initialize all charts as loading
+    // Build effective params — always include aggregate (default: daily)
+    const p = paramsRef.current ?? {};
+    const now = new Date();
+    const ago = new Date(now.getTime() - 30 * 86400000);
+    const effectiveParams: QueryParams = {
+      aggregate: p.aggregate || 'daily',
+      start: p.start || ago.toISOString().split('T')[0],
+      end: p.end || now.toISOString().split('T')[0],
+      ...(p.page ? { page: p.page } : {}),
+      ...(p.limit ? { limit: p.limit } : {}),
+    };
+
+    // Show chart spinners but keep existing KPIs visible during refetch
     const initialLoading: Record<string, boolean> = {};
     chartSlugs.forEach((slug) => { initialLoading[slug] = true; });
-
-    setState({
-      kpis: null,
-      charts: {},
+    setState((s) => ({
+      ...s,
       chartLoading: initialLoading,
-      kpisLoading: true,
+      kpisLoading: s.kpis === null,
       error: null,
-    });
+    }));
 
-    // 1. Fetch KPIs first (fast, small payload)
-    fetchDomainKPIs<K>(domain)
-      .then((kpis) => {
-        if (!cancelled) {
-          setState((s) => ({ ...s, kpis, kpisLoading: false }));
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setState((s) => ({ ...s, kpisLoading: false, error: err.message }));
-        }
-      });
+    // Fetch KPIs with same date range (KPIs are computed dynamically within range)
+    const kpiParams: QueryParams = {};
+    if (effectiveParams.start) kpiParams.start = effectiveParams.start;
+    if (effectiveParams.end) kpiParams.end = effectiveParams.end;
+    fetchDomainKPIs<K>(domain, kpiParams)
+      .then((kpis) => { if (!cancelled) setState((s) => ({ ...s, kpis, kpisLoading: false })); })
+      .catch((err) => { if (!cancelled) setState((s) => ({ ...s, kpisLoading: false, error: err.message })); });
 
-    // 2. Fetch each chart independently (lazy loading)
+    // Fetch each chart
     chartSlugs.forEach((slug) => {
       fetchDomainChartByName<PaginatedResponse<unknown> | unknown[]>(domain, slug, effectiveParams)
         .then((result) => {
@@ -108,16 +104,13 @@ export function useDashboardData<K>(domain: Domain, params?: QueryParams) {
     });
 
     return () => { cancelled = true; };
-  }, [domain, key]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Derived: overall loading = KPIs still loading
-  const loading = state.kpisLoading;
+  }, [domain, paramsJson]); // re-run when domain or serialized params change
 
   return {
     kpis: state.kpis,
     charts: state.charts,
     chartLoading: state.chartLoading,
-    loading,
+    loading: state.kpisLoading,
     error: state.error,
   };
 }

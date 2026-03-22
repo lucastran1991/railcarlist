@@ -20,8 +20,8 @@ func NewTankService(db *database.DB) *TankService {
 
 // --- KPIs ---
 
-func (s *TankService) GetKPIs() (*models.TankKPIs, error) {
-	return s.db.GetTankKPIs()
+func (s *TankService) GetKPIs(params models.HistoryParams) (*models.TankKPIs, error) {
+	return s.db.ComputeTankKPIs(params)
 }
 
 // --- Tank Levels ---

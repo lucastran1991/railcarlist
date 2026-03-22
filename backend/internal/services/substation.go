@@ -20,8 +20,8 @@ func NewSubStationService(db *database.DB) *SubStationService {
 
 // --- KPIs ---
 
-func (s *SubStationService) GetKPIs() (*models.SubStationKPIs, error) {
-	return s.db.GetSubStationKPIs()
+func (s *SubStationService) GetKPIs(params models.HistoryParams) (*models.SubStationKPIs, error) {
+	return s.db.ComputeSubStationKPIs(params)
 }
 
 // --- Voltage Profile ---

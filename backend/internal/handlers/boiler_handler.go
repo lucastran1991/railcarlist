@@ -17,7 +17,8 @@ func NewBoilerHandler(svc *services.BoilerService) *BoilerHandler {
 }
 
 func (h *BoilerHandler) HandleGetKPIs(w http.ResponseWriter, r *http.Request) {
-	kpis, err := h.svc.GetKPIs()
+	params := httputil.ParseHistoryParams(r)
+	kpis, err := h.svc.GetKPIs(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to get boiler KPIs: "+err.Error())
 		return

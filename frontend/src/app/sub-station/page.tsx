@@ -66,7 +66,6 @@ export default function SubStationPage() {
   // Early returns
   if (!ready) return null;
   if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
-  if (!kpis) return null;
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -77,16 +76,24 @@ export default function SubStationPage() {
         </div>
 
         {/* KPI Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <KpiCard label="Incoming Voltage" value={kpis.incomingVoltage.toFixed(2)} unit="kV" icon={<Zap className="w-5 h-5 text-[#5CE5A0]" />} />
-          <KpiCard label="Total Load" value={kpis.totalLoad.toFixed(1)} unit="MW" icon={<Activity className="w-5 h-5 text-[#56CDE7]" />} />
-          <KpiCard label="Transformer Temp" value={kpis.transformerTemp.toString()} unit="°C" icon={<Thermometer className={`w-5 h-5 ${kpis.transformerTemp > 65 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />} />
-          <KpiCard label="Frequency" value={kpis.frequency.toFixed(2)} unit="Hz" icon={<Radio className="w-5 h-5 text-[#5CE5A0]" />} />
-          <KpiCard label="THD" value={kpis.thd.toFixed(1)} unit="%" icon={<BarChart3 className={`w-5 h-5 ${kpis.thd > 5 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />} />
-          <KpiCard label="Breakers" value={`${kpis.breakersClosed}/${kpis.breakersTotal}`} icon={<Shield className="w-5 h-5 text-[#5CE5A0]" />} />
-          <KpiCard label="Fault Events (24h)" value={kpis.faultEvents24h.toString()} icon={<AlertTriangle className={`w-5 h-5 ${kpis.faultEvents24h > 0 ? 'text-[#E53E3E]' : 'text-[#5CE5A0]'}`} />} />
-          <KpiCard label="Busbar Balance" value={kpis.busbarBalance.toFixed(1)} unit="%" icon={<Gauge className={`w-5 h-5 ${kpis.busbarBalance < 10 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
-        </div>
+        {kpis ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <KpiCard label="Incoming Voltage" value={kpis.incomingVoltage.toFixed(2)} unit="kV" icon={<Zap className="w-5 h-5 text-[#5CE5A0]" />} />
+            <KpiCard label="Total Load" value={kpis.totalLoad.toFixed(1)} unit="MW" icon={<Activity className="w-5 h-5 text-[#56CDE7]" />} />
+            <KpiCard label="Transformer Temp" value={kpis.transformerTemp.toString()} unit="°C" icon={<Thermometer className={`w-5 h-5 ${kpis.transformerTemp > 65 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />} />
+            <KpiCard label="Frequency" value={kpis.frequency.toFixed(2)} unit="Hz" icon={<Radio className="w-5 h-5 text-[#5CE5A0]" />} />
+            <KpiCard label="THD" value={kpis.thd.toFixed(1)} unit="%" icon={<BarChart3 className={`w-5 h-5 ${kpis.thd > 5 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />} />
+            <KpiCard label="Breakers" value={`${kpis.breakersClosed}/${kpis.breakersTotal}`} icon={<Shield className="w-5 h-5 text-[#5CE5A0]" />} />
+            <KpiCard label="Fault Events (24h)" value={kpis.faultEvents24h.toString()} icon={<AlertTriangle className={`w-5 h-5 ${kpis.faultEvents24h > 0 ? 'text-[#E53E3E]' : 'text-[#5CE5A0]'}`} />} />
+            <KpiCard label="Busbar Balance" value={kpis.busbarBalance.toFixed(1)} unit="%" icon={<Gauge className={`w-5 h-5 ${kpis.busbarBalance < 10 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-xl border border-border p-3 sm:p-4 h-[72px] animate-pulse" />
+            ))}
+          </div>
+        )}
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">

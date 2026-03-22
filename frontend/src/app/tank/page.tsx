@@ -56,7 +56,6 @@ export default function TankPage() {
   // Early returns
   if (!ready) return null;
   if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
-  if (!kpis) return null;
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -67,16 +66,24 @@ export default function TankPage() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <KpiCard label="Total Inventory" value={kpis.totalInventory.toLocaleString()} unit="bbl" icon={<Database className="w-5 h-5 text-[#56CDE7]" />} />
-          <KpiCard label="Available Capacity" value={kpis.availableCapacity.toString()} unit="%" icon={<BarChart3 className={`w-5 h-5 ${kpis.availableCapacity > 30 ? 'text-[#5CE5A0]' : 'text-[#E53E3E]'}`} />} />
-          <KpiCard label="Tanks Online" value={`${kpis.tanksInOperation}/${kpis.tanksTotal}`} icon={<CheckCircle className="w-5 h-5 text-[#5CE5A0]" />} />
-          <KpiCard label="Throughput" value={kpis.currentThroughput.toLocaleString()} unit="bbl/h" icon={<Activity className="w-5 h-5 text-[#56CDE7]" />} />
-          <KpiCard label="Avg Temperature" value={kpis.avgTemperature.toString()} unit="°C" icon={<Thermometer className="w-5 h-5 text-[#5CE5A0]" />} />
-          <KpiCard label="Active Alarms" value={kpis.activeAlarms.toString()} icon={<AlertTriangle className={`w-5 h-5 ${kpis.activeAlarms > 0 ? 'text-[#E53E3E]' : 'text-[#5CE5A0]'}`} />} />
-          <KpiCard label="Daily Receipts" value={kpis.dailyReceipts.toLocaleString()} unit="bbl" icon={<ArrowDownCircle className="w-5 h-5 text-[#5CE5A0]" />} />
-          <KpiCard label="Daily Dispatches" value={kpis.dailyDispatches.toLocaleString()} unit="bbl" icon={<ArrowUpCircle className="w-5 h-5 text-[#F6AD55]" />} />
-        </div>
+        {kpis ? (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <KpiCard label="Total Inventory" value={kpis.totalInventory.toLocaleString()} unit="bbl" icon={<Database className="w-5 h-5 text-[#56CDE7]" />} />
+            <KpiCard label="Available Capacity" value={kpis.availableCapacity.toString()} unit="%" icon={<BarChart3 className={`w-5 h-5 ${kpis.availableCapacity > 30 ? 'text-[#5CE5A0]' : 'text-[#E53E3E]'}`} />} />
+            <KpiCard label="Tanks Online" value={`${kpis.tanksInOperation}/${kpis.tanksTotal}`} icon={<CheckCircle className="w-5 h-5 text-[#5CE5A0]" />} />
+            <KpiCard label="Throughput" value={kpis.currentThroughput.toLocaleString()} unit="bbl/h" icon={<Activity className="w-5 h-5 text-[#56CDE7]" />} />
+            <KpiCard label="Avg Temperature" value={kpis.avgTemperature.toString()} unit="°C" icon={<Thermometer className="w-5 h-5 text-[#5CE5A0]" />} />
+            <KpiCard label="Active Alarms" value={kpis.activeAlarms.toString()} icon={<AlertTriangle className={`w-5 h-5 ${kpis.activeAlarms > 0 ? 'text-[#E53E3E]' : 'text-[#5CE5A0]'}`} />} />
+            <KpiCard label="Daily Receipts" value={kpis.dailyReceipts.toLocaleString()} unit="bbl" icon={<ArrowDownCircle className="w-5 h-5 text-[#5CE5A0]" />} />
+            <KpiCard label="Daily Dispatches" value={kpis.dailyDispatches.toLocaleString()} unit="bbl" icon={<ArrowUpCircle className="w-5 h-5 text-[#F6AD55]" />} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-xl border border-border p-3 sm:p-4 h-[72px] animate-pulse" />
+            ))}
+          </div>
+        )}
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">

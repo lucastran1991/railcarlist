@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -881,6 +882,39 @@ func (db *DB) GetElectricityKPIs() (*models.ElectricityKPIs, error) {
 	return &k, nil
 }
 
+func (db *DB) ComputeElectricityKPIs(params models.HistoryParams) (*models.ElectricityKPIs, error) {
+	if params.Start == "" && params.End == "" {
+		return db.GetElectricityKPIs()
+	}
+	where, args := db.buildHistoryWhere(params)
+	var k models.ElectricityKPIs
+	// totalConsumption = SUM(actual) from load_profiles
+	db.conn.QueryRow("SELECT COALESCE(SUM(actual), 0) FROM electricity_load_profiles"+where, args...).Scan(&k.TotalConsumption)
+	// realTimeDemand = last actual value
+	db.conn.QueryRow("SELECT COALESCE(actual, 0) FROM electricity_load_profiles"+where+" ORDER BY recorded_at DESC LIMIT 1", args...).Scan(&k.RealTimeDemand)
+	// peakDemand = MAX(actual)
+	db.conn.QueryRow("SELECT COALESCE(MAX(actual), 0) FROM electricity_load_profiles"+where, args...).Scan(&k.PeakDemand)
+	// powerFactor = AVG(value) from power_factor
+	db.conn.QueryRow("SELECT COALESCE(AVG(value), 0) FROM electricity_power_factor"+where, args...).Scan(&k.PowerFactor)
+	// energyCost = SUM(cost) from cost_breakdown (static, no date filter)
+	db.conn.QueryRow("SELECT COALESCE(SUM(cost), 0) FROM electricity_cost_breakdown").Scan(&k.EnergyCost)
+	// carbonEmissions = totalConsumption * 0.000433
+	k.CarbonEmissions = k.TotalConsumption * 0.000433
+	// gridAvailability = 99.7 (static)
+	k.GridAvailability = 99.7
+	// transformerLoad = peak / 4200 * 100
+	k.TransformerLoad = k.PeakDemand / 4200 * 100
+
+	k.TotalConsumption = math.Round(k.TotalConsumption)
+	k.RealTimeDemand = math.Round(k.RealTimeDemand*10) / 10
+	k.PeakDemand = math.Round(k.PeakDemand*10) / 10
+	k.PowerFactor = math.Round(k.PowerFactor*100) / 100
+	k.CarbonEmissions = math.Round(k.CarbonEmissions*10) / 10
+	k.TransformerLoad = math.Round(k.TransformerLoad)
+
+	return &k, nil
+}
+
 // --- Steam DB Methods ---
 
 func (db *DB) InsertSteamBalance(item models.SteamBalance, recordedAt int64) error {
@@ -1136,6 +1170,41 @@ func (db *DB) GetSteamKPIs() (*models.SteamKPIs, error) {
 	return &k, nil
 }
 
+func (db *DB) ComputeSteamKPIs(params models.HistoryParams) (*models.SteamKPIs, error) {
+	if params.Start == "" && params.End == "" {
+		return db.GetSteamKPIs()
+	}
+	where, args := db.buildHistoryWhere(params)
+	var k models.SteamKPIs
+	// totalProduction = AVG(boiler1+boiler2+boiler3)
+	db.conn.QueryRow("SELECT COALESCE(AVG(boiler1+boiler2+boiler3), 0) FROM steam_balance"+where, args...).Scan(&k.TotalProduction)
+	// totalDemand = AVG(demand)
+	db.conn.QueryRow("SELECT COALESCE(AVG(demand), 0) FROM steam_balance"+where, args...).Scan(&k.TotalDemand)
+	// headerPressure = AVG(hp)
+	db.conn.QueryRow("SELECT COALESCE(AVG(hp), 0) FROM steam_header_pressure"+where, args...).Scan(&k.HeaderPressure)
+	// steamTemperature = 285 (static sensor)
+	k.SteamTemperature = 285
+	// systemEfficiency
+	if k.TotalDemand > 0 {
+		k.SystemEfficiency = k.TotalProduction / k.TotalDemand * 100
+	}
+	// condensateRecovery = AVG(recovery)
+	db.conn.QueryRow("SELECT COALESCE(AVG(recovery), 0) FROM steam_condensate"+where, args...).Scan(&k.CondensateRecovery)
+	// makeupWaterFlow = 4.2 (static)
+	k.MakeupWaterFlow = 4.2
+	// fuelConsumption = AVG(fuel)
+	db.conn.QueryRow("SELECT COALESCE(AVG(fuel), 0) FROM steam_fuel_ratio"+where, args...).Scan(&k.FuelConsumption)
+
+	k.TotalProduction = math.Round(k.TotalProduction*10) / 10
+	k.TotalDemand = math.Round(k.TotalDemand*10) / 10
+	k.HeaderPressure = math.Round(k.HeaderPressure*10) / 10
+	k.SystemEfficiency = math.Round(k.SystemEfficiency*10) / 10
+	k.CondensateRecovery = math.Round(k.CondensateRecovery)
+	k.FuelConsumption = math.Round(k.FuelConsumption)
+
+	return &k, nil
+}
+
 // --- Boiler DB Methods ---
 
 func (db *DB) InsertBoilerReading(item models.BoilerReading) error {
@@ -1375,6 +1444,39 @@ func (db *DB) GetBoilerKPIs() (*models.BoilerKPIs, error) {
 	return &k, nil
 }
 
+func (db *DB) ComputeBoilerKPIs(params models.HistoryParams) (*models.BoilerKPIs, error) {
+	if params.Start == "" && params.End == "" {
+		return db.GetBoilerKPIs()
+	}
+	where, args := db.buildHistoryWhere(params)
+	var k models.BoilerKPIs
+	// Count online boilers from readings (static)
+	db.conn.QueryRow("SELECT COUNT(*) FROM boiler_readings WHERE load > 0").Scan(&k.BoilersOnline)
+	db.conn.QueryRow("SELECT COUNT(*) FROM boiler_readings").Scan(&k.BoilersTotal)
+	// totalSteamOutput = AVG(steam) from boiler_steam_fuel
+	db.conn.QueryRow("SELECT COALESCE(AVG(steam), 0) FROM boiler_steam_fuel"+where, args...).Scan(&k.TotalSteamOutput)
+	// fleetEfficiency = AVG of all boiler efficiencies
+	db.conn.QueryRow("SELECT COALESCE(AVG((blr01+blr02+blr03)/3.0), 0) FROM boiler_efficiency_trend"+where, args...).Scan(&k.FleetEfficiency)
+	// avgStackTemp = AVG of all stack temps
+	db.conn.QueryRow("SELECT COALESCE(AVG((blr01+blr02+blr03)/3.0), 0) FROM boiler_stack_temp"+where, args...).Scan(&k.AvgStackTemp)
+	// totalFuelRate = AVG(fuel)
+	db.conn.QueryRow("SELECT COALESCE(AVG(fuel), 0) FROM boiler_steam_fuel"+where, args...).Scan(&k.TotalFuelRate)
+	// combustion from static table
+	db.conn.QueryRow("SELECT COALESCE(AVG(o2), 0) FROM boiler_combustion").Scan(&k.AvgO2)
+	db.conn.QueryRow("SELECT COALESCE(AVG(co), 0) FROM boiler_combustion").Scan(&k.CoEmissions)
+	db.conn.QueryRow("SELECT COALESCE(AVG(nox), 0) FROM boiler_combustion").Scan(&k.NoxEmissions)
+
+	k.TotalSteamOutput = math.Round(k.TotalSteamOutput*10) / 10
+	k.FleetEfficiency = math.Round(k.FleetEfficiency*10) / 10
+	k.AvgStackTemp = math.Round(k.AvgStackTemp)
+	k.TotalFuelRate = math.Round(k.TotalFuelRate)
+	k.AvgO2 = math.Round(k.AvgO2*10) / 10
+	k.CoEmissions = math.Round(k.CoEmissions)
+	k.NoxEmissions = math.Round(k.NoxEmissions)
+
+	return &k, nil
+}
+
 // --- Tank DB Methods ---
 
 func (db *DB) InsertTankLevel(item models.TankLevel) error {
@@ -1595,6 +1697,35 @@ func (db *DB) GetTankKPIs() (*models.TankKPIs, error) {
 	if err != nil {
 		return nil, err
 	}
+	return &k, nil
+}
+
+func (db *DB) ComputeTankKPIs(params models.HistoryParams) (*models.TankKPIs, error) {
+	if params.Start == "" && params.End == "" {
+		return db.GetTankKPIs()
+	}
+	where, args := db.buildHistoryWhere(params)
+	var k models.TankKPIs
+	// From tank_levels (static snapshot)
+	db.conn.QueryRow("SELECT COALESCE(SUM(volume), 0) FROM tank_levels").Scan(&k.TotalInventory)
+	db.conn.QueryRow("SELECT COUNT(*) FROM tank_levels WHERE level > 0").Scan(&k.TanksInOperation)
+	db.conn.QueryRow("SELECT COUNT(*) FROM tank_levels").Scan(&k.TanksTotal)
+	var totalCap float64
+	db.conn.QueryRow("SELECT COALESCE(SUM(capacity), 0) FROM tank_levels").Scan(&totalCap)
+	if totalCap > 0 {
+		k.AvailableCapacity = math.Round((1 - k.TotalInventory/totalCap) * 100)
+	}
+	// throughput from history
+	db.conn.QueryRow("SELECT COALESCE(AVG(receipts+dispatches), 0) FROM tank_throughput"+where, args...).Scan(&k.CurrentThroughput)
+	db.conn.QueryRow("SELECT COALESCE(AVG(receipts), 0) FROM tank_throughput"+where, args...).Scan(&k.DailyReceipts)
+	db.conn.QueryRow("SELECT COALESCE(AVG(dispatches), 0) FROM tank_throughput"+where, args...).Scan(&k.DailyDispatches)
+	k.AvgTemperature = 42 // static
+	k.ActiveAlarms = 2    // static
+
+	k.CurrentThroughput = math.Round(k.CurrentThroughput)
+	k.DailyReceipts = math.Round(k.DailyReceipts)
+	k.DailyDispatches = math.Round(k.DailyDispatches)
+
 	return &k, nil
 }
 
@@ -1834,6 +1965,38 @@ func (db *DB) GetSubStationKPIs() (*models.SubStationKPIs, error) {
 	if err != nil {
 		return nil, err
 	}
+	return &k, nil
+}
+
+func (db *DB) ComputeSubStationKPIs(params models.HistoryParams) (*models.SubStationKPIs, error) {
+	if params.Start == "" && params.End == "" {
+		return db.GetSubStationKPIs()
+	}
+	where, args := db.buildHistoryWhere(params)
+	var k models.SubStationKPIs
+	// voltage = AVG of 3 phases
+	db.conn.QueryRow("SELECT COALESCE(AVG((v_ry+v_yb+v_br)/3.0), 0) FROM substation_voltage_profile"+where, args...).Scan(&k.IncomingVoltage)
+	// total load from transformers (static)
+	db.conn.QueryRow("SELECT COALESCE(SUM(loading*capacity/100.0), 0) FROM substation_transformers").Scan(&k.TotalLoad)
+	// transformer temp = AVG oil
+	db.conn.QueryRow("SELECT COALESCE(AVG(oil_temp), 0) FROM substation_transformer_temp"+where, args...).Scan(&k.TransformerTemp)
+	// frequency = 50.02 (static)
+	k.Frequency = 50.02
+	// THD from harmonics (static)
+	db.conn.QueryRow("SELECT COALESCE(SUM(magnitude), 0) FROM substation_harmonics").Scan(&k.THD)
+	// breakers (static)
+	k.BreakersClosed = 12
+	k.BreakersTotal = 14
+	// fault events count
+	db.conn.QueryRow("SELECT COALESCE(SUM(h08+h09+h10+h11+h12+h13+h14+h15), 0) FROM substation_fault_events").Scan(&k.FaultEvents24h)
+	// busbar balance
+	k.BusbarBalance = 5.2
+
+	k.IncomingVoltage = math.Round(k.IncomingVoltage*100) / 100
+	k.TotalLoad = math.Round(k.TotalLoad*10) / 10
+	k.TransformerTemp = math.Round(k.TransformerTemp)
+	k.THD = math.Round(k.THD*10) / 10
+
 	return &k, nil
 }
 

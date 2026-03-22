@@ -20,8 +20,8 @@ func NewBoilerService(db *database.DB) *BoilerService {
 
 // --- KPIs ---
 
-func (s *BoilerService) GetKPIs() (*models.BoilerKPIs, error) {
-	return s.db.GetBoilerKPIs()
+func (s *BoilerService) GetKPIs(params models.HistoryParams) (*models.BoilerKPIs, error) {
+	return s.db.ComputeBoilerKPIs(params)
 }
 
 // --- Boiler Readings (comparison) ---

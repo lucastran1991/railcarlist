@@ -17,7 +17,8 @@ func NewElectricityHandler(svc *services.ElectricityService) *ElectricityHandler
 }
 
 func (h *ElectricityHandler) HandleGetKPIs(w http.ResponseWriter, r *http.Request) {
-	kpis, err := h.svc.GetKPIs()
+	params := httputil.ParseHistoryParams(r)
+	kpis, err := h.svc.GetKPIs(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to get electricity KPIs: "+err.Error())
 		return

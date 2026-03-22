@@ -17,7 +17,8 @@ func NewSubStationHandler(svc *services.SubStationService) *SubStationHandler {
 }
 
 func (h *SubStationHandler) HandleGetKPIs(w http.ResponseWriter, r *http.Request) {
-	kpis, err := h.svc.GetKPIs()
+	params := httputil.ParseHistoryParams(r)
+	kpis, err := h.svc.GetKPIs(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to get substation KPIs: "+err.Error())
 		return

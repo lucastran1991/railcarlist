@@ -46,7 +46,6 @@ export default function BoilerPage() {
 
   if (!ready) return null;
   if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
-  if (!kpis) return null;
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -57,56 +56,64 @@ export default function BoilerPage() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <KpiCard
-            label="Boilers Online"
-            value={`${kpis.boilersOnline}/${kpis.boilersTotal}`}
-            icon={<Flame className="w-5 h-5 text-[#5CE5A0]" />}
-            accent
-          />
-          <KpiCard
-            label="Steam Output"
-            value={String(kpis.totalSteamOutput)}
-            unit="tonnes/h"
-            icon={<Cloud className="w-5 h-5 text-[#56CDE7]" />}
-          />
-          <KpiCard
-            label="Fleet Efficiency"
-            value={String(kpis.fleetEfficiency)}
-            unit="%"
-            icon={<TrendingUp className={`w-5 h-5 ${kpis.fleetEfficiency > 85 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />}
-          />
-          <KpiCard
-            label="Avg Stack Temp"
-            value={String(kpis.avgStackTemp)}
-            unit="°C"
-            icon={<Thermometer className={`w-5 h-5 ${kpis.avgStackTemp > 200 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />}
-          />
-          <KpiCard
-            label="Fuel Rate"
-            value={String(kpis.totalFuelRate)}
-            unit="m³/h"
-            icon={<Droplets className="w-5 h-5 text-[#56CDE7]" />}
-          />
-          <KpiCard
-            label="Avg O₂"
-            value={String(kpis.avgO2)}
-            unit="%"
-            icon={<Wind className={`w-5 h-5 ${kpis.avgO2 >= 2 && kpis.avgO2 <= 4 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />}
-          />
-          <KpiCard
-            label="CO Emissions"
-            value={String(kpis.coEmissions)}
-            unit="ppm"
-            icon={<AlertCircle className={`w-5 h-5 ${kpis.coEmissions < 100 ? 'text-[#5CE5A0]' : 'text-[#E53E3E]'}`} />}
-          />
-          <KpiCard
-            label="NOx Emissions"
-            value={String(kpis.noxEmissions)}
-            unit="mg/Nm³"
-            icon={<AlertTriangle className={`w-5 h-5 ${kpis.noxEmissions > 100 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />}
-          />
-        </div>
+        {kpis ? (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <KpiCard
+              label="Boilers Online"
+              value={`${kpis.boilersOnline}/${kpis.boilersTotal}`}
+              icon={<Flame className="w-5 h-5 text-[#5CE5A0]" />}
+              accent
+            />
+            <KpiCard
+              label="Steam Output"
+              value={String(kpis.totalSteamOutput)}
+              unit="tonnes/h"
+              icon={<Cloud className="w-5 h-5 text-[#56CDE7]" />}
+            />
+            <KpiCard
+              label="Fleet Efficiency"
+              value={String(kpis.fleetEfficiency)}
+              unit="%"
+              icon={<TrendingUp className={`w-5 h-5 ${kpis.fleetEfficiency > 85 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />}
+            />
+            <KpiCard
+              label="Avg Stack Temp"
+              value={String(kpis.avgStackTemp)}
+              unit="°C"
+              icon={<Thermometer className={`w-5 h-5 ${kpis.avgStackTemp > 200 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />}
+            />
+            <KpiCard
+              label="Fuel Rate"
+              value={String(kpis.totalFuelRate)}
+              unit="m³/h"
+              icon={<Droplets className="w-5 h-5 text-[#56CDE7]" />}
+            />
+            <KpiCard
+              label="Avg O₂"
+              value={String(kpis.avgO2)}
+              unit="%"
+              icon={<Wind className={`w-5 h-5 ${kpis.avgO2 >= 2 && kpis.avgO2 <= 4 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />}
+            />
+            <KpiCard
+              label="CO Emissions"
+              value={String(kpis.coEmissions)}
+              unit="ppm"
+              icon={<AlertCircle className={`w-5 h-5 ${kpis.coEmissions < 100 ? 'text-[#5CE5A0]' : 'text-[#E53E3E]'}`} />}
+            />
+            <KpiCard
+              label="NOx Emissions"
+              value={String(kpis.noxEmissions)}
+              unit="mg/Nm³"
+              icon={<AlertTriangle className={`w-5 h-5 ${kpis.noxEmissions > 100 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-xl border border-border p-3 sm:p-4 h-[72px] animate-pulse" />
+            ))}
+          </div>
+        )}
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">

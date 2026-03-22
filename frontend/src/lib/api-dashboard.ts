@@ -54,8 +54,8 @@ const CHART_ENDPOINTS: Record<Domain, string[]> = {
 
 // --- Generic domain fetchers ---
 
-export async function fetchDomainKPIs<T>(domain: Domain): Promise<T> {
-  return fetchJSON<T>(`${API_ENDPOINTS[domain]}/kpis`);
+export async function fetchDomainKPIs<T>(domain: Domain, params?: QueryParams): Promise<T> {
+  return fetchJSON<T>(`${API_ENDPOINTS[domain]}/kpis`, params);
 }
 
 export async function fetchDomainChart<T>(domain: Domain, chartIndex: number, params?: QueryParams): Promise<T> {

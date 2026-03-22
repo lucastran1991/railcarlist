@@ -147,14 +147,7 @@ export default function FilterBar({ onChange }: FilterBarProps) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  // Fire on initial mount
-  const initialFired = useRef(false);
-  useEffect(() => {
-    if (!initialFired.current) {
-      initialFired.current = true;
-      onChangeRef.current(buildParams('daily', 'mtd', '', ''));
-    }
-  }, []);
+  // No initial fire — hook uses sensible defaults on first render
 
   const handleFrequencyChange = useCallback((v: Frequency) => {
     setFrequency(v);

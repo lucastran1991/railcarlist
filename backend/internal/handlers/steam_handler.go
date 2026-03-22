@@ -17,7 +17,8 @@ func NewSteamHandler(svc *services.SteamService) *SteamHandler {
 }
 
 func (h *SteamHandler) HandleGetKPIs(w http.ResponseWriter, r *http.Request) {
-	kpis, err := h.svc.GetKPIs()
+	params := httputil.ParseHistoryParams(r)
+	kpis, err := h.svc.GetKPIs(params)
 	if err != nil {
 		httputil.WriteJSONError(w, http.StatusInternalServerError, "Failed to get steam KPIs: "+err.Error())
 		return

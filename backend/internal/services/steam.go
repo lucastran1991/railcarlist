@@ -20,8 +20,8 @@ func NewSteamService(db *database.DB) *SteamService {
 
 // --- KPIs ---
 
-func (s *SteamService) GetKPIs() (*models.SteamKPIs, error) {
-	return s.db.GetSteamKPIs()
+func (s *SteamService) GetKPIs(params models.HistoryParams) (*models.SteamKPIs, error) {
+	return s.db.ComputeSteamKPIs(params)
 }
 
 // --- Steam Balance ---

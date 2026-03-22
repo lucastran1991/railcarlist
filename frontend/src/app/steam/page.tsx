@@ -69,9 +69,7 @@ export default function SteamPage() {
     );
   }
 
-  if (!kpis) return null;
-
-  const supplyGtDemand = kpis.totalProduction > kpis.totalDemand;
+  const supplyGtDemand = kpis ? kpis.totalProduction > kpis.totalDemand : false;
   const distributionTotal = steamDistribution.reduce((s, d) => s + d.value, 0);
 
   const lossMax = Math.max(...steamLoss.map((l) => l.loss), 0);
@@ -92,16 +90,24 @@ export default function SteamPage() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <KpiCard label="Total Production" value={kpis.totalProduction.toFixed(1)} unit="tonnes/h" icon={<Flame className="w-5 h-5 text-[#56CDE7]" />} />
-          <KpiCard label="Total Demand" value={kpis.totalDemand.toFixed(1)} unit="tonnes/h" icon={<Activity className={`w-5 h-5 ${supplyGtDemand ? 'text-[#5CE5A0]' : 'text-[#E53E3E]'}`} />} />
-          <KpiCard label="Header Pressure" value={kpis.headerPressure.toFixed(1)} unit="bar" icon={<Gauge className="w-5 h-5 text-[#5CE5A0]" />} />
-          <KpiCard label="Steam Temperature" value={kpis.steamTemperature.toString()} unit="°C" icon={<Thermometer className="w-5 h-5 text-[#F6AD55]" />} />
-          <KpiCard label="System Efficiency" value={kpis.systemEfficiency.toFixed(1)} unit="%" icon={<TrendingUp className={`w-5 h-5 ${kpis.systemEfficiency > 85 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
-          <KpiCard label="Condensate Recovery" value={kpis.condensateRecovery.toString()} unit="%" icon={<Droplets className={`w-5 h-5 ${kpis.condensateRecovery > 80 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
-          <KpiCard label="Makeup Water" value={kpis.makeupWaterFlow.toFixed(1)} unit="m³/h" icon={<Waves className="w-5 h-5 text-[#56CDE7]" />} />
-          <KpiCard label="Fuel Consumption" value={kpis.fuelConsumption.toLocaleString()} unit="m³/h" icon={<Fuel className="w-5 h-5 text-[#F6AD55]" />} />
-        </div>
+        {kpis ? (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <KpiCard label="Total Production" value={kpis.totalProduction.toFixed(1)} unit="tonnes/h" icon={<Flame className="w-5 h-5 text-[#56CDE7]" />} />
+            <KpiCard label="Total Demand" value={kpis.totalDemand.toFixed(1)} unit="tonnes/h" icon={<Activity className={`w-5 h-5 ${supplyGtDemand ? 'text-[#5CE5A0]' : 'text-[#E53E3E]'}`} />} />
+            <KpiCard label="Header Pressure" value={kpis.headerPressure.toFixed(1)} unit="bar" icon={<Gauge className="w-5 h-5 text-[#5CE5A0]" />} />
+            <KpiCard label="Steam Temperature" value={kpis.steamTemperature.toString()} unit="°C" icon={<Thermometer className="w-5 h-5 text-[#F6AD55]" />} />
+            <KpiCard label="System Efficiency" value={kpis.systemEfficiency.toFixed(1)} unit="%" icon={<TrendingUp className={`w-5 h-5 ${kpis.systemEfficiency > 85 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
+            <KpiCard label="Condensate Recovery" value={kpis.condensateRecovery.toString()} unit="%" icon={<Droplets className={`w-5 h-5 ${kpis.condensateRecovery > 80 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
+            <KpiCard label="Makeup Water" value={kpis.makeupWaterFlow.toFixed(1)} unit="m³/h" icon={<Waves className="w-5 h-5 text-[#56CDE7]" />} />
+            <KpiCard label="Fuel Consumption" value={kpis.fuelConsumption.toLocaleString()} unit="m³/h" icon={<Fuel className="w-5 h-5 text-[#F6AD55]" />} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-xl border border-border p-3 sm:p-4 h-[72px] animate-pulse" />
+            ))}
+          </div>
+        )}
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">

@@ -74,8 +74,6 @@ export default function ElectricityPage() {
     );
   }
 
-  if (!kpis) return null;
-
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -85,16 +83,24 @@ export default function ElectricityPage() {
         </div>
 
         {/* KPI Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <KpiCard label="Total Consumption" value={kpis.totalConsumption.toLocaleString()} unit="kWh" icon={<Zap className="w-5 h-5 text-[#56CDE7]" />} />
-          <KpiCard label="Real-time Demand" value={kpis.realTimeDemand.toLocaleString()} unit="kW" icon={<Activity className="w-5 h-5 text-[#5CE5A0]" />} />
-          <KpiCard label="Peak Demand" value={kpis.peakDemand.toLocaleString()} unit="kW" icon={<TrendingUp className="w-5 h-5 text-[#F6AD55]" />} />
-          <KpiCard label="Power Factor" value={kpis.powerFactor.toFixed(2)} icon={<Gauge className={`w-5 h-5 ${kpis.powerFactor > 0.93 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
-          <KpiCard label="Energy Cost" value={`$${kpis.energyCost.toLocaleString()}`} icon={<DollarSign className="w-5 h-5 text-[#56CDE7]" />} />
-          <KpiCard label="Carbon Emissions" value={kpis.carbonEmissions.toFixed(2)} unit="tonnes" icon={<Cloud className="w-5 h-5 text-[#5CE5A0]" />} />
-          <KpiCard label="Grid Availability" value={kpis.gridAvailability.toFixed(1)} unit="%" icon={<Shield className="w-5 h-5 text-[#5CE5A0]" />} />
-          <KpiCard label="Transformer Load" value={kpis.transformerLoad.toString()} unit="%" icon={<Thermometer className={`w-5 h-5 ${kpis.transformerLoad > 80 ? 'text-[#F6AD55]' : 'text-[#56CDE7]'}`} />} />
-        </div>
+        {kpis ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <KpiCard label="Total Consumption" value={kpis.totalConsumption.toLocaleString()} unit="kWh" icon={<Zap className="w-5 h-5 text-[#56CDE7]" />} />
+            <KpiCard label="Real-time Demand" value={kpis.realTimeDemand.toLocaleString()} unit="kW" icon={<Activity className="w-5 h-5 text-[#5CE5A0]" />} />
+            <KpiCard label="Peak Demand" value={kpis.peakDemand.toLocaleString()} unit="kW" icon={<TrendingUp className="w-5 h-5 text-[#F6AD55]" />} />
+            <KpiCard label="Power Factor" value={kpis.powerFactor.toFixed(2)} icon={<Gauge className={`w-5 h-5 ${kpis.powerFactor > 0.93 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
+            <KpiCard label="Energy Cost" value={`$${kpis.energyCost.toLocaleString()}`} icon={<DollarSign className="w-5 h-5 text-[#56CDE7]" />} />
+            <KpiCard label="Carbon Emissions" value={kpis.carbonEmissions.toFixed(2)} unit="tonnes" icon={<Cloud className="w-5 h-5 text-[#5CE5A0]" />} />
+            <KpiCard label="Grid Availability" value={kpis.gridAvailability.toFixed(1)} unit="%" icon={<Shield className="w-5 h-5 text-[#5CE5A0]" />} />
+            <KpiCard label="Transformer Load" value={kpis.transformerLoad.toString()} unit="%" icon={<Thermometer className={`w-5 h-5 ${kpis.transformerLoad > 80 ? 'text-[#F6AD55]' : 'text-[#56CDE7]'}`} />} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-xl border border-border p-3 sm:p-4 h-[72px] animate-pulse" />
+            ))}
+          </div>
+        )}
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">

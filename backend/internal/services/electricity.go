@@ -20,8 +20,8 @@ func NewElectricityService(db *database.DB) *ElectricityService {
 
 // --- KPIs ---
 
-func (s *ElectricityService) GetKPIs() (*models.ElectricityKPIs, error) {
-	return s.db.GetElectricityKPIs()
+func (s *ElectricityService) GetKPIs(params models.HistoryParams) (*models.ElectricityKPIs, error) {
+	return s.db.ComputeElectricityKPIs(params)
 }
 
 // --- Load Profiles ---
