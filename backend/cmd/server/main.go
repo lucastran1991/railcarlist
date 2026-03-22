@@ -56,6 +56,7 @@ func main() {
 	boilerSvc := services.NewBoilerService(db)
 	tankSvc := services.NewTankService(db)
 	subStationSvc := services.NewSubStationService(db)
+	systemGenSvc := services.NewSystemGeneratorService(db)
 
 	minValue, maxValue, useSequential, startTime, endTime := cfg.GenerationDefaults()
 
@@ -72,6 +73,7 @@ func main() {
 	boilerHandler := handlers.NewBoilerHandler(boilerSvc)
 	tankHandler := handlers.NewTankHandler(tankSvc)
 	subStationHandler := handlers.NewSubStationHandler(subStationSvc)
+	systemHandler := handlers.NewSystemHandler(systemGenSvc)
 
 	// Setup router
 	router := mux.NewRouter()
@@ -142,6 +144,8 @@ func main() {
 	api.HandleFunc("/substation/feeder-distribution", subStationHandler.HandleGetFeederDistribution).Methods("GET")
 	api.HandleFunc("/substation/fault-events", subStationHandler.HandleGetFaultEvents).Methods("GET")
 	api.HandleFunc("/substation/ingest", subStationHandler.HandleIngest).Methods("POST")
+	// System data generation
+	api.HandleFunc("/system/generate", systemHandler.HandleGenerate).Methods("POST")
 	// Handle timeseriesdata with flexible path matching
 	api.PathPrefix("/timeseriesdata/").HandlerFunc(queryHandler.Handle).Methods("GET")
 
@@ -226,6 +230,7 @@ func main() {
 	log.Printf("  GET  /api/substation/feeder-distribution")
 	log.Printf("  GET  /api/substation/fault-events")
 	log.Printf("  POST /api/substation/ingest")
+	log.Printf("  POST /api/system/generate")
 	log.Printf("  GET  /health")
 
 	if err := http.ListenAndServe(addr, corsMiddleware(router)); err != nil {
