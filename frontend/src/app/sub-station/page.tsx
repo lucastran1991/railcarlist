@@ -43,28 +43,30 @@ export default function SubStationPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
-  const { kpis, charts, loading, error } = useDashboardData<SubStationKPIs>('substation', filterParams);
+  const { kpis, charts, chartLoading, loading, error } = useDashboardData<SubStationKPIs>('substation', filterParams);
 
-  if (!ready) return null;
-  if (loading) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-muted-foreground">Loading...</p></div>;
-  if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
-  if (!kpis) return null;
-
+  // Chart data extraction
   const voltageProfile = (charts['voltage-profile'] ?? []) as { timestamp: number; vRY: number; vYB: number; vBR: number }[];
   const transformerLoading = (charts['transformers'] ?? []) as { name: string; loading: number; capacity: number; unit: string }[];
   const harmonicSpectrum = (charts['harmonics'] ?? []) as { order: string; magnitude: number }[];
   const transformerTemperature = (charts['transformer-temp'] ?? []) as { timestamp: number; oilTemp: number; windingTemp: number }[];
   const feederDistribution = (charts['feeder-distribution'] ?? []) as { timestamp: number; feeder1: number; feeder2: number; feeder3: number; feeder4: number; feeder5: number }[];
+  const faultEvents = (charts['fault-events'] ?? []) as { day: string; h08: number; h09: number; h10: number; h11: number; h12: number; h13: number; h14: number; h15: number }[];
 
+  // useMemo hooks
   const voltageGranularity = useMemo(() => detectGranularity(voltageProfile.map((d) => d.timestamp)), [voltageProfile]);
   const txTempGranularity = useMemo(() => detectGranularity(transformerTemperature.map((d) => d.timestamp)), [transformerTemperature]);
   const feederGranularity = useMemo(() => detectGranularity(feederDistribution.map((d) => d.timestamp)), [feederDistribution]);
-  const faultEvents = (charts['fault-events'] ?? []) as { day: string; h08: number; h09: number; h10: number; h11: number; h12: number; h13: number; h14: number; h15: number }[];
 
   const faultChartData = faultEvents.map((fe) => ({
     day: fe.day,
     total: fe.h08 + fe.h09 + fe.h10 + fe.h11 + fe.h12 + fe.h13 + fe.h14 + fe.h15,
   }));
+
+  // Early returns
+  if (!ready) return null;
+  if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
+  if (!kpis) return null;
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -89,7 +91,7 @@ export default function SubStationPage() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           {/* 1. Voltage Profile (3-Phase) */}
-          <ChartCard title="Voltage Profile (3-Phase)">
+          <ChartCard title="Voltage Profile (3-Phase)" loading={chartLoading['voltage-profile']}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={voltageProfile}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -106,7 +108,7 @@ export default function SubStationPage() {
           </ChartCard>
 
           {/* 2. Transformer Loading (Horizontal) */}
-          <ChartCard title="Transformer Loading">
+          <ChartCard title="Transformer Loading" loading={chartLoading['transformers']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={transformerLoading} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -123,7 +125,7 @@ export default function SubStationPage() {
           </ChartCard>
 
           {/* 3. Harmonic Spectrum */}
-          <ChartCard title="Harmonic Spectrum">
+          <ChartCard title="Harmonic Spectrum" loading={chartLoading['harmonics']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={harmonicSpectrum}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -141,7 +143,7 @@ export default function SubStationPage() {
           </ChartCard>
 
           {/* 4. Transformer Temperature */}
-          <ChartCard title="Transformer Temperature">
+          <ChartCard title="Transformer Temperature" loading={chartLoading['transformer-temp']}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={transformerTemperature}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -158,7 +160,7 @@ export default function SubStationPage() {
           </ChartCard>
 
           {/* 5. Feeder Load Distribution (Stacked) */}
-          <ChartCard title="Feeder Load Distribution">
+          <ChartCard title="Feeder Load Distribution" loading={chartLoading['feeder-distribution']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={feederDistribution}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -176,7 +178,7 @@ export default function SubStationPage() {
           </ChartCard>
 
           {/* 6. Fault Events by Day */}
-          <ChartCard title="Fault Events by Day">
+          <ChartCard title="Fault Events by Day" loading={chartLoading['fault-events']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={faultChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />

@@ -42,17 +42,24 @@ export default function SteamPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
-  const { kpis, charts, loading, error } = useDashboardData<SteamKPIs>('steam', filterParams);
+  const { kpis, charts, chartLoading, loading, error } = useDashboardData<SteamKPIs>('steam', filterParams);
 
+  // Chart data extraction
+  const steamBalance = (charts['balance'] ?? []) as { timestamp: number; boiler1: number; boiler2: number; boiler3: number; demand: number }[];
+  const headerPressureTrend = (charts['header-pressure'] ?? []) as { timestamp: number; hp: number; mp: number; lp: number }[];
+  const steamDistribution = (charts['distribution'] ?? []) as { consumer: string; value: number; color: string }[];
+  const condensateRecoveryTrend = (charts['condensate'] ?? []) as { timestamp: number; recovery: number }[];
+  const fuelVsSteam = (charts['fuel-ratio'] ?? []) as { timestamp: number; fuel: number; steam: number }[];
+  const steamLoss = (charts['loss'] ?? []) as { location: string; loss: number; trapsTotal: number; trapsFailed: number }[];
+
+  // useMemo hooks
+  const balanceGranularity = useMemo(() => detectGranularity(steamBalance.map((d) => d.timestamp)), [steamBalance]);
+  const pressureGranularity = useMemo(() => detectGranularity(headerPressureTrend.map((d) => d.timestamp)), [headerPressureTrend]);
+  const condensateGranularity = useMemo(() => detectGranularity(condensateRecoveryTrend.map((d) => d.timestamp)), [condensateRecoveryTrend]);
+  const fuelGranularity = useMemo(() => detectGranularity(fuelVsSteam.map((d) => d.timestamp)), [fuelVsSteam]);
+
+  // Early returns
   if (!ready) return null;
-
-  if (loading) {
-    return (
-      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground" />
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -63,18 +70,6 @@ export default function SteamPage() {
   }
 
   if (!kpis) return null;
-
-  const steamBalance = (charts['balance'] ?? []) as { timestamp: number; boiler1: number; boiler2: number; boiler3: number; demand: number }[];
-  const headerPressureTrend = (charts['header-pressure'] ?? []) as { timestamp: number; hp: number; mp: number; lp: number }[];
-  const steamDistribution = (charts['distribution'] ?? []) as { consumer: string; value: number; color: string }[];
-  const condensateRecoveryTrend = (charts['condensate'] ?? []) as { timestamp: number; recovery: number }[];
-  const fuelVsSteam = (charts['fuel-ratio'] ?? []) as { timestamp: number; fuel: number; steam: number }[];
-  const steamLoss = (charts['loss'] ?? []) as { location: string; loss: number; trapsTotal: number; trapsFailed: number }[];
-
-  const balanceGranularity = useMemo(() => detectGranularity(steamBalance.map((d) => d.timestamp)), [steamBalance]);
-  const pressureGranularity = useMemo(() => detectGranularity(headerPressureTrend.map((d) => d.timestamp)), [headerPressureTrend]);
-  const condensateGranularity = useMemo(() => detectGranularity(condensateRecoveryTrend.map((d) => d.timestamp)), [condensateRecoveryTrend]);
-  const fuelGranularity = useMemo(() => detectGranularity(fuelVsSteam.map((d) => d.timestamp)), [fuelVsSteam]);
 
   const supplyGtDemand = kpis.totalProduction > kpis.totalDemand;
   const distributionTotal = steamDistribution.reduce((s, d) => s + d.value, 0);
@@ -111,7 +106,7 @@ export default function SteamPage() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           {/* 1. Steam Balance — Supply vs Demand */}
-          <ChartCard title="Steam Balance — Supply vs Demand">
+          <ChartCard title="Steam Balance — Supply vs Demand" loading={chartLoading['balance']}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={steamBalance}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -128,7 +123,7 @@ export default function SteamPage() {
           </ChartCard>
 
           {/* 2. Header Pressure Trend */}
-          <ChartCard title="Header Pressure Trend">
+          <ChartCard title="Header Pressure Trend" loading={chartLoading['header-pressure']}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={headerPressureTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -144,7 +139,7 @@ export default function SteamPage() {
           </ChartCard>
 
           {/* 3. Steam Distribution by Consumer */}
-          <ChartCard title="Steam Distribution by Consumer">
+          <ChartCard title="Steam Distribution by Consumer" loading={chartLoading['distribution']}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -171,7 +166,7 @@ export default function SteamPage() {
           </ChartCard>
 
           {/* 4. Condensate Recovery Rate */}
-          <ChartCard title="Condensate Recovery Rate">
+          <ChartCard title="Condensate Recovery Rate" loading={chartLoading['condensate']}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={condensateRecoveryTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -185,7 +180,7 @@ export default function SteamPage() {
           </ChartCard>
 
           {/* 5. Fuel Input vs Steam Output */}
-          <ChartCard title="Fuel Input vs Steam Output">
+          <ChartCard title="Fuel Input vs Steam Output" loading={chartLoading['fuel-ratio']}>
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -198,7 +193,7 @@ export default function SteamPage() {
           </ChartCard>
 
           {/* 6. Steam Loss by Location */}
-          <ChartCard title="Steam Loss by Location">
+          <ChartCard title="Steam Loss by Location" loading={chartLoading['loss']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={steamLoss} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />

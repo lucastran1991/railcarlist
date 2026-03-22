@@ -31,12 +31,7 @@ export default function BoilerPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
-  const { kpis, charts, loading, error } = useDashboardData<BoilerKPIs>('boiler', filterParams);
-
-  if (!ready) return null;
-  if (loading) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-muted-foreground">Loading...</p></div>;
-  if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
-  if (!kpis) return null;
+  const { kpis, charts, chartLoading, loading, error } = useDashboardData<BoilerKPIs>('boiler', filterParams);
 
   const boilerComparison = (charts['readings'] ?? []) as { boiler: string; efficiency: number; load: number; steamOutput: number }[];
   const efficiencyTrend = (charts['efficiency-trend'] ?? []) as { timestamp: number; blr01: number; blr02: number; blr03: number; blr04: number }[];
@@ -48,6 +43,10 @@ export default function BoilerPage() {
   const efficiencyGranularity = useMemo(() => detectGranularity(efficiencyTrend.map((d) => d.timestamp)), [efficiencyTrend]);
   const steamFuelGranularity = useMemo(() => detectGranularity(steamVsFuel.map((d) => d.timestamp)), [steamVsFuel]);
   const stackTempGranularity = useMemo(() => detectGranularity(stackTemperature.map((d) => d.timestamp)), [stackTemperature]);
+
+  if (!ready) return null;
+  if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
+  if (!kpis) return null;
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -112,7 +111,7 @@ export default function BoilerPage() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           {/* 1. Boiler Fleet Comparison — Grouped Bar */}
-          <ChartCard title="Boiler Fleet Comparison">
+          <ChartCard title="Boiler Fleet Comparison" loading={chartLoading['readings']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={boilerComparison}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -128,7 +127,7 @@ export default function BoilerPage() {
           </ChartCard>
 
           {/* 2. Efficiency Trend (7 days) — Multi Line */}
-          <ChartCard title="Efficiency Trend (7 days)">
+          <ChartCard title="Efficiency Trend (7 days)" loading={chartLoading['efficiency-trend']}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={efficiencyTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -145,7 +144,7 @@ export default function BoilerPage() {
           </ChartCard>
 
           {/* 3. Combustion Analysis — Stacked Bar */}
-          <ChartCard title="Combustion Analysis">
+          <ChartCard title="Combustion Analysis" loading={chartLoading['combustion']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={combustionAnalysis}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -162,7 +161,7 @@ export default function BoilerPage() {
           </ChartCard>
 
           {/* 4. Steam Output vs Fuel Input (24h) — Dual Axis Area + Line */}
-          <ChartCard title="Steam Output vs Fuel Input (24h)">
+          <ChartCard title="Steam Output vs Fuel Input (24h)" loading={chartLoading['steam-fuel']}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={steamVsFuel}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -178,7 +177,7 @@ export default function BoilerPage() {
           </ChartCard>
 
           {/* 5. Emissions Status — Custom Progress Bars */}
-          <ChartCard title="Emissions Status">
+          <ChartCard title="Emissions Status" loading={chartLoading['emissions']}>
             <div className="space-y-4 flex flex-col justify-center h-full">
               {emissionsGauges.map((e) => {
                 const ratio = e.current / e.limit;
@@ -204,7 +203,7 @@ export default function BoilerPage() {
           </ChartCard>
 
           {/* 6. Stack Temperature (24h) — Multi Line with ReferenceLine */}
-          <ChartCard title="Stack Temperature (24h)">
+          <ChartCard title="Stack Temperature (24h)" loading={chartLoading['stack-temp']}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stackTemperature}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />

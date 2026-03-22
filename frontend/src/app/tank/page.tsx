@@ -37,23 +37,26 @@ export default function TankPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
-  const { kpis, charts, loading, error } = useDashboardData<TankKPIs>('tank', filterParams);
+  const { kpis, charts, chartLoading, loading, error } = useDashboardData<TankKPIs>('tank', filterParams);
 
-  if (!ready) return null;
-  if (loading) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-muted-foreground">Loading...</p></div>;
-  if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
-  if (!kpis) return null;
-
+  // Chart data extraction
   const tankLevels = (charts['levels'] ?? []) as { tank: string; product: string; level: number; capacity: number; volume: number; color: string }[];
   const inventoryTrend = (charts['inventory-trend'] ?? []) as { timestamp: number; gasoline: number; diesel: number; crude: number; ethanol: number }[];
   const throughput = (charts['throughput'] ?? []) as { timestamp: number; receipts: number; dispatches: number }[];
-
-  const inventoryGranularity = useMemo(() => detectGranularity(inventoryTrend.map((d) => d.timestamp)), [inventoryTrend]);
-  const throughputGranularity = useMemo(() => detectGranularity(throughput.map((d) => d.timestamp)), [throughput]);
   const productDistribution = (charts['product-distribution'] ?? []) as { product: string; volume: number; color: string }[];
   const tankLevelChanges = (charts['level-changes'] ?? []) as { tank: string; change: number }[];
   const tankTemperatures = (charts['temperatures'] ?? []) as { tank: string; t00: number; t06: number; t12: number; t18: number }[];
+
+  // useMemo hooks
+  const inventoryGranularity = useMemo(() => detectGranularity(inventoryTrend.map((d) => d.timestamp)), [inventoryTrend]);
+  const throughputGranularity = useMemo(() => detectGranularity(throughput.map((d) => d.timestamp)), [throughput]);
+
   const distributionTotal = productDistribution.reduce((s, d) => s + d.volume, 0);
+
+  // Early returns
+  if (!ready) return null;
+  if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
+  if (!kpis) return null;
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -78,7 +81,7 @@ export default function TankPage() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           {/* 1. Tank Levels */}
-          <ChartCard title="Tank Levels">
+          <ChartCard title="Tank Levels" loading={chartLoading['levels']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={tankLevels} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -95,7 +98,7 @@ export default function TankPage() {
           </ChartCard>
 
           {/* 2. Inventory Trend (7 days) */}
-          <ChartCard title="Inventory Trend (7 days)">
+          <ChartCard title="Inventory Trend (7 days)" loading={chartLoading['inventory-trend']}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={inventoryTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -112,7 +115,7 @@ export default function TankPage() {
           </ChartCard>
 
           {/* 3. Throughput — Receipts vs Dispatches */}
-          <ChartCard title="Throughput — Receipts vs Dispatches">
+          <ChartCard title="Throughput — Receipts vs Dispatches" loading={chartLoading['throughput']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={throughput}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -127,7 +130,7 @@ export default function TankPage() {
           </ChartCard>
 
           {/* 4. Product Distribution */}
-          <ChartCard title="Product Distribution">
+          <ChartCard title="Product Distribution" loading={chartLoading['product-distribution']}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -154,7 +157,7 @@ export default function TankPage() {
           </ChartCard>
 
           {/* 5. Tank Level Changes (24h) */}
-          <ChartCard title="Tank Level Changes (24h)">
+          <ChartCard title="Tank Level Changes (24h)" loading={chartLoading['level-changes']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={tankLevelChanges}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
@@ -171,7 +174,7 @@ export default function TankPage() {
           </ChartCard>
 
           {/* 6. Tank Temperatures */}
-          <ChartCard title="Tank Temperatures">
+          <ChartCard title="Tank Temperatures" loading={chartLoading['temperatures']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={tankTemperatures}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />

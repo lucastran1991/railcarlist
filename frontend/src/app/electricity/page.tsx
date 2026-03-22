@@ -41,17 +41,27 @@ export default function ElectricityPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
-  const { kpis, charts, loading, error } = useDashboardData<ElectricityKPIs>('electricity', filterParams);
+  const { kpis, charts, chartLoading, loading, error } = useDashboardData<ElectricityKPIs>('electricity', filterParams);
 
+  // Chart data extraction
+  const loadProfile = (charts['load-profiles'] ?? []) as { timestamp: number; actual: number; planned: number; threshold: number }[];
+  const weeklyConsumption = (charts['weekly-consumption'] ?? []) as { timestamp: number; thisWeek: number; lastWeek: number }[];
+  const powerFactorTrend = (charts['power-factor'] ?? []) as { timestamp: number; value: number }[];
+  const costBreakdown = (charts['cost-breakdown'] ?? []) as { source: string; cost: number; color: string }[];
+  const peakDemandHistory = (charts['peak-demand'] ?? []) as { timestamp: number; peak: number }[];
+  const phaseBalance = (charts['phase-balance'] ?? []) as { timestamp: number; phaseA: number; phaseB: number; phaseC: number }[];
+
+  // useMemo hooks
+  const loadProfileGranularity = useMemo(() => detectGranularity(loadProfile.map(d => d.timestamp)), [loadProfile]);
+  const weeklyGranularity = useMemo(() => detectGranularity(weeklyConsumption.map(d => d.timestamp)), [weeklyConsumption]);
+  const powerFactorGranularity = useMemo(() => detectGranularity(powerFactorTrend.map(d => d.timestamp)), [powerFactorTrend]);
+  const peakDemandGranularity = useMemo(() => detectGranularity(peakDemandHistory.map(d => d.timestamp)), [peakDemandHistory]);
+  const phaseBalanceGranularity = useMemo(() => detectGranularity(phaseBalance.map(d => d.timestamp)), [phaseBalance]);
+
+  const totalCost = costBreakdown.reduce((s, c) => s + c.cost, 0);
+
+  // Early returns
   if (!ready) return null;
-
-  if (loading) {
-    return (
-      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#56CDE7]" />
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -65,21 +75,6 @@ export default function ElectricityPage() {
   }
 
   if (!kpis) return null;
-
-  const loadProfile = (charts['load-profiles'] ?? []) as { timestamp: number; actual: number; planned: number; threshold: number }[];
-  const weeklyConsumption = (charts['weekly-consumption'] ?? []) as { timestamp: number; thisWeek: number; lastWeek: number }[];
-  const powerFactorTrend = (charts['power-factor'] ?? []) as { timestamp: number; value: number }[];
-  const costBreakdown = (charts['cost-breakdown'] ?? []) as { source: string; cost: number; color: string }[];
-  const peakDemandHistory = (charts['peak-demand'] ?? []) as { timestamp: number; peak: number }[];
-  const phaseBalance = (charts['phase-balance'] ?? []) as { timestamp: number; phaseA: number; phaseB: number; phaseC: number }[];
-
-  const loadProfileGranularity = useMemo(() => detectGranularity(loadProfile.map(d => d.timestamp)), [loadProfile]);
-  const weeklyGranularity = useMemo(() => detectGranularity(weeklyConsumption.map(d => d.timestamp)), [weeklyConsumption]);
-  const powerFactorGranularity = useMemo(() => detectGranularity(powerFactorTrend.map(d => d.timestamp)), [powerFactorTrend]);
-  const peakDemandGranularity = useMemo(() => detectGranularity(peakDemandHistory.map(d => d.timestamp)), [peakDemandHistory]);
-  const phaseBalanceGranularity = useMemo(() => detectGranularity(phaseBalance.map(d => d.timestamp)), [phaseBalance]);
-
-  const totalCost = costBreakdown.reduce((s, c) => s + c.cost, 0);
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -104,7 +99,7 @@ export default function ElectricityPage() {
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           {/* 1. 24h Load Profile */}
-          <ChartCard title="24h Load Profile">
+          <ChartCard title="24h Load Profile" loading={chartLoading['load-profiles']}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={loadProfile}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -120,7 +115,7 @@ export default function ElectricityPage() {
           </ChartCard>
 
           {/* 2. Weekly Consumption */}
-          <ChartCard title="Weekly Consumption">
+          <ChartCard title="Weekly Consumption" loading={chartLoading['weekly-consumption']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyConsumption}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -135,7 +130,7 @@ export default function ElectricityPage() {
           </ChartCard>
 
           {/* 3. Power Factor Trend */}
-          <ChartCard title="Power Factor Trend">
+          <ChartCard title="Power Factor Trend" loading={chartLoading['power-factor']}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={powerFactorTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -149,7 +144,7 @@ export default function ElectricityPage() {
           </ChartCard>
 
           {/* 4. Cost Breakdown */}
-          <ChartCard title="Cost Breakdown">
+          <ChartCard title="Cost Breakdown" loading={chartLoading['cost-breakdown']}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -176,7 +171,7 @@ export default function ElectricityPage() {
           </ChartCard>
 
           {/* 5. Peak Demand History */}
-          <ChartCard title="Peak Demand History (30d)">
+          <ChartCard title="Peak Demand History (30d)" loading={chartLoading['peak-demand']}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={peakDemandHistory}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -190,7 +185,7 @@ export default function ElectricityPage() {
           </ChartCard>
 
           {/* 6. Phase Balance */}
-          <ChartCard title="Phase Balance (A)">
+          <ChartCard title="Phase Balance (A)" loading={chartLoading['phase-balance']}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={phaseBalance}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
