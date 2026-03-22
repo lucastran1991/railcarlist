@@ -2,23 +2,23 @@ package models
 
 type ElectricityLoadProfile struct {
 	ID        int64   `json:"id"`
-	Hour      string  `json:"hour"`      // "00:00", "01:00", etc.
+	Timestamp int64   `json:"timestamp"` // epoch ms
 	Actual    float64 `json:"actual"`    // kW
 	Planned   float64 `json:"planned"`   // kW
 	Threshold float64 `json:"threshold"` // kW
 }
 
 type ElectricityWeeklyConsumption struct {
-	ID       int64   `json:"id"`
-	Day      string  `json:"day"`       // "Mon", "Tue", etc.
-	ThisWeek float64 `json:"thisWeek"`  // kWh
-	LastWeek float64 `json:"lastWeek"`  // kWh
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	ThisWeek  float64 `json:"thisWeek"`  // kWh
+	LastWeek  float64 `json:"lastWeek"`  // kWh
 }
 
 type ElectricityPowerFactor struct {
-	ID    int64   `json:"id"`
-	Time  string  `json:"time"`  // "00:00", "02:00", etc.
-	Value float64 `json:"value"` // 0-1
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	Value     float64 `json:"value"`     // 0-1
 }
 
 type ElectricityCostBreakdown struct {
@@ -29,17 +29,17 @@ type ElectricityCostBreakdown struct {
 }
 
 type ElectricityPeakDemand struct {
-	ID   int64   `json:"id"`
-	Date string  `json:"date"` // "Mar 20"
-	Peak float64 `json:"peak"` // kW
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	Peak      float64 `json:"peak"`      // kW
 }
 
 type ElectricityPhaseBalance struct {
-	ID     int64   `json:"id"`
-	Time   string  `json:"time"`   // "Now-5m", "Now", etc.
-	PhaseA float64 `json:"phaseA"` // volts
-	PhaseB float64 `json:"phaseB"`
-	PhaseC float64 `json:"phaseC"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	PhaseA    float64 `json:"phaseA"`    // volts
+	PhaseB    float64 `json:"phaseB"`
+	PhaseC    float64 `json:"phaseC"`
 }
 
 type ElectricityKPIs struct {

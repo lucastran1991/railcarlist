@@ -19,17 +19,17 @@ type TankLevel struct {
 }
 
 type TankInventoryTrend struct {
-	ID       int64   `json:"id"`
-	Date     string  `json:"date"`
-	Gasoline float64 `json:"gasoline"`
-	Diesel   float64 `json:"diesel"`
-	Crude    float64 `json:"crude"`
-	Ethanol  float64 `json:"ethanol"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	Gasoline  float64 `json:"gasoline"`
+	Diesel    float64 `json:"diesel"`
+	Crude     float64 `json:"crude"`
+	Ethanol   float64 `json:"ethanol"`
 }
 
 type TankThroughput struct {
 	ID         int64   `json:"id"`
-	Date       string  `json:"date"`
+	Timestamp  int64   `json:"timestamp"` // epoch ms
 	Receipts   float64 `json:"receipts"`
 	Dispatches float64 `json:"dispatches"`
 }

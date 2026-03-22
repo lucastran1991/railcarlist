@@ -17,12 +17,12 @@ type BoilerReading struct {
 }
 
 type BoilerEfficiencyTrend struct {
-	ID    int64   `json:"id"`
-	Date  string  `json:"date"`
-	Blr01 float64 `json:"blr01"`
-	Blr02 float64 `json:"blr02"`
-	Blr03 float64 `json:"blr03"`
-	Blr04 float64 `json:"blr04"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	Blr01     float64 `json:"blr01"`
+	Blr02     float64 `json:"blr02"`
+	Blr03     float64 `json:"blr03"`
+	Blr04     float64 `json:"blr04"`
 }
 
 type BoilerCombustion struct {
@@ -35,10 +35,10 @@ type BoilerCombustion struct {
 }
 
 type BoilerSteamFuel struct {
-	ID    int64   `json:"id"`
-	Hour  string  `json:"hour"`
-	Steam float64 `json:"steam"`
-	Fuel  float64 `json:"fuel"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	Steam     float64 `json:"steam"`
+	Fuel      float64 `json:"fuel"`
 }
 
 type BoilerEmission struct {
@@ -50,11 +50,11 @@ type BoilerEmission struct {
 }
 
 type BoilerStackTemp struct {
-	ID    int64   `json:"id"`
-	Hour  string  `json:"hour"`
-	Blr01 float64 `json:"blr01"`
-	Blr02 float64 `json:"blr02"`
-	Blr03 float64 `json:"blr03"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	Blr01     float64 `json:"blr01"`
+	Blr02     float64 `json:"blr02"`
+	Blr03     float64 `json:"blr03"`
 }
 
 type BoilerKPIs struct {

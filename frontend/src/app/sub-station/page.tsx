@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { type SubStationKPIs, type QueryParams } from '@/lib/api-dashboard';
@@ -22,6 +22,7 @@ import {
   Legend,
   ReferenceLine,
 } from 'recharts';
+import { formatTs, formatTsTooltip, detectGranularity } from '@/lib/formatTimestamp';
 
 const tooltipStyle = {
   contentStyle: { backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' },
@@ -49,11 +50,15 @@ export default function SubStationPage() {
   if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
   if (!kpis) return null;
 
-  const voltageProfile = (charts['voltage-profile'] ?? []) as { time: string; vRY: number; vYB: number; vBR: number }[];
+  const voltageProfile = (charts['voltage-profile'] ?? []) as { timestamp: number; vRY: number; vYB: number; vBR: number }[];
   const transformerLoading = (charts['transformers'] ?? []) as { name: string; loading: number; capacity: number; unit: string }[];
   const harmonicSpectrum = (charts['harmonics'] ?? []) as { order: string; magnitude: number }[];
-  const transformerTemperature = (charts['transformer-temp'] ?? []) as { time: string; oilTemp: number; windingTemp: number }[];
-  const feederDistribution = (charts['feeder-distribution'] ?? []) as { time: string; feeder1: number; feeder2: number; feeder3: number; feeder4: number; feeder5: number }[];
+  const transformerTemperature = (charts['transformer-temp'] ?? []) as { timestamp: number; oilTemp: number; windingTemp: number }[];
+  const feederDistribution = (charts['feeder-distribution'] ?? []) as { timestamp: number; feeder1: number; feeder2: number; feeder3: number; feeder4: number; feeder5: number }[];
+
+  const voltageGranularity = useMemo(() => detectGranularity(voltageProfile.map((d) => d.timestamp)), [voltageProfile]);
+  const txTempGranularity = useMemo(() => detectGranularity(transformerTemperature.map((d) => d.timestamp)), [transformerTemperature]);
+  const feederGranularity = useMemo(() => detectGranularity(feederDistribution.map((d) => d.timestamp)), [feederDistribution]);
   const faultEvents = (charts['fault-events'] ?? []) as { day: string; h08: number; h09: number; h10: number; h11: number; h12: number; h13: number; h14: number; h15: number }[];
 
   const faultChartData = faultEvents.map((fe) => ({
@@ -88,9 +93,9 @@ export default function SubStationPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={voltageProfile}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                <XAxis dataKey="time" tick={AXIS_STYLE} />
+                <XAxis dataKey="timestamp" tick={AXIS_STYLE} tickFormatter={(ts) => formatTs(ts, voltageGranularity)} />
                 <YAxis domain={[10.7, 11.1]} tick={AXIS_STYLE} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <ReferenceLine y={11.0} stroke="#5CE5A0" strokeDasharray="6 3" label={{ value: 'Nominal 11kV', fill: '#5CE5A0', fontSize: 10 }} />
                 <Line type="monotone" dataKey="vRY" stroke="#E53E3E" strokeWidth={2} dot={{ r: 2 }} name="V(RY)" />
@@ -140,9 +145,9 @@ export default function SubStationPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={transformerTemperature}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                <XAxis dataKey="time" tick={AXIS_STYLE} />
+                <XAxis dataKey="timestamp" tick={AXIS_STYLE} tickFormatter={(ts) => formatTs(ts, txTempGranularity)} />
                 <YAxis tick={AXIS_STYLE} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <ReferenceLine y={75} stroke="#F6AD55" strokeDasharray="6 3" label={{ value: 'Warning', fill: '#F6AD55', fontSize: 10 }} />
                 <ReferenceLine y={85} stroke="#E53E3E" strokeDasharray="6 3" label={{ value: 'Alarm', fill: '#E53E3E', fontSize: 10 }} />
@@ -157,9 +162,9 @@ export default function SubStationPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={feederDistribution}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                <XAxis dataKey="time" tick={AXIS_STYLE} />
+                <XAxis dataKey="timestamp" tick={AXIS_STYLE} tickFormatter={(ts) => formatTs(ts, feederGranularity)} />
                 <YAxis tick={AXIS_STYLE} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <Bar dataKey="feeder1" stackId="a" fill="#4D65FF" name="Feeder 1" />
                 <Bar dataKey="feeder2" stackId="a" fill="#56CDE7" name="Feeder 2" />

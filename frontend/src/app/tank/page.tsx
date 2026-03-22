@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { type TankKPIs, type QueryParams } from '@/lib/api-dashboard';
@@ -23,6 +23,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
+import { formatTs, formatTsTooltip, detectGranularity } from '@/lib/formatTimestamp';
 
 const tooltipStyle = {
   contentStyle: { backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' },
@@ -44,8 +45,11 @@ export default function TankPage() {
   if (!kpis) return null;
 
   const tankLevels = (charts['levels'] ?? []) as { tank: string; product: string; level: number; capacity: number; volume: number; color: string }[];
-  const inventoryTrend = (charts['inventory-trend'] ?? []) as { date: string; gasoline: number; diesel: number; crude: number; ethanol: number }[];
-  const throughput = (charts['throughput'] ?? []) as { date: string; receipts: number; dispatches: number }[];
+  const inventoryTrend = (charts['inventory-trend'] ?? []) as { timestamp: number; gasoline: number; diesel: number; crude: number; ethanol: number }[];
+  const throughput = (charts['throughput'] ?? []) as { timestamp: number; receipts: number; dispatches: number }[];
+
+  const inventoryGranularity = useMemo(() => detectGranularity(inventoryTrend.map((d) => d.timestamp)), [inventoryTrend]);
+  const throughputGranularity = useMemo(() => detectGranularity(throughput.map((d) => d.timestamp)), [throughput]);
   const productDistribution = (charts['product-distribution'] ?? []) as { product: string; volume: number; color: string }[];
   const tankLevelChanges = (charts['level-changes'] ?? []) as { tank: string; change: number }[];
   const tankTemperatures = (charts['temperatures'] ?? []) as { tank: string; t00: number; t06: number; t12: number; t18: number }[];
@@ -95,9 +99,9 @@ export default function TankPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={inventoryTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-                <XAxis dataKey="date" tick={AXIS} />
+                <XAxis dataKey="timestamp" tick={AXIS} tickFormatter={(ts) => formatTs(ts, inventoryGranularity)} />
                 <YAxis tick={AXIS} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip {...tooltipStyle} formatter={(value: number) => value.toLocaleString()} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} formatter={(value: number) => value.toLocaleString()} />
                 <Legend />
                 <Line type="monotone" dataKey="gasoline" stroke="#F6AD55" strokeWidth={2} dot={false} name="Gasoline" />
                 <Line type="monotone" dataKey="diesel" stroke="#4D65FF" strokeWidth={2} dot={false} name="Diesel" />
@@ -112,9 +116,9 @@ export default function TankPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={throughput}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-                <XAxis dataKey="date" tick={AXIS} />
+                <XAxis dataKey="timestamp" tick={AXIS} tickFormatter={(ts) => formatTs(ts, throughputGranularity)} />
                 <YAxis tick={AXIS} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip {...tooltipStyle} formatter={(value: number) => value.toLocaleString()} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} formatter={(value: number) => value.toLocaleString()} />
                 <Legend />
                 <Bar dataKey="receipts" fill="#5CE5A0" name="Receipts" />
                 <Bar dataKey="dispatches" fill="#F6AD55" name="Dispatches" />

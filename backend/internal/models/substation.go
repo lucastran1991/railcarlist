@@ -1,11 +1,11 @@
 package models
 
 type SubStationVoltageProfile struct {
-	ID  int64   `json:"id"`
-	Time string `json:"time"`
-	VRY  float64 `json:"vRY"`
-	VYB  float64 `json:"vYB"`
-	VBR  float64 `json:"vBR"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	VRY       float64 `json:"vRY"`
+	VYB       float64 `json:"vYB"`
+	VBR       float64 `json:"vBR"`
 }
 
 type SubStationTransformer struct {
@@ -23,20 +23,20 @@ type SubStationHarmonic struct {
 }
 
 type SubStationTransformerTemp struct {
-	ID       int64   `json:"id"`
-	Time     string  `json:"time"`
-	OilTemp  float64 `json:"oilTemp"`
-	WindTemp float64 `json:"windingTemp"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	OilTemp   float64 `json:"oilTemp"`
+	WindTemp  float64 `json:"windingTemp"`
 }
 
 type SubStationFeederDistribution struct {
-	ID      int64   `json:"id"`
-	Time    string  `json:"time"`
-	Feeder1 float64 `json:"feeder1"`
-	Feeder2 float64 `json:"feeder2"`
-	Feeder3 float64 `json:"feeder3"`
-	Feeder4 float64 `json:"feeder4"`
-	Feeder5 float64 `json:"feeder5"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	Feeder1   float64 `json:"feeder1"`
+	Feeder2   float64 `json:"feeder2"`
+	Feeder3   float64 `json:"feeder3"`
+	Feeder4   float64 `json:"feeder4"`
+	Feeder5   float64 `json:"feeder5"`
 }
 
 type SubStationFaultEvent struct {

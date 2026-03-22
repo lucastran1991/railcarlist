@@ -186,7 +186,6 @@ func (s *SystemGeneratorService) generateElectricity(start, end time.Time, rng *
 			dailyTotal += actual
 
 			s.db.InsertElectricityLoadProfile(models.ElectricityLoadProfile{
-				Hour:      fmt.Sprintf("%02d:00", h),
 				Actual:    math.Round(actual*10) / 10,
 				Planned:   math.Round(planned*10) / 10,
 				Threshold: math.Round(threshold*10) / 10,
@@ -196,7 +195,6 @@ func (s *SystemGeneratorService) generateElectricity(start, end time.Time, rng *
 
 		// Peak demand (one per day)
 		s.db.InsertElectricityPeakDemand(models.ElectricityPeakDemand{
-			Date: d.Format("Jan 02"),
 			Peak: math.Round(dailyPeak*10) / 10,
 		}, d.UnixMilli())
 		count++
@@ -209,7 +207,6 @@ func (s *SystemGeneratorService) generateElectricity(start, end time.Time, rng *
 			// Voltage sags slightly during peak hours
 			sag := (1.0 - hf) * 5.0
 			s.db.InsertElectricityPhaseBalance(models.ElectricityPhaseBalance{
-				Time:   fmt.Sprintf("%02d:00", h),
 				PhaseA: math.Round(noise(rng, baseV-sag, 0.005)*10) / 10,
 				PhaseB: math.Round(noise(rng, baseV-sag-2, 0.005)*10) / 10,
 				PhaseC: math.Round(noise(rng, baseV-sag+1, 0.005)*10) / 10,
@@ -224,7 +221,6 @@ func (s *SystemGeneratorService) generateElectricity(start, end time.Time, rng *
 			// PF drops during peak load (more reactive power)
 			pf := clamp(0.96-hf*0.04+rng.Float64()*0.01, 0.88, 0.99)
 			s.db.InsertElectricityPowerFactor(models.ElectricityPowerFactor{
-				Time:  fmt.Sprintf("%02d:00", h),
 				Value: math.Round(pf*1000) / 1000,
 			}, t.UnixMilli())
 			count++
@@ -234,7 +230,6 @@ func (s *SystemGeneratorService) generateElectricity(start, end time.Time, rng *
 		thisWeek := math.Round(dailyTotal)
 		lastWeek := math.Round(dailyTotal * noise(rng, 0.97, 0.02))
 		s.db.InsertElectricityWeeklyConsumption(models.ElectricityWeeklyConsumption{
-			Day:      d.Weekday().String()[:3],
 			ThisWeek: thisWeek,
 			LastWeek: lastWeek,
 		}, d.UnixMilli())
@@ -271,7 +266,6 @@ func (s *SystemGeneratorService) generateSteam(start, end time.Time, rng *rand.R
 			}
 
 			s.db.InsertSteamBalance(models.SteamBalance{
-				Hour:    fmt.Sprintf("%02d:00", h),
 				Boiler1: math.Round(b1*10) / 10,
 				Boiler2: math.Round(b2*10) / 10,
 				Boiler3: math.Round(b3*10) / 10,
@@ -285,7 +279,6 @@ func (s *SystemGeneratorService) generateSteam(start, end time.Time, rng *rand.R
 			lp := clamp(noise(rng, 3.8-demandRatio*0.3, 0.01), 3, 5)
 
 			s.db.InsertSteamHeaderPressure(models.SteamHeaderPressure{
-				Time: fmt.Sprintf("%02d:00", h),
 				HP:   math.Round(hp*10) / 10,
 				MP:   math.Round(mp*10) / 10,
 				LP:   math.Round(lp*10) / 10,
@@ -294,7 +287,6 @@ func (s *SystemGeneratorService) generateSteam(start, end time.Time, rng *rand.R
 			// Condensate recovery: drops during high demand
 			recovery := clamp(noise(rng, 88.0-demandRatio*8.0, 0.02), 72, 95)
 			s.db.InsertSteamCondensate(models.SteamCondensate{
-				Hour:     fmt.Sprintf("%02d:00", h),
 				Recovery: math.Round(recovery*10) / 10,
 			}, t.UnixMilli())
 
@@ -302,7 +294,6 @@ func (s *SystemGeneratorService) generateSteam(start, end time.Time, rng *rand.R
 			efficiency := 0.87 + rng.Float64()*0.04
 			fuel := (b1 + b2 + b3) / efficiency
 			s.db.InsertSteamFuelRatio(models.SteamFuelRatio{
-				Hour:  fmt.Sprintf("%02d:00", h),
 				Fuel:  math.Round(fuel*10) / 10,
 				Steam: math.Round((b1+b2+b3)*10) / 10,
 			}, t.UnixMilli())
@@ -332,7 +323,6 @@ func (s *SystemGeneratorService) generateBoiler(start, end time.Time, rng *rand.
 		baseEff := []float64{91.0, 87.0, 93.0, 86.0} // per boiler base
 
 		s.db.InsertBoilerEfficiencyTrend(models.BoilerEfficiencyTrend{
-			Date:  d.Format("Jan 02"),
 			Blr01: math.Round(clamp(noise(rng, baseEff[0]-degradation, 0.005), 80, 95)*10) / 10,
 			Blr02: math.Round(clamp(noise(rng, baseEff[1]-degradation, 0.005), 78, 93)*10) / 10,
 			Blr03: math.Round(clamp(noise(rng, baseEff[2]-degradation, 0.005), 82, 96)*10) / 10,
@@ -351,7 +341,6 @@ func (s *SystemGeneratorService) generateBoiler(start, end time.Time, rng *rand.
 			fuelIn := steamOut / (0.87 + rng.Float64()*0.04)
 
 			s.db.InsertBoilerSteamFuel(models.BoilerSteamFuel{
-				Hour:  fmt.Sprintf("%02d:00", h),
 				Steam: math.Round(steamOut*10) / 10,
 				Fuel:  math.Round(fuelIn*10) / 10,
 			}, t.UnixMilli())
@@ -359,7 +348,6 @@ func (s *SystemGeneratorService) generateBoiler(start, end time.Time, rng *rand.
 			// Stack temp rises with load
 			loadFactor := hf * wf
 			s.db.InsertBoilerStackTemp(models.BoilerStackTemp{
-				Hour:  fmt.Sprintf("%02d:00", h),
 				Blr01: math.Round(noise(rng, 170+loadFactor*20, 0.02)),
 				Blr02: math.Round(noise(rng, 185+loadFactor*25, 0.02)),
 				Blr03: math.Round(noise(rng, 165+loadFactor*18, 0.02)),
@@ -393,7 +381,6 @@ func (s *SystemGeneratorService) generateTank(start, end time.Time, rng *rand.Ra
 		dispatches = clamp(dispatches, 8000, 45000)
 
 		s.db.InsertTankThroughput(models.TankThroughput{
-			Date:       d.Format("Jan 02"),
 			Receipts:   math.Round(receipts),
 			Dispatches: math.Round(dispatches),
 		}, d.UnixMilli())
@@ -406,7 +393,6 @@ func (s *SystemGeneratorService) generateTank(start, end time.Time, rng *rand.Ra
 		ethanol = clamp(ethanol+netFlow*0.10+rng.NormFloat64()*1000, 5000, 55000)
 
 		s.db.InsertTankInventoryTrend(models.TankInventoryTrend{
-			Date:     d.Format("Jan 02"),
 			Gasoline: math.Round(gasoline),
 			Diesel:   math.Round(diesel),
 			Crude:    math.Round(crude),
@@ -438,7 +424,6 @@ func (s *SystemGeneratorService) generateSubStation(start, end time.Time, rng *r
 			baseV := 11.0
 			sag := loadFactor * 0.2
 			s.db.InsertSubStationVoltageProfile(models.SubStationVoltageProfile{
-				Time: fmt.Sprintf("%02d:00", h),
 				VRY:  math.Round(noise(rng, baseV-sag, 0.003)*100) / 100,
 				VYB:  math.Round(noise(rng, baseV-sag+0.05, 0.003)*100) / 100,
 				VBR:  math.Round(noise(rng, baseV-sag-0.03, 0.003)*100) / 100,
@@ -447,7 +432,6 @@ func (s *SystemGeneratorService) generateSubStation(start, end time.Time, rng *r
 			// Transformer temp: follows load with thermal lag (simplified)
 			baseOilTemp := 50.0 + loadFactor*20.0
 			s.db.InsertSubStationTransformerTemp(models.SubStationTransformerTemp{
-				Time:     fmt.Sprintf("%02d:00", h),
 				OilTemp:  math.Round(noise(rng, baseOilTemp, 0.02)*10) / 10,
 				WindTemp: math.Round(noise(rng, baseOilTemp+8, 0.02)*10) / 10,
 			}, t.UnixMilli())
@@ -456,7 +440,6 @@ func (s *SystemGeneratorService) generateSubStation(start, end time.Time, rng *r
 			totalLoad := 3200.0 * loadFactor
 			shares := []float64{0.25, 0.20, 0.28, 0.15, 0.12}
 			s.db.InsertSubStationFeederDistribution(models.SubStationFeederDistribution{
-				Time:    fmt.Sprintf("%02d:00", h),
 				Feeder1: math.Round(noise(rng, totalLoad*shares[0], 0.05)),
 				Feeder2: math.Round(noise(rng, totalLoad*shares[1], 0.05)),
 				Feeder3: math.Round(noise(rng, totalLoad*shares[2], 0.05)),

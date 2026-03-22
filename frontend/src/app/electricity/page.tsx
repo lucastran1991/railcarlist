@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import type { ElectricityKPIs, QueryParams } from '@/lib/api-dashboard';
 import FilterBar from '@/components/dashboard/FilterBar';
+import { formatTs, formatTsTooltip, detectGranularity } from '@/lib/formatTimestamp';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { Zap, Activity, TrendingUp, Gauge, DollarSign, Cloud, Shield, Thermometer, Loader2 } from 'lucide-react';
@@ -65,12 +66,18 @@ export default function ElectricityPage() {
 
   if (!kpis) return null;
 
-  const loadProfile = (charts['load-profiles'] ?? []) as { hour: string; actual: number; planned: number; threshold: number }[];
-  const weeklyConsumption = (charts['weekly-consumption'] ?? []) as { day: string; thisWeek: number; lastWeek: number }[];
-  const powerFactorTrend = (charts['power-factor'] ?? []) as { time: string; value: number }[];
+  const loadProfile = (charts['load-profiles'] ?? []) as { timestamp: number; actual: number; planned: number; threshold: number }[];
+  const weeklyConsumption = (charts['weekly-consumption'] ?? []) as { timestamp: number; thisWeek: number; lastWeek: number }[];
+  const powerFactorTrend = (charts['power-factor'] ?? []) as { timestamp: number; value: number }[];
   const costBreakdown = (charts['cost-breakdown'] ?? []) as { source: string; cost: number; color: string }[];
-  const peakDemandHistory = (charts['peak-demand'] ?? []) as { date: string; peak: number }[];
-  const phaseBalance = (charts['phase-balance'] ?? []) as { time: string; phaseA: number; phaseB: number; phaseC: number }[];
+  const peakDemandHistory = (charts['peak-demand'] ?? []) as { timestamp: number; peak: number }[];
+  const phaseBalance = (charts['phase-balance'] ?? []) as { timestamp: number; phaseA: number; phaseB: number; phaseC: number }[];
+
+  const loadProfileGranularity = useMemo(() => detectGranularity(loadProfile.map(d => d.timestamp)), [loadProfile]);
+  const weeklyGranularity = useMemo(() => detectGranularity(weeklyConsumption.map(d => d.timestamp)), [weeklyConsumption]);
+  const powerFactorGranularity = useMemo(() => detectGranularity(powerFactorTrend.map(d => d.timestamp)), [powerFactorTrend]);
+  const peakDemandGranularity = useMemo(() => detectGranularity(peakDemandHistory.map(d => d.timestamp)), [peakDemandHistory]);
+  const phaseBalanceGranularity = useMemo(() => detectGranularity(phaseBalance.map(d => d.timestamp)), [phaseBalance]);
 
   const totalCost = costBreakdown.reduce((s, c) => s + c.cost, 0);
 
@@ -101,9 +108,9 @@ export default function ElectricityPage() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={loadProfile}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                <XAxis dataKey="hour" tick={AXIS_STYLE} />
+                <XAxis dataKey="timestamp" tickFormatter={(ts) => formatTs(ts, loadProfileGranularity)} tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <ReferenceLine y={4000} stroke="#E53E3E" strokeDasharray="6 3" label={{ value: 'Threshold', fill: '#E53E3E', fontSize: 10 }} />
                 <Area type="monotone" dataKey="actual" stroke="#4D65FF" fill="#4D65FF" fillOpacity={0.3} strokeWidth={2} name="Actual" />
@@ -117,9 +124,9 @@ export default function ElectricityPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyConsumption}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                <XAxis dataKey="day" tick={AXIS_STYLE} />
+                <XAxis dataKey="timestamp" tickFormatter={(ts) => formatTs(ts, weeklyGranularity)} tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <Bar dataKey="thisWeek" fill="#56CDE7" name="This Week" />
                 <Bar dataKey="lastWeek" fill="#4D65FF" name="Last Week" />
@@ -132,9 +139,9 @@ export default function ElectricityPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={powerFactorTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                <XAxis dataKey="time" tick={AXIS_STYLE} />
+                <XAxis dataKey="timestamp" tickFormatter={(ts) => formatTs(ts, powerFactorGranularity)} tick={AXIS_STYLE} />
                 <YAxis domain={[0.88, 1.0]} tick={AXIS_STYLE} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <ReferenceLine y={0.95} stroke="#5CE5A0" strokeDasharray="6 3" label={{ value: 'Target 0.95', fill: '#5CE5A0', fontSize: 10 }} />
                 <Line type="monotone" dataKey="value" stroke="#F6AD55" strokeWidth={2} dot={{ r: 3 }} name="Power Factor" />
               </LineChart>
@@ -173,9 +180,9 @@ export default function ElectricityPage() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={peakDemandHistory}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                <XAxis dataKey="date" tick={AXIS_STYLE} />
+                <XAxis dataKey="timestamp" tickFormatter={(ts) => formatTs(ts, peakDemandGranularity)} tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <ReferenceLine y={4200} stroke="#E53E3E" strokeDasharray="6 3" label={{ value: 'Contract 4200 kW', fill: '#E53E3E', fontSize: 10 }} />
                 <Area type="monotone" dataKey="peak" stroke="#F6AD55" fill="#F6AD55" fillOpacity={0.25} strokeWidth={2} name="Peak Demand" />
               </AreaChart>
@@ -187,9 +194,9 @@ export default function ElectricityPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={phaseBalance}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                <XAxis dataKey="time" tick={AXIS_STYLE} />
+                <XAxis dataKey="timestamp" tickFormatter={(ts) => formatTs(ts, phaseBalanceGranularity)} tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <Bar dataKey="phaseA" fill="#E53E3E" name="Phase A" />
                 <Bar dataKey="phaseB" fill="#F6AD55" name="Phase B" />

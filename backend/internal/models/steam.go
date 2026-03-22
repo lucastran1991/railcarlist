@@ -1,20 +1,20 @@
 package models
 
 type SteamBalance struct {
-	ID      int64   `json:"id"`
-	Hour    string  `json:"hour"`
-	Boiler1 float64 `json:"boiler1"`
-	Boiler2 float64 `json:"boiler2"`
-	Boiler3 float64 `json:"boiler3"`
-	Demand  float64 `json:"demand"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	Boiler1   float64 `json:"boiler1"`
+	Boiler2   float64 `json:"boiler2"`
+	Boiler3   float64 `json:"boiler3"`
+	Demand    float64 `json:"demand"`
 }
 
 type SteamHeaderPressure struct {
-	ID   int64   `json:"id"`
-	Time string  `json:"time"`
-	HP   float64 `json:"hp"`
-	MP   float64 `json:"mp"`
-	LP   float64 `json:"lp"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	HP        float64 `json:"hp"`
+	MP        float64 `json:"mp"`
+	LP        float64 `json:"lp"`
 }
 
 type SteamDistribution struct {
@@ -25,16 +25,16 @@ type SteamDistribution struct {
 }
 
 type SteamCondensate struct {
-	ID       int64   `json:"id"`
-	Hour     string  `json:"hour"`
-	Recovery float64 `json:"recovery"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	Recovery  float64 `json:"recovery"`
 }
 
 type SteamFuelRatio struct {
-	ID    int64   `json:"id"`
-	Hour  string  `json:"hour"`
-	Fuel  float64 `json:"fuel"`
-	Steam float64 `json:"steam"`
+	ID        int64   `json:"id"`
+	Timestamp int64   `json:"timestamp"` // epoch ms
+	Fuel      float64 `json:"fuel"`
+	Steam     float64 `json:"steam"`
 }
 
 type SteamLoss struct {

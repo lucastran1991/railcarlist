@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { formatTs, formatTsTooltip, detectGranularity } from '@/lib/formatTimestamp';
 import type { SteamKPIs, QueryParams } from '@/lib/api-dashboard';
 import FilterBar from '@/components/dashboard/FilterBar';
 import { KpiCard } from '@/components/dashboard/KpiCard';
@@ -63,12 +64,17 @@ export default function SteamPage() {
 
   if (!kpis) return null;
 
-  const steamBalance = (charts['balance'] ?? []) as { hour: string; boiler1: number; boiler2: number; boiler3: number; demand: number }[];
-  const headerPressureTrend = (charts['header-pressure'] ?? []) as { time: string; hp: number; mp: number; lp: number }[];
+  const steamBalance = (charts['balance'] ?? []) as { timestamp: number; boiler1: number; boiler2: number; boiler3: number; demand: number }[];
+  const headerPressureTrend = (charts['header-pressure'] ?? []) as { timestamp: number; hp: number; mp: number; lp: number }[];
   const steamDistribution = (charts['distribution'] ?? []) as { consumer: string; value: number; color: string }[];
-  const condensateRecoveryTrend = (charts['condensate'] ?? []) as { hour: string; recovery: number }[];
-  const fuelVsSteam = (charts['fuel-ratio'] ?? []) as { fuel: number; steam: number; hour: string }[];
+  const condensateRecoveryTrend = (charts['condensate'] ?? []) as { timestamp: number; recovery: number }[];
+  const fuelVsSteam = (charts['fuel-ratio'] ?? []) as { timestamp: number; fuel: number; steam: number }[];
   const steamLoss = (charts['loss'] ?? []) as { location: string; loss: number; trapsTotal: number; trapsFailed: number }[];
+
+  const balanceGranularity = useMemo(() => detectGranularity(steamBalance.map((d) => d.timestamp)), [steamBalance]);
+  const pressureGranularity = useMemo(() => detectGranularity(headerPressureTrend.map((d) => d.timestamp)), [headerPressureTrend]);
+  const condensateGranularity = useMemo(() => detectGranularity(condensateRecoveryTrend.map((d) => d.timestamp)), [condensateRecoveryTrend]);
+  const fuelGranularity = useMemo(() => detectGranularity(fuelVsSteam.map((d) => d.timestamp)), [fuelVsSteam]);
 
   const supplyGtDemand = kpis.totalProduction > kpis.totalDemand;
   const distributionTotal = steamDistribution.reduce((s, d) => s + d.value, 0);
@@ -109,9 +115,9 @@ export default function SteamPage() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={steamBalance}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-                <XAxis dataKey="hour" tick={AXIS} />
+                <XAxis dataKey="timestamp" tick={AXIS} tickFormatter={(ts) => formatTs(ts, balanceGranularity)} />
                 <YAxis tick={AXIS} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <Area type="monotone" dataKey="boiler1" stackId="supply" stroke="#4D65FF" fill="#4D65FF" fillOpacity={0.6} name="Boiler 1" />
                 <Area type="monotone" dataKey="boiler2" stackId="supply" stroke="#56CDE7" fill="#56CDE7" fillOpacity={0.6} name="Boiler 2" />
@@ -126,9 +132,9 @@ export default function SteamPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={headerPressureTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-                <XAxis dataKey="time" tick={AXIS} />
+                <XAxis dataKey="timestamp" tick={AXIS} tickFormatter={(ts) => formatTs(ts, pressureGranularity)} />
                 <YAxis tick={AXIS} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <Line type="monotone" dataKey="hp" stroke="#E53E3E" strokeWidth={2} dot={false} name="HP" />
                 <Line type="monotone" dataKey="mp" stroke="#F6AD55" strokeWidth={2} dot={false} name="MP" />
@@ -169,9 +175,9 @@ export default function SteamPage() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={condensateRecoveryTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-                <XAxis dataKey="hour" tick={AXIS} />
+                <XAxis dataKey="timestamp" tick={AXIS} tickFormatter={(ts) => formatTs(ts, condensateGranularity)} />
                 <YAxis tick={AXIS} domain={[70, 95]} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <ReferenceLine y={85} stroke="#5CE5A0" strokeDasharray="6 4" label={{ value: 'Target 85%', fill: '#5CE5A0', fontSize: 11 }} />
                 <Area type="monotone" dataKey="recovery" stroke="#56CDE7" fill="#56CDE7" fillOpacity={0.3} name="Recovery %" />
               </AreaChart>
@@ -185,7 +191,7 @@ export default function SteamPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis type="number" dataKey="fuel" name="Fuel (m³/h)" tick={AXIS} label={{ value: 'Fuel (m³/h)', position: 'insideBottom', offset: -5, style: AXIS }} />
                 <YAxis type="number" dataKey="steam" name="Steam (t/h)" tick={AXIS} label={{ value: 'Steam (t/h)', angle: -90, position: 'insideLeft', style: AXIS }} />
-                <Tooltip {...tooltipStyle} cursor={{ strokeDasharray: '3 3' }} />
+                <Tooltip {...tooltipStyle} cursor={{ strokeDasharray: '3 3' }} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Scatter data={fuelVsSteam} fill="#4D65FF" name="Fuel vs Steam" />
               </ScatterChart>
             </ResponsiveContainer>

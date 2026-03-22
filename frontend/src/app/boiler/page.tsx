@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { type BoilerKPIs, type QueryParams } from '@/lib/api-dashboard';
@@ -17,6 +17,7 @@ import {
   AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine,
 } from 'recharts';
+import { formatTs, formatTsTooltip, detectGranularity } from '@/lib/formatTimestamp';
 
 const tooltipStyle = {
   contentStyle: { backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' },
@@ -38,11 +39,15 @@ export default function BoilerPage() {
   if (!kpis) return null;
 
   const boilerComparison = (charts['readings'] ?? []) as { boiler: string; efficiency: number; load: number; steamOutput: number }[];
-  const efficiencyTrend = (charts['efficiency-trend'] ?? []) as { date: string; blr01: number; blr02: number; blr03: number; blr04: number }[];
+  const efficiencyTrend = (charts['efficiency-trend'] ?? []) as { timestamp: number; blr01: number; blr02: number; blr03: number; blr04: number }[];
   const combustionAnalysis = (charts['combustion'] ?? []) as { boiler: string; o2: number; co2: number; co: number; nox: number }[];
-  const steamVsFuel = (charts['steam-fuel'] ?? []) as { hour: string; steam: number; fuel: number }[];
+  const steamVsFuel = (charts['steam-fuel'] ?? []) as { timestamp: number; steam: number; fuel: number }[];
   const emissionsGauges = (charts['emissions'] ?? []) as { pollutant: string; current: number; limit: number; unit: string }[];
-  const stackTemperature = (charts['stack-temp'] ?? []) as { hour: string; blr01: number; blr02: number; blr03: number }[];
+  const stackTemperature = (charts['stack-temp'] ?? []) as { timestamp: number; blr01: number; blr02: number; blr03: number }[];
+
+  const efficiencyGranularity = useMemo(() => detectGranularity(efficiencyTrend.map((d) => d.timestamp)), [efficiencyTrend]);
+  const steamFuelGranularity = useMemo(() => detectGranularity(steamVsFuel.map((d) => d.timestamp)), [steamVsFuel]);
+  const stackTempGranularity = useMemo(() => detectGranularity(stackTemperature.map((d) => d.timestamp)), [stackTemperature]);
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -127,9 +132,9 @@ export default function BoilerPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={efficiencyTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-                <XAxis dataKey="date" tick={AXIS} />
+                <XAxis dataKey="timestamp" tick={AXIS} tickFormatter={(ts) => formatTs(ts, efficiencyGranularity)} />
                 <YAxis tick={AXIS} domain={[0, 100]} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <Line type="monotone" dataKey="blr01" stroke="#4D65FF" strokeWidth={2} dot={false} name="BLR-01" />
                 <Line type="monotone" dataKey="blr02" stroke="#56CDE7" strokeWidth={2} dot={false} name="BLR-02" />
@@ -161,10 +166,10 @@ export default function BoilerPage() {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={steamVsFuel}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-                <XAxis dataKey="hour" tick={AXIS} />
+                <XAxis dataKey="timestamp" tick={AXIS} tickFormatter={(ts) => formatTs(ts, steamFuelGranularity)} />
                 <YAxis yAxisId="left" tick={AXIS} />
                 <YAxis yAxisId="right" orientation="right" tick={AXIS} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <Area yAxisId="left" type="monotone" dataKey="steam" stroke="#56CDE7" fill="#56CDE7" fillOpacity={0.3} name="Steam (tonnes/h)" />
                 <Line yAxisId="right" type="monotone" dataKey="fuel" stroke="#F6AD55" strokeWidth={2} dot={false} name="Fuel (m³/h)" />
@@ -203,9 +208,9 @@ export default function BoilerPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stackTemperature}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
-                <XAxis dataKey="hour" tick={AXIS} />
+                <XAxis dataKey="timestamp" tick={AXIS} tickFormatter={(ts) => formatTs(ts, stackTempGranularity)} />
                 <YAxis tick={AXIS} domain={[150, 230]} />
-                <Tooltip {...tooltipStyle} />
+                <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
                 <ReferenceLine y={220} stroke="#E53E3E" strokeDasharray="5 5" label={{ value: 'Alarm 220°C', fill: '#E53E3E', fontSize: 10 }} />
                 <Line type="monotone" dataKey="blr01" stroke="#4D65FF" strokeWidth={2} dot={false} name="BLR-01" />
