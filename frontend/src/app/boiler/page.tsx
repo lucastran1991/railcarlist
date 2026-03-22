@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { type BoilerKPIs } from '@/lib/api-dashboard';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import {
@@ -15,26 +16,6 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ReferenceLine,
 } from 'recharts';
 
-interface BoilerData {
-  kpis: {
-    boilersOnline: number;
-    boilersTotal: number;
-    totalSteamOutput: number;
-    fleetEfficiency: number;
-    avgStackTemp: number;
-    totalFuelRate: number;
-    avgO2: number;
-    coEmissions: number;
-    noxEmissions: number;
-  };
-  boilerComparison: { boiler: string; efficiency: number; load: number; steamOutput: number }[];
-  efficiencyTrend: { date: string; blr01: number; blr02: number; blr03: number; blr04: number }[];
-  combustionAnalysis: { boiler: string; o2: number; co2: number; co: number; nox: number }[];
-  steamVsFuel: { hour: string; steam: number; fuel: number }[];
-  emissionsGauges: { pollutant: string; current: number; limit: number; unit: string }[];
-  stackTemperature: { hour: string; blr01: number; blr02: number; blr03: number }[];
-}
-
 const tooltipStyle = {
   contentStyle: { backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' },
   itemStyle: { color: 'hsl(var(--foreground))' },
@@ -45,17 +26,19 @@ const AXIS = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 
 export default function BoilerPage() {
   const ready = useAuth();
-  const [data, setData] = useState<BoilerData | null>(null);
+  const { kpis, charts, loading, error } = useDashboardData<BoilerKPIs>('boiler');
 
-  useEffect(() => {
-    fetch('/data/mock/boiler.json')
-      .then((r) => r.json())
-      .then(setData);
-  }, []);
+  if (!ready) return null;
+  if (loading) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-muted-foreground">Loading...</p></div>;
+  if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
+  if (!kpis) return null;
 
-  if (!ready || !data) return null;
-
-  const { kpis } = data;
+  const boilerComparison = (charts['readings'] ?? []) as { boiler: string; efficiency: number; load: number; steamOutput: number }[];
+  const efficiencyTrend = (charts['efficiency-trend'] ?? []) as { date: string; blr01: number; blr02: number; blr03: number; blr04: number }[];
+  const combustionAnalysis = (charts['combustion'] ?? []) as { boiler: string; o2: number; co2: number; co: number; nox: number }[];
+  const steamVsFuel = (charts['steam-fuel'] ?? []) as { hour: string; steam: number; fuel: number }[];
+  const emissionsGauges = (charts['emissions'] ?? []) as { pollutant: string; current: number; limit: number; unit: string }[];
+  const stackTemperature = (charts['stack-temp'] ?? []) as { hour: string; blr01: number; blr02: number; blr03: number }[];
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -119,7 +102,7 @@ export default function BoilerPage() {
           {/* 1. Boiler Fleet Comparison — Grouped Bar */}
           <ChartCard title="Boiler Fleet Comparison">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.boilerComparison}>
+              <BarChart data={boilerComparison}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="boiler" tick={AXIS} />
                 <YAxis tick={AXIS} />
@@ -135,7 +118,7 @@ export default function BoilerPage() {
           {/* 2. Efficiency Trend (7 days) — Multi Line */}
           <ChartCard title="Efficiency Trend (7 days)">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.efficiencyTrend}>
+              <LineChart data={efficiencyTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="date" tick={AXIS} />
                 <YAxis tick={AXIS} domain={[0, 100]} />
@@ -152,7 +135,7 @@ export default function BoilerPage() {
           {/* 3. Combustion Analysis — Stacked Bar */}
           <ChartCard title="Combustion Analysis">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.combustionAnalysis}>
+              <BarChart data={combustionAnalysis}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="boiler" tick={AXIS} />
                 <YAxis tick={AXIS} />
@@ -169,7 +152,7 @@ export default function BoilerPage() {
           {/* 4. Steam Output vs Fuel Input (24h) — Dual Axis Area + Line */}
           <ChartCard title="Steam Output vs Fuel Input (24h)">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.steamVsFuel}>
+              <AreaChart data={steamVsFuel}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="hour" tick={AXIS} />
                 <YAxis yAxisId="left" tick={AXIS} />
@@ -185,7 +168,7 @@ export default function BoilerPage() {
           {/* 5. Emissions Status — Custom Progress Bars */}
           <ChartCard title="Emissions Status">
             <div className="space-y-4 flex flex-col justify-center h-full">
-              {data.emissionsGauges.map((e) => {
+              {emissionsGauges.map((e) => {
                 const ratio = e.current / e.limit;
                 return (
                   <div key={e.pollutant}>
@@ -211,7 +194,7 @@ export default function BoilerPage() {
           {/* 6. Stack Temperature (24h) — Multi Line with ReferenceLine */}
           <ChartCard title="Stack Temperature (24h)">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.stackTemperature}>
+              <LineChart data={stackTemperature}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="hour" tick={AXIS} />
                 <YAxis tick={AXIS} domain={[150, 230]} />

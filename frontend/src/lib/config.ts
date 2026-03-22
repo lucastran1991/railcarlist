@@ -25,4 +25,10 @@ export const API_ENDPOINTS = {
   tags: '/api/tags',
   railcars: '/api/railcars',
   railcarsImport: '/api/railcars/import',
+  // Dashboard domains
+  electricity: '/api/electricity',
+  steam: '/api/steam',
+  boiler: '/api/boiler',
+  tank: '/api/tank',
+  substation: '/api/substation',
 } as const;

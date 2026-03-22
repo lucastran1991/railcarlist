@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import type { ElectricityKPIs } from '@/lib/api-dashboard';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
-import { Zap, Activity, TrendingUp, Gauge, DollarSign, Cloud, Shield, Thermometer } from 'lucide-react';
+import { Zap, Activity, TrendingUp, Gauge, DollarSign, Cloud, Shield, Thermometer, Loader2 } from 'lucide-react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -33,39 +34,41 @@ const tooltipStyle = {
 const GRID_STROKE = 'hsl(var(--border))';
 const AXIS_STYLE = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 
-interface ElectricityData {
-  kpis: {
-    totalConsumption: number;
-    realTimeDemand: number;
-    peakDemand: number;
-    powerFactor: number;
-    energyCost: number;
-    carbonEmissions: number;
-    gridAvailability: number;
-    transformerLoad: number;
-  };
-  loadProfile: { hour: string; actual: number; planned: number; threshold: number }[];
-  weeklyConsumption: { day: string; thisWeek: number; lastWeek: number }[];
-  powerFactorTrend: { time: string; value: number }[];
-  costBreakdown: { source: string; cost: number; color: string }[];
-  peakDemandHistory: { date: string; peak: number }[];
-  phaseBalance: { time: string; phaseA: number; phaseB: number; phaseC: number }[];
-}
-
 export default function ElectricityPage() {
   const ready = useAuth();
-  const [data, setData] = useState<ElectricityData | null>(null);
+  const { kpis, charts, loading, error } = useDashboardData<ElectricityKPIs>('electricity');
 
-  useEffect(() => {
-    fetch('/data/mock/electricity.json')
-      .then((r) => r.json())
-      .then(setData);
-  }, []);
+  if (!ready) return null;
 
-  if (!ready || !data) return null;
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#56CDE7]" />
+      </div>
+    );
+  }
 
-  const { kpis } = data;
-  const totalCost = data.costBreakdown.reduce((s, c) => s + c.cost, 0);
+  if (error) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <div className="text-center space-y-2">
+          <p className="text-destructive font-medium">Failed to load data</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!kpis) return null;
+
+  const loadProfile = (charts['load-profiles'] ?? []) as { hour: string; actual: number; planned: number; threshold: number }[];
+  const weeklyConsumption = (charts['weekly-consumption'] ?? []) as { day: string; thisWeek: number; lastWeek: number }[];
+  const powerFactorTrend = (charts['power-factor'] ?? []) as { time: string; value: number }[];
+  const costBreakdown = (charts['cost-breakdown'] ?? []) as { source: string; cost: number; color: string }[];
+  const peakDemandHistory = (charts['peak-demand'] ?? []) as { date: string; peak: number }[];
+  const phaseBalance = (charts['phase-balance'] ?? []) as { time: string; phaseA: number; phaseB: number; phaseC: number }[];
+
+  const totalCost = costBreakdown.reduce((s, c) => s + c.cost, 0);
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -89,7 +92,7 @@ export default function ElectricityPage() {
           {/* 1. 24h Load Profile */}
           <ChartCard title="24h Load Profile">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.loadProfile}>
+              <AreaChart data={loadProfile}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                 <XAxis dataKey="hour" tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
@@ -105,7 +108,7 @@ export default function ElectricityPage() {
           {/* 2. Weekly Consumption */}
           <ChartCard title="Weekly Consumption">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.weeklyConsumption}>
+              <BarChart data={weeklyConsumption}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                 <XAxis dataKey="day" tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
@@ -120,7 +123,7 @@ export default function ElectricityPage() {
           {/* 3. Power Factor Trend */}
           <ChartCard title="Power Factor Trend">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.powerFactorTrend}>
+              <LineChart data={powerFactorTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                 <XAxis dataKey="time" tick={AXIS_STYLE} />
                 <YAxis domain={[0.88, 1.0]} tick={AXIS_STYLE} />
@@ -136,7 +139,7 @@ export default function ElectricityPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data.costBreakdown}
+                  data={costBreakdown}
                   dataKey="cost"
                   nameKey="source"
                   cx="50%"
@@ -146,7 +149,7 @@ export default function ElectricityPage() {
                   paddingAngle={3}
                   label={({ source, percent }) => `${source} ${(percent * 100).toFixed(0)}%`}
                 >
-                  {data.costBreakdown.map((entry, i) => (
+                  {costBreakdown.map((entry, i) => (
                     <Cell key={i} fill={entry.color} />
                   ))}
                 </Pie>
@@ -161,7 +164,7 @@ export default function ElectricityPage() {
           {/* 5. Peak Demand History */}
           <ChartCard title="Peak Demand History (30d)">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.peakDemandHistory}>
+              <AreaChart data={peakDemandHistory}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                 <XAxis dataKey="date" tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
@@ -175,7 +178,7 @@ export default function ElectricityPage() {
           {/* 6. Phase Balance */}
           <ChartCard title="Phase Balance (A)">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.phaseBalance}>
+              <BarChart data={phaseBalance}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                 <XAxis dataKey="time" tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />

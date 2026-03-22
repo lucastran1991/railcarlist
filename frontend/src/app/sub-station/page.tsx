@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { type SubStationKPIs } from '@/lib/api-dashboard';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { Zap, Activity, Thermometer, Radio, BarChart3, Shield, AlertTriangle, Gauge } from 'lucide-react';
@@ -29,26 +30,6 @@ const tooltipStyle = {
 const GRID_STROKE = 'hsl(var(--border))';
 const AXIS_STYLE = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 
-interface SubstationData {
-  kpis: {
-    incomingVoltage: number;
-    totalLoad: number;
-    transformerTemp: number;
-    frequency: number;
-    thd: number;
-    breakersClosed: number;
-    breakersTotal: number;
-    faultEvents24h: number;
-    busbarBalance: number;
-  };
-  voltageProfile: { time: string; vRY: number; vYB: number; vBR: number }[];
-  transformerLoading: { name: string; loading: number; capacity: number; unit: string }[];
-  harmonicSpectrum: { order: string; magnitude: number }[];
-  transformerTemperature: { time: string; oilTemp: number; windingTemp: number }[];
-  feederDistribution: { time: string; feeder1: number; feeder2: number; feeder3: number; feeder4: number; feeder5: number }[];
-  faultEvents: { day: string; h08: number; h09: number; h10: number; h11: number; h12: number; h13: number; h14: number; h15: number }[];
-}
-
 function getLoadingColor(loading: number) {
   if (loading > 90) return '#E53E3E';
   if (loading >= 70) return '#F6AD55';
@@ -57,19 +38,21 @@ function getLoadingColor(loading: number) {
 
 export default function SubStationPage() {
   const ready = useAuth();
-  const [data, setData] = useState<SubstationData | null>(null);
+  const { kpis, charts, loading, error } = useDashboardData<SubStationKPIs>('substation');
 
-  useEffect(() => {
-    fetch('/data/mock/substation.json')
-      .then((r) => r.json())
-      .then(setData);
-  }, []);
+  if (!ready) return null;
+  if (loading) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-muted-foreground">Loading...</p></div>;
+  if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
+  if (!kpis) return null;
 
-  if (!ready || !data) return null;
+  const voltageProfile = (charts['voltage-profile'] ?? []) as { time: string; vRY: number; vYB: number; vBR: number }[];
+  const transformerLoading = (charts['transformers'] ?? []) as { name: string; loading: number; capacity: number; unit: string }[];
+  const harmonicSpectrum = (charts['harmonics'] ?? []) as { order: string; magnitude: number }[];
+  const transformerTemperature = (charts['transformer-temp'] ?? []) as { time: string; oilTemp: number; windingTemp: number }[];
+  const feederDistribution = (charts['feeder-distribution'] ?? []) as { time: string; feeder1: number; feeder2: number; feeder3: number; feeder4: number; feeder5: number }[];
+  const faultEvents = (charts['fault-events'] ?? []) as { day: string; h08: number; h09: number; h10: number; h11: number; h12: number; h13: number; h14: number; h15: number }[];
 
-  const { kpis } = data;
-
-  const faultChartData = data.faultEvents.map((fe) => ({
+  const faultChartData = faultEvents.map((fe) => ({
     day: fe.day,
     total: fe.h08 + fe.h09 + fe.h10 + fe.h11 + fe.h12 + fe.h13 + fe.h14 + fe.h15,
   }));
@@ -96,7 +79,7 @@ export default function SubStationPage() {
           {/* 1. Voltage Profile (3-Phase) */}
           <ChartCard title="Voltage Profile (3-Phase)">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.voltageProfile}>
+              <LineChart data={voltageProfile}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                 <XAxis dataKey="time" tick={AXIS_STYLE} />
                 <YAxis domain={[10.7, 11.1]} tick={AXIS_STYLE} />
@@ -113,13 +96,13 @@ export default function SubStationPage() {
           {/* 2. Transformer Loading (Horizontal) */}
           <ChartCard title="Transformer Loading">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.transformerLoading} layout="vertical">
+              <BarChart data={transformerLoading} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                 <XAxis type="number" domain={[0, 100]} tick={AXIS_STYLE} unit="%" />
                 <YAxis type="category" dataKey="name" tick={AXIS_STYLE} width={100} />
                 <Tooltip {...tooltipStyle} formatter={(value: number) => [`${value}%`, 'Loading']} />
                 <Bar dataKey="loading" name="Loading %" radius={[0, 4, 4, 0]}>
-                  {data.transformerLoading.map((entry, i) => (
+                  {transformerLoading.map((entry, i) => (
                     <Cell key={i} fill={getLoadingColor(entry.loading)} />
                   ))}
                 </Bar>
@@ -130,14 +113,14 @@ export default function SubStationPage() {
           {/* 3. Harmonic Spectrum */}
           <ChartCard title="Harmonic Spectrum">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.harmonicSpectrum}>
+              <BarChart data={harmonicSpectrum}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                 <XAxis dataKey="order" tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
                 <Tooltip {...tooltipStyle} />
                 <ReferenceLine y={5.0} stroke="#E53E3E" strokeDasharray="6 3" label={{ value: 'IEEE 519 Limit', fill: '#E53E3E', fontSize: 10 }} />
                 <Bar dataKey="magnitude" name="THD %" fill="#56CDE7" radius={[4, 4, 0, 0]}>
-                  {data.harmonicSpectrum.map((entry, i) => (
+                  {harmonicSpectrum.map((entry, i) => (
                     <Cell key={i} fill={entry.magnitude > 5 ? '#E53E3E' : '#56CDE7'} />
                   ))}
                 </Bar>
@@ -148,7 +131,7 @@ export default function SubStationPage() {
           {/* 4. Transformer Temperature */}
           <ChartCard title="Transformer Temperature">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.transformerTemperature}>
+              <LineChart data={transformerTemperature}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                 <XAxis dataKey="time" tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
@@ -165,7 +148,7 @@ export default function SubStationPage() {
           {/* 5. Feeder Load Distribution (Stacked) */}
           <ChartCard title="Feeder Load Distribution">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.feederDistribution}>
+              <BarChart data={feederDistribution}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                 <XAxis dataKey="time" tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />

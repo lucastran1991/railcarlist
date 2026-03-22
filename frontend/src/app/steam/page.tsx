@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import type { SteamKPIs } from '@/lib/api-dashboard';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { Flame, Activity, Gauge, Thermometer, TrendingUp, Droplets, Waves, Fuel } from 'lucide-react';
@@ -34,43 +35,43 @@ const tooltipStyle = {
 const GRID = 'hsl(var(--border))';
 const AXIS = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 
-interface SteamData {
-  kpis: {
-    totalProduction: number;
-    totalDemand: number;
-    headerPressure: number;
-    steamTemperature: number;
-    systemEfficiency: number;
-    condensateRecovery: number;
-    makeupWaterFlow: number;
-    fuelConsumption: number;
-  };
-  steamBalance: { hour: string; boiler1: number; boiler2: number; boiler3: number; demand: number }[];
-  headerPressureTrend: { time: string; hp: number; mp: number; lp: number }[];
-  steamDistribution: { consumer: string; value: number; color: string }[];
-  condensateRecoveryTrend: { hour: string; recovery: number }[];
-  fuelVsSteam: { fuel: number; steam: number; hour: string }[];
-  steamLoss: { location: string; loss: number; trapsTotal: number; trapsFailed: number }[];
-}
-
 export default function SteamPage() {
   const ready = useAuth();
-  const [data, setData] = useState<SteamData | null>(null);
+  const { kpis, charts, loading, error } = useDashboardData<SteamKPIs>('steam');
 
-  useEffect(() => {
-    fetch('/data/mock/steam.json')
-      .then((r) => r.json())
-      .then(setData);
-  }, []);
+  if (!ready) return null;
 
-  if (!ready || !data) return null;
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground" />
+      </div>
+    );
+  }
 
-  const { kpis } = data;
+  if (error) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <p className="text-destructive">Failed to load steam data: {error}</p>
+      </div>
+    );
+  }
+
+  if (!kpis) return null;
+
+  const steamBalance = (charts['balance'] ?? []) as { hour: string; boiler1: number; boiler2: number; boiler3: number; demand: number }[];
+  const headerPressureTrend = (charts['header-pressure'] ?? []) as { time: string; hp: number; mp: number; lp: number }[];
+  const steamDistribution = (charts['distribution'] ?? []) as { consumer: string; value: number; color: string }[];
+  const condensateRecoveryTrend = (charts['condensate'] ?? []) as { hour: string; recovery: number }[];
+  const fuelVsSteam = (charts['fuel-ratio'] ?? []) as { fuel: number; steam: number; hour: string }[];
+  const steamLoss = (charts['loss'] ?? []) as { location: string; loss: number; trapsTotal: number; trapsFailed: number }[];
+
   const supplyGtDemand = kpis.totalProduction > kpis.totalDemand;
-  const distributionTotal = data.steamDistribution.reduce((s, d) => s + d.value, 0);
+  const distributionTotal = steamDistribution.reduce((s, d) => s + d.value, 0);
 
-  const lossMax = Math.max(...data.steamLoss.map((l) => l.loss));
+  const lossMax = Math.max(...steamLoss.map((l) => l.loss), 0);
   const getLossColor = (loss: number) => {
+    if (lossMax === 0) return '#5CE5A0';
     const ratio = loss / lossMax;
     if (ratio > 0.7) return '#E53E3E';
     if (ratio > 0.4) return '#F6AD55';
@@ -99,7 +100,7 @@ export default function SteamPage() {
           {/* 1. Steam Balance — Supply vs Demand */}
           <ChartCard title="Steam Balance — Supply vs Demand">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.steamBalance}>
+              <AreaChart data={steamBalance}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="hour" tick={AXIS} />
                 <YAxis tick={AXIS} />
@@ -116,7 +117,7 @@ export default function SteamPage() {
           {/* 2. Header Pressure Trend */}
           <ChartCard title="Header Pressure Trend">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.headerPressureTrend}>
+              <LineChart data={headerPressureTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="time" tick={AXIS} />
                 <YAxis tick={AXIS} />
@@ -134,7 +135,7 @@ export default function SteamPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data.steamDistribution}
+                  data={steamDistribution}
                   dataKey="value"
                   nameKey="consumer"
                   cx="50%"
@@ -144,7 +145,7 @@ export default function SteamPage() {
                   paddingAngle={2}
                   label={({ consumer, percent }) => `${consumer} ${(percent * 100).toFixed(0)}%`}
                 >
-                  {data.steamDistribution.map((entry, i) => (
+                  {steamDistribution.map((entry, i) => (
                     <Cell key={i} fill={entry.color} />
                   ))}
                 </Pie>
@@ -159,7 +160,7 @@ export default function SteamPage() {
           {/* 4. Condensate Recovery Rate */}
           <ChartCard title="Condensate Recovery Rate">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.condensateRecoveryTrend}>
+              <AreaChart data={condensateRecoveryTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="hour" tick={AXIS} />
                 <YAxis tick={AXIS} domain={[70, 95]} />
@@ -178,7 +179,7 @@ export default function SteamPage() {
                 <XAxis type="number" dataKey="fuel" name="Fuel (m³/h)" tick={AXIS} label={{ value: 'Fuel (m³/h)', position: 'insideBottom', offset: -5, style: AXIS }} />
                 <YAxis type="number" dataKey="steam" name="Steam (t/h)" tick={AXIS} label={{ value: 'Steam (t/h)', angle: -90, position: 'insideLeft', style: AXIS }} />
                 <Tooltip {...tooltipStyle} cursor={{ strokeDasharray: '3 3' }} />
-                <Scatter data={data.fuelVsSteam} fill="#4D65FF" name="Fuel vs Steam" />
+                <Scatter data={fuelVsSteam} fill="#4D65FF" name="Fuel vs Steam" />
               </ScatterChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -186,13 +187,13 @@ export default function SteamPage() {
           {/* 6. Steam Loss by Location */}
           <ChartCard title="Steam Loss by Location">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.steamLoss} layout="vertical">
+              <BarChart data={steamLoss} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis type="number" tick={AXIS} />
                 <YAxis type="category" dataKey="location" tick={AXIS} width={110} />
                 <Tooltip {...tooltipStyle} />
                 <Bar dataKey="loss" name="Loss (t/h)">
-                  {data.steamLoss.map((entry, i) => (
+                  {steamLoss.map((entry, i) => (
                     <Cell key={i} fill={getLossColor(entry.loss)} />
                   ))}
                 </Bar>

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { type TankKPIs } from '@/lib/api-dashboard';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { Database, BarChart3, CheckCircle, Activity, Thermometer, AlertTriangle, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
@@ -29,40 +30,22 @@ const tooltipStyle = {
 const GRID = 'hsl(var(--border))';
 const AXIS = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 
-interface TankData {
-  kpis: {
-    totalInventory: number;
-    availableCapacity: number;
-    tanksInOperation: number;
-    tanksTotal: number;
-    currentThroughput: number;
-    avgTemperature: number;
-    activeAlarms: number;
-    dailyReceipts: number;
-    dailyDispatches: number;
-  };
-  tankLevels: { tank: string; product: string; level: number; capacity: number; volume: number; color: string }[];
-  inventoryTrend: { date: string; gasoline: number; diesel: number; crude: number; ethanol: number }[];
-  throughput: { date: string; receipts: number; dispatches: number }[];
-  productDistribution: { product: string; volume: number; color: string }[];
-  tankLevelChanges: { tank: string; change: number }[];
-  tankTemperatures: { tank: string; t00: number; t06: number; t12: number; t18: number }[];
-}
-
 export default function TankPage() {
   const ready = useAuth();
-  const [data, setData] = useState<TankData | null>(null);
+  const { kpis, charts, loading, error } = useDashboardData<TankKPIs>('tank');
 
-  useEffect(() => {
-    fetch('/data/mock/tank.json')
-      .then((r) => r.json())
-      .then(setData);
-  }, []);
+  if (!ready) return null;
+  if (loading) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-muted-foreground">Loading...</p></div>;
+  if (error) return <div className="flex items-center justify-center min-h-[calc(100vh-64px)]"><p className="text-destructive">Error: {error}</p></div>;
+  if (!kpis) return null;
 
-  if (!ready || !data) return null;
-
-  const { kpis } = data;
-  const distributionTotal = data.productDistribution.reduce((s, d) => s + d.volume, 0);
+  const tankLevels = (charts['levels'] ?? []) as { tank: string; product: string; level: number; capacity: number; volume: number; color: string }[];
+  const inventoryTrend = (charts['inventory-trend'] ?? []) as { date: string; gasoline: number; diesel: number; crude: number; ethanol: number }[];
+  const throughput = (charts['throughput'] ?? []) as { date: string; receipts: number; dispatches: number }[];
+  const productDistribution = (charts['product-distribution'] ?? []) as { product: string; volume: number; color: string }[];
+  const tankLevelChanges = (charts['level-changes'] ?? []) as { tank: string; change: number }[];
+  const tankTemperatures = (charts['temperatures'] ?? []) as { tank: string; t00: number; t06: number; t12: number; t18: number }[];
+  const distributionTotal = productDistribution.reduce((s, d) => s + d.volume, 0);
 
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
@@ -86,13 +69,13 @@ export default function TankPage() {
           {/* 1. Tank Levels */}
           <ChartCard title="Tank Levels">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.tankLevels} layout="vertical">
+              <BarChart data={tankLevels} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis type="number" tick={AXIS} domain={[0, 100]} unit="%" />
                 <YAxis type="category" dataKey="tank" tick={AXIS} width={60} />
                 <Tooltip {...tooltipStyle} formatter={(value: number) => `${value}%`} />
                 <Bar dataKey="level" name="Level %">
-                  {data.tankLevels.map((entry, i) => (
+                  {tankLevels.map((entry, i) => (
                     <Cell key={i} fill={entry.color} />
                   ))}
                 </Bar>
@@ -103,7 +86,7 @@ export default function TankPage() {
           {/* 2. Inventory Trend (7 days) */}
           <ChartCard title="Inventory Trend (7 days)">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data.inventoryTrend}>
+              <LineChart data={inventoryTrend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="date" tick={AXIS} />
                 <YAxis tick={AXIS} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
@@ -120,7 +103,7 @@ export default function TankPage() {
           {/* 3. Throughput — Receipts vs Dispatches */}
           <ChartCard title="Throughput — Receipts vs Dispatches">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.throughput}>
+              <BarChart data={throughput}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="date" tick={AXIS} />
                 <YAxis tick={AXIS} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
@@ -137,7 +120,7 @@ export default function TankPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={data.productDistribution}
+                  data={productDistribution}
                   dataKey="volume"
                   nameKey="product"
                   cx="50%"
@@ -147,7 +130,7 @@ export default function TankPage() {
                   paddingAngle={2}
                   label={({ product, percent }) => `${product} ${(percent * 100).toFixed(0)}%`}
                 >
-                  {data.productDistribution.map((entry, i) => (
+                  {productDistribution.map((entry, i) => (
                     <Cell key={i} fill={entry.color} />
                   ))}
                 </Pie>
@@ -162,13 +145,13 @@ export default function TankPage() {
           {/* 5. Tank Level Changes (24h) */}
           <ChartCard title="Tank Level Changes (24h)">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.tankLevelChanges}>
+              <BarChart data={tankLevelChanges}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="tank" tick={AXIS} />
                 <YAxis tick={AXIS} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip {...tooltipStyle} formatter={(value: number) => value.toLocaleString()} />
                 <Bar dataKey="change" name="Change (bbl)">
-                  {data.tankLevelChanges.map((entry, i) => (
+                  {tankLevelChanges.map((entry, i) => (
                     <Cell key={i} fill={entry.change >= 0 ? '#5CE5A0' : '#E53E3E'} />
                   ))}
                 </Bar>
@@ -179,7 +162,7 @@ export default function TankPage() {
           {/* 6. Tank Temperatures */}
           <ChartCard title="Tank Temperatures">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.tankTemperatures}>
+              <BarChart data={tankTemperatures}>
                 <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
                 <XAxis dataKey="tank" tick={AXIS} />
                 <YAxis tick={AXIS} unit="°C" />
