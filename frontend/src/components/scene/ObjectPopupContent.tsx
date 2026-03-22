@@ -1,84 +1,141 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Thermometer, Activity, Zap, Wind, Droplets, AlertTriangle, ExternalLink,
+  Droplets, Gauge, Package, ExternalLink, Loader2, Building2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { mockBoilerData, fmtNum, MODES } from '@/lib/boilerData';
+import {
+  fetchTankByOsmId, isMappedTank, fmtVolume, fmtPercent, levelColor,
+  PRODUCT_COLORS, type TankLevelData,
+} from '@/lib/tankData';
 import type { ClickedObject } from '@/lib/three/types';
 
-function Stat({ icon: Icon, label, value, unit, accent }: {
-  icon: React.FC<{ size?: number; className?: string }>; label: string; value: string; unit?: string; accent?: boolean;
+function Stat({ icon: Icon, label, value, unit, color }: {
+  icon: React.FC<{ size?: number; className?: string; color?: string }>; label: string; value: string; unit?: string; color?: string;
 }) {
   return (
     <div className="flex items-center gap-1.5">
-      <Icon size={10} className={cn('shrink-0', accent ? 'text-orange-300' : 'text-gray-500')} />
+      <Icon size={10} className="shrink-0" color={color ?? '#6b7280'} />
       <span className="text-[10px] text-gray-500">{label}</span>
-      <span className={cn('text-[10px] font-mono ml-auto', accent ? 'text-orange-200 font-semibold' : 'text-gray-200')}>
+      <span className="text-[10px] font-mono ml-auto text-gray-200">
         {value}{unit && <span className="text-gray-600 ml-0.5">{unit}</span>}
       </span>
     </div>
   );
 }
 
+function LevelBar({ level, color }: { level: number; color: string }) {
+  return (
+    <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+      <div
+        className="h-full rounded-full transition-all duration-500"
+        style={{ width: `${Math.min(100, level)}%`, backgroundColor: color }}
+      />
+    </div>
+  );
+}
+
 export default function ObjectPopupContent({ obj }: { obj: ClickedObject }) {
-  const boiler = useMemo(() => mockBoilerData(obj.name), [obj.name]);
-  const modeInfo = MODES[boiler.boilerMode] ?? MODES[0];
-  const isActive = boiler.boilerMode === 1;
+  const [tank, setTank] = useState<TankLevelData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const mapped = isMappedTank(obj.name);
+
+  useEffect(() => {
+    if (!mapped) { setLoading(false); return; }
+    setLoading(true);
+    fetchTankByOsmId(obj.name)
+      .then(setTank)
+      .catch(() => setTank(null))
+      .finally(() => setLoading(false));
+  }, [obj.name, mapped]);
+
+  // Non-tank building — show simple info
+  if (!mapped) {
+    return (
+      <div className="w-[260px] animate-[popupIn_0.15s_ease-out]" style={{ transform: 'translateY(-100%)' }}>
+        <div className="bg-gradient-to-b from-[rgba(18,22,32,0.95)] to-[rgba(12,15,24,0.97)] backdrop-blur-[24px] rounded-xl border border-white/10 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
+          <div className="h-0.5 bg-gradient-to-r from-gray-500 to-gray-600" />
+          <div className="px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <Building2 size={12} className="text-gray-400" />
+              <span className="text-xs font-bold text-white">Building</span>
+              <span className="text-[9px] text-gray-600 font-mono ml-auto">{obj.name}</span>
+            </div>
+            <p className="text-[10px] text-gray-500 mt-1">Structure — no telemetry data</p>
+          </div>
+        </div>
+        <div className="w-0 h-0 mx-auto border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-[rgba(12,15,24,0.97)]" />
+      </div>
+    );
+  }
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="w-[300px] animate-[popupIn_0.15s_ease-out]" style={{ transform: 'translateY(-100%)' }}>
+        <div className="bg-gradient-to-b from-[rgba(18,22,32,0.95)] to-[rgba(12,15,24,0.97)] backdrop-blur-[24px] rounded-xl border border-white/10 p-4 flex justify-center">
+          <Loader2 size={16} className="animate-spin text-gray-400" />
+        </div>
+        <div className="w-0 h-0 mx-auto border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-[rgba(12,15,24,0.97)]" />
+      </div>
+    );
+  }
+
+  if (!tank) {
+    return (
+      <div className="w-[260px] animate-[popupIn_0.15s_ease-out]" style={{ transform: 'translateY(-100%)' }}>
+        <div className="bg-gradient-to-b from-[rgba(18,22,32,0.95)] to-[rgba(12,15,24,0.97)] backdrop-blur-[24px] rounded-xl border border-white/10 p-3">
+          <span className="text-[10px] text-gray-400">Tank data unavailable</span>
+        </div>
+        <div className="w-0 h-0 mx-auto border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-[rgba(12,15,24,0.97)]" />
+      </div>
+    );
+  }
+
+  const prodColor = PRODUCT_COLORS[tank.product] ?? '#888';
+  const lvlColor = levelColor(tank.level);
 
   return (
-    <div
-      className="w-[380px] animate-[popupIn_0.15s_ease-out]"
-      style={{ transform: 'translateY(-100%)' }}
-    >
+    <div className="w-[340px] animate-[popupIn_0.15s_ease-out]" style={{ transform: 'translateY(-100%)' }}>
       <div className="bg-gradient-to-b from-[rgba(18,22,32,0.95)] to-[rgba(12,15,24,0.97)] backdrop-blur-[24px] rounded-xl border border-white/10 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
-        {/* Accent bar */}
-        <div className={cn('h-0.5', isActive
-          ? 'bg-gradient-to-r from-green-500 via-teal-500 to-blue-500'
-          : 'bg-gradient-to-r from-yellow-500 to-orange-500'
-        )} />
+        {/* Accent bar — product color */}
+        <div className="h-0.5" style={{ background: `linear-gradient(to right, ${prodColor}, ${prodColor}88)` }} />
 
         <div className="px-3 py-2.5">
-          {/* Header row */}
+          {/* Header */}
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <div className={cn('w-[6px] h-[6px] rounded-full', isActive ? 'bg-green-400 shadow-[0_0_6px_rgba(72,187,120,0.7)]' : 'bg-gray-500')} />
-              <span className="text-xs font-bold text-white">{boiler.boilerId}</span>
+              <div className="w-[6px] h-[6px] rounded-full shadow-[0_0_6px]" style={{ backgroundColor: prodColor, boxShadow: `0 0 6px ${prodColor}` }} />
+              <span className="text-xs font-bold text-white">{tank.tank}</span>
               <span className="text-[9px] text-gray-600 font-mono">{obj.name}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className={cn('text-[9px] px-1.5 py-0.5 rounded font-medium', obj.type === 'tank' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-orange-500/20 text-orange-400')}>
-                {obj.type.toUpperCase()}
-              </span>
-              <span className={cn('text-[9px] px-1.5 py-0.5 rounded font-medium', modeInfo.cls)}>
-                {modeInfo.label}
-              </span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-medium" style={{ backgroundColor: `${prodColor}20`, color: prodColor }}>
+              {tank.product}
+            </span>
+          </div>
+
+          {/* Level bar */}
+          <div className="mb-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-gray-500">Level</span>
+              <span className="text-xs font-bold" style={{ color: lvlColor }}>{fmtPercent(tank.level)}</span>
             </div>
+            <LevelBar level={tank.level} color={lvlColor} />
           </div>
 
-          {/* Two-column stats grid */}
+          {/* Stats */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 border-t border-white/5 pt-2">
-            <Stat icon={Thermometer} label="PSI" value={fmtNum(boiler.currentPSI, 0)} unit="psi" accent={isActive} />
-            <Stat icon={Zap} label="Firing" value={fmtNum(boiler.firingRate, 1)} unit="%" accent={isActive && boiler.firingRate > 50} />
-            <Stat icon={Activity} label="Req" value={fmtNum(boiler.requestPSI, 0)} unit="psi" />
-            <Stat icon={Wind} label="Steam" value={fmtNum(boiler.steamProduced, 1)} unit="lb/hr" />
-            <Stat icon={Zap} label="Set" value={fmtNum(boiler.setpointPSI, 0)} unit="psi" />
-            <Stat icon={Droplets} label="Gas" value={fmtNum(boiler.gasConsumed)} unit="cf" />
+            <Stat icon={Droplets} label="Volume" value={fmtVolume(tank.volume)} unit="bbl" color={prodColor} />
+            <Stat icon={Package} label="Capacity" value={fmtVolume(tank.capacity)} unit="bbl" />
+            <Stat icon={Gauge} label="Available" value={fmtVolume(tank.capacity - tank.volume)} unit="bbl" />
+            <Stat icon={Gauge} label="Utilization" value={fmtPercent(tank.level)} color={lvlColor} />
           </div>
 
-          {/* Footer: diagnostic + details */}
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
-            {boiler.diagnosticCode !== '0' ? (
-              <div className="flex items-center gap-1">
-                <AlertTriangle size={10} className="text-yellow-400" />
-                <span className="text-[9px] text-yellow-400">Diag: {boiler.diagnosticCode}</span>
-              </div>
-            ) : (
-              <div />
-            )}
+          {/* Footer */}
+          <div className="flex items-center justify-end mt-2 pt-2 border-t border-white/5">
             <button
-              onClick={() => { window.location.href = `/boiler/${obj.name}`; }}
+              onClick={() => { window.location.href = `/tank/${tank.tank}`; }}
               className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[#5CE5A0]/20 text-[#5CE5A0] text-[10px] font-medium hover:bg-[#5CE5A0]/30 transition-colors"
             >
               <ExternalLink size={10} />
