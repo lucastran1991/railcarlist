@@ -58,6 +58,7 @@ export default function Navigation() {
     { href: '/steam', label: 'Steam', icon: Droplets },
     { href: '/tank', label: 'Tank', icon: Gauge },
     { href: '/boiler', label: 'Boiler', icon: Flame },
+    { href: '/alerts', label: 'Alerts', icon: Bell },
   ];
 
   const userMenu = (
@@ -93,10 +94,10 @@ export default function Navigation() {
   return (
     <>
       <nav className={cn(
-        'py-3 z-30 pointer-events-auto',
+        'py-3 z-30 pointer-events-auto sticky top-0',
         isHome
-          ? 'fixed top-0 left-0 right-0 border-b border-border/30 bg-background/80'
-          : 'border-b border-border glass'
+          ? 'border-b border-border/30 bg-background/80'
+          : 'border-b border-border bg-background/70 backdrop-blur-xl backdrop-saturate-[180%]'
       )}>
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
@@ -171,9 +172,13 @@ export default function Navigation() {
                       ))}
                     </div>
                     <div className="px-4 py-2.5 border-t border-border">
-                      <button className="w-full text-xs text-center text-[var(--color-accent,#5CE5A0)] hover:underline font-medium">
+                      <Link
+                        href="/alerts"
+                        onClick={() => setAlertOpen(false)}
+                        className="block w-full text-xs text-center text-[var(--color-accent,#5CE5A0)] hover:underline font-medium"
+                      >
                         View all alerts
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 )}

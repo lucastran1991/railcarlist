@@ -61,6 +61,7 @@ func main() {
 	tankSvc := services.NewTankService(db)
 	subStationSvc := services.NewSubStationService(db)
 	systemGenSvc := services.NewSystemGeneratorService(db)
+	alertSvc := services.NewAlertService(db)
 
 	minValue, maxValue, useSequential, startTime, endTime := cfg.GenerationDefaults()
 
@@ -78,6 +79,7 @@ func main() {
 	tankHandler := handlers.NewTankHandler(tankSvc)
 	subStationHandler := handlers.NewSubStationHandler(subStationSvc)
 	systemHandler := handlers.NewSystemHandler(systemGenSvc)
+	alertHandler := handlers.NewAlertHandler(alertSvc)
 
 	// Setup router
 	router := mux.NewRouter()
@@ -148,6 +150,9 @@ func main() {
 	api.HandleFunc("/substation/feeder-distribution", subStationHandler.HandleGetFeederDistribution).Methods("GET")
 	api.HandleFunc("/substation/fault-events", subStationHandler.HandleGetFaultEvents).Methods("GET")
 	api.HandleFunc("/substation/ingest", subStationHandler.HandleIngest).Methods("POST")
+	// Alert API
+	api.HandleFunc("/alerts", alertHandler.HandleList).Methods("GET")
+	api.HandleFunc("/alerts/kpis", alertHandler.HandleGetKPIs).Methods("GET")
 	// System data generation
 	api.HandleFunc("/system/generate", systemHandler.HandleGenerate).Methods("POST")
 	// Handle timeseriesdata with flexible path matching
@@ -234,6 +239,8 @@ func main() {
 	log.Printf("  GET  /api/substation/feeder-distribution")
 	log.Printf("  GET  /api/substation/fault-events")
 	log.Printf("  POST /api/substation/ingest")
+	log.Printf("  GET  /api/alerts")
+	log.Printf("  GET  /api/alerts/kpis")
 	log.Printf("  POST /api/system/generate")
 	log.Printf("  GET  /health")
 

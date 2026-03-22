@@ -2355,6 +2355,19 @@ func (db *DB) migrate() error {
 		busbar_balance REAL NOT NULL DEFAULT 0,
 		updated_at TEXT
 	)`, autoInc),
+
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS alerts (
+		id %s,
+		type TEXT NOT NULL DEFAULT 'info',
+		title TEXT NOT NULL,
+		description TEXT NOT NULL DEFAULT '',
+		source TEXT NOT NULL DEFAULT '',
+		source_id TEXT NOT NULL DEFAULT '',
+		severity INTEGER NOT NULL DEFAULT 3,
+		is_read INTEGER NOT NULL DEFAULT 0,
+		created_at BIGINT NOT NULL DEFAULT 0,
+		resolved_at BIGINT NOT NULL DEFAULT 0
+	)`, autoInc),
 	}
 
 	for _, stmt := range ddlStatements {
@@ -2400,4 +2413,82 @@ func (db *DB) migrate() error {
 	}
 
 	return nil
+}
+
+// --- Alert CRUD ---
+
+func (db *DB) InsertAlert(a models.Alert) error {
+	isRead := 0
+	if a.IsRead {
+		isRead = 1
+	}
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO alerts (type, title, description, source, source_id, severity, is_read, created_at, resolved_at) VALUES (%s)", db.placeholders(9)),
+		a.Type, a.Title, a.Description, a.Source, a.SourceID, a.Severity, isRead, a.CreatedAt, a.ResolvedAt)
+	return err
+}
+
+func (db *DB) ListAlerts(params models.HistoryParams) ([]models.Alert, int, error) {
+	// Build WHERE clause for created_at (not recorded_at)
+	var args []interface{}
+	conditions := []string{}
+	if params.Start != "" {
+		ms, err := parseTime(params.Start)
+		if err == nil {
+			args = append(args, ms)
+			conditions = append(conditions, "created_at >= "+db.ph(len(args)))
+		}
+	}
+	if params.End != "" {
+		ms, err := parseTime(params.End)
+		if err == nil {
+			if !strings.Contains(params.End, "T") {
+				ms += 86400000 - 1
+			}
+			args = append(args, ms)
+			conditions = append(conditions, "created_at <= "+db.ph(len(args)))
+		}
+	}
+	where := ""
+	if len(conditions) > 0 {
+		where = " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	var total int
+	db.conn.QueryRow("SELECT COUNT(*) FROM alerts"+where, args...).Scan(&total)
+
+	query := "SELECT id, type, title, description, source, source_id, severity, is_read, created_at, resolved_at FROM alerts" + where + " ORDER BY created_at DESC"
+	query = applyPagination(query, params)
+
+	rows, err := db.conn.Query(query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	var results []models.Alert
+	for rows.Next() {
+		var r models.Alert
+		var isRead int
+		if err := rows.Scan(&r.ID, &r.Type, &r.Title, &r.Description, &r.Source, &r.SourceID, &r.Severity, &isRead, &r.CreatedAt, &r.ResolvedAt); err != nil {
+			return nil, 0, err
+		}
+		r.IsRead = isRead != 0
+		results = append(results, r)
+	}
+	return results, total, nil
+}
+
+func (db *DB) GetAlertKPIs() (*models.AlertKPIs, error) {
+	kpis := &models.AlertKPIs{}
+	db.conn.QueryRow("SELECT COUNT(*) FROM alerts").Scan(&kpis.Total)
+	db.conn.QueryRow("SELECT COUNT(*) FROM alerts WHERE type = 'critical'").Scan(&kpis.Critical)
+	db.conn.QueryRow("SELECT COUNT(*) FROM alerts WHERE type = 'warning'").Scan(&kpis.Warning)
+	db.conn.QueryRow("SELECT COUNT(*) FROM alerts WHERE type = 'info'").Scan(&kpis.Info)
+	db.conn.QueryRow("SELECT COUNT(*) FROM alerts WHERE type = 'resolved'").Scan(&kpis.Resolved)
+	db.conn.QueryRow("SELECT COUNT(*) FROM alerts WHERE is_read = 0").Scan(&kpis.Unread)
+	return kpis, nil
+}
+
+func (db *DB) DeleteAllAlerts() error {
+	_, err := db.conn.Exec("DELETE FROM alerts")
+	return err
 }

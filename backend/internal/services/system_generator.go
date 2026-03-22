@@ -141,6 +141,9 @@ func (s *SystemGeneratorService) Generate(req GenerateRequest, onProgress func(P
 	if err := s.generateSubStation(startDate, endDate, rng, onProgress); err != nil {
 		return fmt.Errorf("substation: %w", err)
 	}
+	if err := s.generateAlerts(startDate, endDate, rng, onProgress); err != nil {
+		return fmt.Errorf("alerts: %w", err)
+	}
 
 	// Update KPIs with latest values
 	s.updateAllKPIs(endDate, rng)
@@ -478,6 +481,8 @@ func (s *SystemGeneratorService) clearAllTables() {
 	s.db.DeleteAllSubStationVoltageProfile()
 	s.db.DeleteAllSubStationTransformerTemp()
 	s.db.DeleteAllSubStationFeederDistribution()
+	// Alerts
+	s.db.DeleteAllAlerts()
 	// Also clear static tables
 	s.db.DeleteAllElectricityCostBreakdown()
 	s.db.DeleteAllSteamDistribution()
@@ -668,4 +673,71 @@ func (s *SystemGeneratorService) generateStaticData(rng *rand.Rand) {
 	s.db.InsertSubStationFaultEvent(models.SubStationFaultEvent{Day: "Wed", H08: 1, H09: 0, H10: 0, H11: 0, H12: 0, H13: 0, H14: 0, H15: 1})
 	s.db.InsertSubStationFaultEvent(models.SubStationFaultEvent{Day: "Thu", H08: 0, H09: 0, H10: 0, H11: 1, H12: 0, H13: 0, H14: 0, H15: 0})
 	s.db.InsertSubStationFaultEvent(models.SubStationFaultEvent{Day: "Fri", H08: 0, H09: 0, H10: 0, H11: 1, H12: 0, H13: 0, H14: 2, H15: 0})
+}
+
+func (s *SystemGeneratorService) generateAlerts(start, end time.Time, rng *rand.Rand, onProgress func(ProgressEvent)) error {
+	s.db.DeleteAllAlerts()
+
+	type alertTemplate struct {
+		typ      string
+		severity int
+		source   string
+		sourceID string
+		title    string
+		desc     string
+	}
+
+	templates := []alertTemplate{
+		{"critical", 1, "boiler", "BLR-03", "High Stack Temperature", "Stack temp exceeded 220°C alarm threshold"},
+		{"critical", 1, "electricity", "GRID", "Power Grid Fault", "Incoming voltage dropped below 10.5kV"},
+		{"warning", 2, "tank", "TK-201", "Tank Level Above 90%", "Diesel tank at 92% capacity"},
+		{"warning", 2, "substation", "TR-03", "High Transformer Load", "Loading at 85%, above 80% warning"},
+		{"warning", 2, "steam", "HEADER", "Header Pressure Low", "HP header dropped below 38 bar"},
+		{"info", 3, "boiler", "BLR-04", "Scheduled Maintenance", "Boiler offline for planned maintenance"},
+		{"info", 3, "tank", "TK-302", "Tank Inspection Due", "Annual inspection scheduled"},
+		{"resolved", 4, "electricity", "PF", "Power Factor Restored", "PF returned to 0.94 after capacitor switch"},
+		{"resolved", 4, "steam", "TRAP-N", "Steam Trap Repaired", "Failed trap in Header North replaced"},
+		{"resolved", 4, "boiler", "BLR-01", "Boiler Back Online", "Returned to service after maintenance"},
+	}
+
+	totalRange := end.Sub(start)
+	count := 0
+	now := time.Now().UTC()
+	sevenDaysAgo := now.AddDate(0, 0, -7)
+
+	for i := 0; i < 50; i++ {
+		tmpl := templates[i%len(templates)]
+		// Random timestamp in the date range
+		offset := time.Duration(rng.Int63n(int64(totalRange)))
+		ts := start.Add(offset)
+		createdAt := ts.UnixMilli()
+
+		resolvedAt := int64(0)
+		if tmpl.typ == "resolved" {
+			// Resolved 1-12 hours after creation
+			resolvedAt = createdAt + int64(rng.Intn(12*3600))*1000
+		}
+
+		// Mark as read if resolved or older than 7 days
+		isRead := tmpl.typ == "resolved" || ts.Before(sevenDaysAgo)
+
+		err := s.db.InsertAlert(models.Alert{
+			Type:        tmpl.typ,
+			Title:       tmpl.title,
+			Description: tmpl.desc,
+			Source:      tmpl.source,
+			SourceID:    tmpl.sourceID,
+			Severity:    tmpl.severity,
+			IsRead:      isRead,
+			CreatedAt:   createdAt,
+			ResolvedAt:  resolvedAt,
+		})
+		if err != nil {
+			return fmt.Errorf("insert alert: %w", err)
+		}
+		count++
+	}
+
+	onProgress(ProgressEvent{Event: "progress", Domain: "alerts", Table: "alerts", Records: count})
+	return nil
 }
