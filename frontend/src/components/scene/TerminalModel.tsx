@@ -65,6 +65,18 @@ function getGearMaterial() {
   });
 }
 
+export function getProductForTank(tankId: string): string {
+  if (tankId.startsWith('TK-1')) return 'Gasoline';
+  if (tankId.startsWith('TK-2')) return 'Diesel';
+  if (tankId.startsWith('TK-3')) return 'Crude Oil';
+  if (tankId.startsWith('TK-4')) return 'Ethanol';
+  const num = parseInt(tankId.replace('TK-', ''));
+  if (num >= 536) return 'LPG';
+  if (num >= 524) return 'Gasoline';
+  if (num >= 501 && num <= 504) return 'Crude Oil';
+  return 'Diesel';
+}
+
 function isClickableNode(name: string, verts: number): boolean {
   if (name.includes('GOOGLE_SAT') || name.includes('EXPORT_GOOGLE')) return false;
   if (name === 'Cube') return false;
@@ -113,6 +125,7 @@ interface TerminalModelProps {
 export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug }: TerminalModelProps) {
   const statusEffects = useSceneStore(s => s.statusEffects);
   const selectedObjName = useSceneStore(s => s.selectedObj?.name ?? null);
+  const setTankLabelPositions = useSceneStore(s => s.setTankLabelPositions);
   const { scene } = useGLTF('/models/terminal.glb');
 
   // Fetch tank status data
@@ -130,7 +143,7 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
   const gearRefsArray = useRef<THREE.Mesh[]>([]);
 
   // Extract all meshes with their world transforms, apply status-based materials
-  const { meshes, groundMeshes, maintenanceTanks, particleTanks } = useMemo(() => {
+  const { meshes, groundMeshes, maintenanceTanks, particleTanks, labelPositions } = useMemo(() => {
     const effectsOn = statusEffects;
     const clone = scene.clone(true);
 
@@ -154,6 +167,7 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
     const animated: AnimatedTank[] = [];
     const maintenanceTanks: { position: [number, number, number]; topY: number }[] = [];
     const particleTanks: { position: [number, number, number]; status: TankStatus; tankId: string }[] = [];
+    const labelPositions = new Map<string, { tankId: string; product: string; position: [number, number, number] }>();
 
     clone.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
@@ -191,6 +205,18 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
         }
       } else {
         material = isTank ? getTankMat().clone() : getBuildingMat().clone();
+      }
+
+      // Collect label positions for all tanks (always, not just when effects ON)
+      if (isTank && tankId && !labelPositions.has(tankId)) {
+        const meshBox = new THREE.Box3().setFromObject(obj);
+        const center = meshBox.getCenter(new THREE.Vector3());
+        const top = meshBox.max.y;
+        labelPositions.set(tankId, {
+          tankId,
+          product: getProductForTank(tankId),
+          position: [center.x - scaledCenter.x, top + 0.3, center.z - scaledCenter.z],
+        });
       }
 
       // Get bounding box for overlays (gears + particles) — only when effects ON
@@ -238,7 +264,7 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
     // Store animated refs for useFrame
     animatedTanksRef.current = animated;
 
-    return { meshes, groundMeshes, maintenanceTanks, particleTanks } as const;
+    return { meshes, groundMeshes, maintenanceTanks, particleTanks, labelPositions } as const;
   }, [scene, tankData, statusEffects]);
 
   // --- Per-frame animation: pulse emissive + rotate gears (only when effects ON) ---
@@ -306,6 +332,11 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
   useEffect(() => {
     gearRefsArray.current = [];
   }, [maintenanceTanks]);
+
+  // Publish label positions to scene store so TankLabels can read them without re-cloning GLTF
+  useEffect(() => {
+    setTankLabelPositions(labelPositions);
+  }, [labelPositions, setTankLabelPositions]);
 
   return (
     <group onPointerMove={handlePointerMove}>

@@ -20,6 +20,10 @@ interface SceneState {
   // Effects toggle
   statusEffects: boolean;
   toggleStatusEffects: () => void;
+
+  // Tank label positions (computed by TerminalModel, shared with TankLabels)
+  tankLabelPositions: Map<string, { tankId: string; product: string; position: [number, number, number] }>;
+  setTankLabelPositions: (positions: Map<string, { tankId: string; product: string; position: [number, number, number] }>) => void;
 }
 
 export const useSceneStore = create<SceneState>((set) => ({
@@ -36,4 +40,7 @@ export const useSceneStore = create<SceneState>((set) => ({
 
   statusEffects: false,
   toggleStatusEffects: () => set((s) => ({ statusEffects: !s.statusEffects })),
+
+  tankLabelPositions: new Map(),
+  setTankLabelPositions: (positions) => set({ tankLabelPositions: positions }),
 }));

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Bvh } from '@react-three/drei';
 import * as THREE from 'three';
@@ -38,15 +38,17 @@ function SceneContent({ config, onCameraApiReady }: { config: SceneConfig } & Te
       <SceneLighting />
       <CameraController ref={cameraRef} config={config} />
 
-      <Bvh firstHitOnly>
-        <TerminalModel
-          onObjectClick={handleObjectClick}
-          onMissed={handleMissed}
-          onRaycastDebug={(info) => useSceneStore.getState().setRaycastInfo(info)}
-        />
-      </Bvh>
+      <Suspense fallback={null}>
+        <Bvh firstHitOnly>
+          <TerminalModel
+            onObjectClick={handleObjectClick}
+            onMissed={handleMissed}
+            onRaycastDebug={(info) => useSceneStore.getState().setRaycastInfo(info)}
+          />
+        </Bvh>
 
-      <TankLabels />
+        <TankLabels />
+      </Suspense>
     </>
   );
 }
