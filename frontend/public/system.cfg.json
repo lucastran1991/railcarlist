@@ -44,5 +44,12 @@
       "from": "#5CE5A0",
       "to": "#56CDE7"
     }
+  },
+  "assistant": {
+    "provider": "google",
+    "model": "gemini-2.0-flash",
+    "api_key": "DEFAULT",
+    "max_steps": 5,
+    "max_tokens": 1024
   }
 }
