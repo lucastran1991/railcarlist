@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { EffectComposer, Outline } from '@react-three/postprocessing';
-import { BlendFunction, KernelSize } from 'postprocessing';
 import * as THREE from 'three';
 import TerminalModel from './TerminalModel';
 import SceneLighting from './SceneLighting';
@@ -20,84 +18,36 @@ interface TerminalCanvasProps {
 
 function SceneContent({ config, onCameraApiReady }: { config: SceneConfig } & TerminalCanvasProps) {
   const cameraRef = useRef<CameraControllerHandle>(null);
-  const [selectedMesh, setSelectedMesh] = useState<THREE.Object3D | null>(null);
-  const [selectedTarget, setSelectedTarget] = useState<THREE.Vector3 | null>(null);
-  const [hoveredMesh, setHoveredMesh] = useState<THREE.Mesh | null>(null);
-
-  const handleHover = useCallback((mesh: THREE.Mesh | null) => {
-    setHoveredMesh(mesh);
-  }, []);
 
   useEffect(() => {
     if (cameraRef.current) onCameraApiReady?.(cameraRef.current.api);
     return () => onCameraApiReady?.(null);
   }, [onCameraApiReady]);
 
-  const deselect = useCallback(() => {
-    setSelectedMesh(null);
-    setSelectedTarget(null);
-    useSceneStore.getState().select(null);
+  const handleObjectClick = useCallback((obj: ClickedObject | null) => {
+    useSceneStore.getState().select(obj);
   }, []);
 
-  // Sync with store: when store clears selection (zoom out, close button), deselect here too
-  const storeSelectedObj = useSceneStore(s => s.selectedObj);
-  const prevStoreSelected = useRef(storeSelectedObj);
-  useEffect(() => {
-    if (prevStoreSelected.current !== null && storeSelectedObj === null) {
-      setSelectedMesh(null);
-      setSelectedTarget(null);
-    }
-    prevStoreSelected.current = storeSelectedObj;
-  }, [storeSelectedObj]);
-
-  const handleObjectClick = useCallback((obj: ClickedObject | null, mesh: THREE.Object3D | null) => {
-    if (obj && mesh) {
-      setSelectedMesh(mesh);
-      const box = new THREE.Box3().setFromObject(mesh);
-      setSelectedTarget(box.getCenter(new THREE.Vector3()));
-      useSceneStore.getState().select(obj);
-    } else {
-      deselect();
-    }
-  }, [deselect]);
+  const handleMissed = useCallback(() => {
+    useSceneStore.getState().select(null);
+  }, []);
 
   const handleCameraChange = useCallback((info: import('@/lib/three/types').CameraInfo) => {
     useSceneStore.getState().setCameraInfo(info);
   }, []);
 
-  const handleRaycastDebug = useCallback((info: import('./TerminalModel').RaycastDebugInfo | null) => {
-    useSceneStore.getState().setRaycastInfo(info);
-  }, []);
-
-  // Build outline selection — always keep EffectComposer mounted to avoid
-  // black-screen on first select (shader compilation lag)
-  const outlineSelection: THREE.Mesh[] = [];
-  if (selectedMesh) outlineSelection.push(selectedMesh as THREE.Mesh);
-  if (hoveredMesh && hoveredMesh !== selectedMesh) outlineSelection.push(hoveredMesh);
-
   return (
     <>
       <SceneLighting />
-      <CameraController ref={cameraRef} config={config} selectedTarget={selectedTarget} onCameraChange={handleCameraChange} />
+      <CameraController ref={cameraRef} config={config} onCameraChange={handleCameraChange} />
 
-      <TerminalModel selectedMesh={selectedMesh} hoveredMesh={hoveredMesh} onObjectClick={handleObjectClick} onMissed={deselect} onHover={handleHover} onRaycastDebug={handleRaycastDebug} />
+      <TerminalModel
+        onObjectClick={handleObjectClick}
+        onMissed={handleMissed}
+        onRaycastDebug={(info) => useSceneStore.getState().setRaycastInfo(info)}
+      />
 
       <TankLabels />
-
-      <EffectComposer multisampling={2} autoClear={false}>
-        <Outline
-          selection={outlineSelection}
-          visibleEdgeColor={0x5CE5A0}
-          hiddenEdgeColor={0x5CE5A0}
-          edgeStrength={300}
-          width={2000}
-          blur
-          kernelSize={KernelSize.SMALL}
-          xRay={false}
-          pulseSpeed={0}
-          blendFunction={BlendFunction.ALPHA}
-        />
-      </EffectComposer>
     </>
   );
 }

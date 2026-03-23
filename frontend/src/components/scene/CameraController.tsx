@@ -1,15 +1,15 @@
 'use client';
 
-import { useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from 'react';
+import { useRef, useEffect, useImperativeHandle, forwardRef, useCallback, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import type { SceneConfig, CameraInfo, TerminalCameraApi } from '@/lib/three/types';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+import { useSceneStore } from '@/lib/sceneStore';
 
 interface CameraControllerProps {
   config: SceneConfig;
-  selectedTarget: THREE.Vector3 | null;
   onCameraChange?: (info: CameraInfo) => void;
 }
 
@@ -18,7 +18,7 @@ export interface CameraControllerHandle {
 }
 
 const CameraController = forwardRef<CameraControllerHandle, CameraControllerProps>(
-  ({ config, selectedTarget, onCameraChange }, ref) => {
+  ({ config, onCameraChange }, ref) => {
     const controlsRef = useRef<OrbitControlsImpl>(null);
     const { camera } = useThree();
     const sc = config.scene;
@@ -27,6 +27,13 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
     const animProgress = useRef(0);
     const animFrom = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3() });
     const animTo = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3() });
+
+    // Read selection from store and derive target
+    const selectedObj = useSceneStore(s => s.selectedObj);
+    const selectedTarget = useMemo(() => {
+      if (!selectedObj?.position) return null;
+      return new THREE.Vector3(selectedObj.position.x, selectedObj.position.y, selectedObj.position.z);
+    }, [selectedObj]);
 
     // Set initial camera position
     useEffect(() => {

@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
-import { useGLTF, useCursor } from '@react-three/drei';
+import { useGLTF, Outlines } from '@react-three/drei';
 import { ThreeEvent, useFrame } from '@react-three/fiber';
 import type { ClickedObject } from '@/lib/three/types';
 import { osmToTankId, fetchTankLevels, type TankLevelData, type TankStatus, TANK_STATUS_CONFIG } from '@/lib/tankData';
@@ -105,16 +105,14 @@ export interface RaycastDebugInfo {
 }
 
 interface TerminalModelProps {
-  selectedMesh: THREE.Object3D | null;
-  hoveredMesh: THREE.Mesh | null;
-  onObjectClick: (obj: ClickedObject | null, mesh: THREE.Object3D | null) => void;
+  onObjectClick: (obj: ClickedObject | null) => void;
   onMissed?: () => void;
-  onHover?: (mesh: THREE.Mesh | null) => void;
   onRaycastDebug?: (info: RaycastDebugInfo | null) => void;
 }
 
-export default function TerminalModel({ selectedMesh, hoveredMesh, onObjectClick, onMissed, onHover, onRaycastDebug }: TerminalModelProps) {
+export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug }: TerminalModelProps) {
   const statusEffects = useSceneStore(s => s.statusEffects);
+  const selectedObjName = useSceneStore(s => s.selectedObj?.name ?? null);
   const { scene } = useGLTF('/models/terminal.glb');
 
   // Fetch tank status data
@@ -126,9 +124,6 @@ export default function TerminalModel({ selectedMesh, hoveredMesh, onObjectClick
       setTankData(map);
     });
   }, []);
-
-  // Cursor: pointer when hovering clickable object
-  useCursor(!!hoveredMesh, 'pointer', 'default');
 
   // Refs for per-frame animation (avoid re-renders)
   const animatedTanksRef = useRef<AnimatedTank[]>([]);
@@ -285,11 +280,9 @@ export default function TerminalModel({ selectedMesh, hoveredMesh, onObjectClick
   }, [onRaycastDebug]);
 
   const handleMeshClick = useCallback((e: ThreeEvent<MouseEvent>, entry: ProcessedMesh) => {
-    // stopPropagation prevents this click from reaching meshes behind
     e.stopPropagation();
     if (!entry.clickable) { onMissed?.(); return; }
 
-    // Trust R3F's event target — e.object is the mesh the user clicked on.
     const mesh = e.object as THREE.Mesh;
     const box = new THREE.Box3().setFromObject(mesh);
     const center = box.getCenter(new THREE.Vector3());
@@ -301,39 +294,13 @@ export default function TerminalModel({ selectedMesh, hoveredMesh, onObjectClick
       position: { x: parseFloat(center.x.toFixed(1)), y: parseFloat(center.y.toFixed(1)), z: parseFloat(center.z.toFixed(1)) },
       screenX: 0,
       screenY: 0,
-    }, mesh);
+    });
   }, [onObjectClick, onMissed]);
 
   const handleGroundClick = useCallback((e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
-    onHover?.(null);
     onMissed?.();
-  }, [onMissed, onHover]);
-
-  // Debounced hover
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hoveredNameRef = useRef<string | null>(null);
-
-  const handlePointerOver = useCallback((e: ThreeEvent<PointerEvent>, entry: ProcessedMesh) => {
-    e.stopPropagation();
-    if (!entry.clickable) return;
-    const mesh = e.object as THREE.Mesh;
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
-    hoveredNameRef.current = entry.name;
-    onHover?.(mesh);
-  }, [onHover]);
-
-  const handlePointerOut = useCallback(() => {
-    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
-    hoverTimerRef.current = setTimeout(() => {
-      hoveredNameRef.current = null;
-      onHover?.(null);
-      hoverTimerRef.current = null;
-    }, 50);
-  }, [onHover]);
+  }, [onMissed]);
 
   // Reset gear refs array on maintenance tank changes
   useEffect(() => {
@@ -367,7 +334,11 @@ export default function TerminalModel({ selectedMesh, hoveredMesh, onObjectClick
             castShadow={entry.castShadow}
             receiveShadow={entry.receiveShadow}
             onClick={(e) => handleMeshClick(e, entry)}
-          />
+          >
+            {entry.name === selectedObjName && (
+              <Outlines thickness={0.04} color="#5CE5A0" screenspace />
+            )}
+          </mesh>
         ))}
 
         {/* Rotating gears on maintenance tanks */}
