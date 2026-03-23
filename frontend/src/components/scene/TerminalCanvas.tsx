@@ -32,14 +32,10 @@ function SceneContent({ config, onCameraApiReady }: { config: SceneConfig } & Te
     useSceneStore.getState().select(null);
   }, []);
 
-  const handleCameraChange = useCallback((info: import('@/lib/three/types').CameraInfo) => {
-    useSceneStore.getState().setCameraInfo(info);
-  }, []);
-
   return (
     <>
       <SceneLighting />
-      <CameraController ref={cameraRef} config={config} onCameraChange={handleCameraChange} />
+      <CameraController ref={cameraRef} config={config} />
 
       <TerminalModel
         onObjectClick={handleObjectClick}
