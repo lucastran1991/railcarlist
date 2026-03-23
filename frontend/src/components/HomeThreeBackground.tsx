@@ -1,6 +1,11 @@
 'use client';
 
-import TerminalCanvas from '@/components/scene/TerminalCanvas';
+import dynamic from 'next/dynamic';
+
+const TerminalCanvas = dynamic(
+  () => import('@/components/scene/TerminalCanvas'),
+  { ssr: false, loading: () => <div className="absolute inset-0 bg-black/90" /> }
+);
 import type { CameraInfo, TerminalCameraApi, ClickedObject } from '@/lib/three/types';
 import type { RaycastDebugInfo } from '@/components/scene/TerminalModel';
 
