@@ -8,23 +8,23 @@ import type { TankStatus } from '@/lib/tankData';
 // --- Particle config per status ---
 interface ParticleConfig {
   count: number;
-  color: THREE.Color;
-  colorEnd: THREE.Color;  // fade-to color
-  speed: number;          // upward velocity
-  spread: number;         // horizontal spread radius
+  color: string;        // hex string — Color objects created lazily in component
+  colorEnd: string;     // fade-to color hex string
+  speed: number;        // upward velocity
+  spread: number;       // horizontal spread radius
   size: number;
   sizeEnd: number;
-  lifetime: number;       // seconds before reset
+  lifetime: number;     // seconds before reset
   opacity: number;
-  rise: number;           // max height above origin
-  turbulence: number;     // horizontal wobble
+  rise: number;         // max height above origin
+  turbulence: number;   // horizontal wobble
 }
 
 const PARTICLE_CONFIGS: Partial<Record<TankStatus, ParticleConfig>> = {
   heating: {
     count: 40,
-    color: new THREE.Color('#FF6B35'),
-    colorEnd: new THREE.Color('#FFD700'),
+    color: '#FF6B35',
+    colorEnd: '#FFD700',
     speed: 1.2,
     spread: 0.3,
     size: 0.15,
@@ -36,8 +36,8 @@ const PARTICLE_CONFIGS: Partial<Record<TankStatus, ParticleConfig>> = {
   },
   critical: {
     count: 30,
-    color: new THREE.Color('#FF2020'),
-    colorEnd: new THREE.Color('#FF6060'),
+    color: '#FF2020',
+    colorEnd: '#FF6060',
     speed: 0.8,
     spread: 0.5,
     size: 0.12,
@@ -49,8 +49,8 @@ const PARTICLE_CONFIGS: Partial<Record<TankStatus, ParticleConfig>> = {
   },
   receiving: {
     count: 20,
-    color: new THREE.Color('#56CDE7'),
-    colorEnd: new THREE.Color('#56CDE7'),
+    color: '#56CDE7',
+    colorEnd: '#56CDE7',
     speed: -0.6,  // downward for receiving
     spread: 0.25,
     size: 0.08,
@@ -62,8 +62,8 @@ const PARTICLE_CONFIGS: Partial<Record<TankStatus, ParticleConfig>> = {
   },
   discharging: {
     count: 20,
-    color: new THREE.Color('#4D65FF'),
-    colorEnd: new THREE.Color('#8BA4FF'),
+    color: '#4D65FF',
+    colorEnd: '#8BA4FF',
     speed: 0.9,
     spread: 0.25,
     size: 0.08,
@@ -75,8 +75,8 @@ const PARTICLE_CONFIGS: Partial<Record<TankStatus, ParticleConfig>> = {
   },
   warning: {
     count: 15,
-    color: new THREE.Color('#ECC94B'),
-    colorEnd: new THREE.Color('#FEFCBF'),
+    color: '#ECC94B',
+    colorEnd: '#FEFCBF',
     speed: 0.5,
     spread: 0.4,
     size: 0.10,
@@ -119,6 +119,10 @@ function TankParticleGroup({ position, status }: TankParticleGroupProps) {
 
   const pointsRef = useRef<THREE.Points>(null);
 
+  // Create Color objects lazily in component (SSR safe)
+  const colorStart = useMemo(() => new THREE.Color(config.color), [config.color]);
+  const colorEnd = useMemo(() => new THREE.Color(config.colorEnd), [config.colorEnd]);
+
   // Initialize particle state arrays
   const { geometry, ages, velocities } = useMemo(() => {
     const count = config.count;
@@ -143,9 +147,9 @@ function TankParticleGroup({ position, status }: TankParticleGroupProps) {
       velocities[i * 3 + 1] = config.speed * (0.8 + Math.random() * 0.4);
       velocities[i * 3 + 2] = (Math.random() - 0.5) * config.turbulence;
 
-      colors[i * 3] = config.color.r;
-      colors[i * 3 + 1] = config.color.g;
-      colors[i * 3 + 2] = config.color.b;
+      colors[i * 3] = colorStart.r;
+      colors[i * 3 + 1] = colorStart.g;
+      colors[i * 3 + 2] = colorStart.b;
       sizes[i] = config.size;
     }
 
@@ -155,7 +159,7 @@ function TankParticleGroup({ position, status }: TankParticleGroupProps) {
     geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
     return { geometry: geo, ages, velocities };
-  }, [config]);
+  }, [config, colorStart]);
 
   // Per-frame: advance particle ages, update positions/colors/sizes
   useFrame((_, delta) => {
@@ -195,9 +199,9 @@ function TankParticleGroup({ position, status }: TankParticleGroupProps) {
       }
 
       // Lerp color from start to end
-      col[i * 3] = config.color.r + (config.colorEnd.r - config.color.r) * life;
-      col[i * 3 + 1] = config.color.g + (config.colorEnd.g - config.color.g) * life;
-      col[i * 3 + 2] = config.color.b + (config.colorEnd.b - config.color.b) * life;
+      col[i * 3] = colorStart.r + (colorEnd.r - colorStart.r) * life;
+      col[i * 3 + 1] = colorStart.g + (colorEnd.g - colorStart.g) * life;
+      col[i * 3 + 2] = colorStart.b + (colorEnd.b - colorStart.b) * life;
 
       // Shrink size over lifetime
       sz[i] = config.size + (config.sizeEnd - config.size) * life;

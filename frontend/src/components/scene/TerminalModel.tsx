@@ -9,11 +9,13 @@ import { osmToTankId, fetchTankLevels, type TankLevelData, type TankStatus, TANK
 import TankParticles from './TankParticles';
 import { useSceneStore } from '@/lib/sceneStore';
 
-// PBR materials (StandardMaterial — no clearcoat overhead)
-const tankMat = new THREE.MeshStandardMaterial({
+// PBR materials — lazy singletons for SSR safety
+let _tankMat: THREE.MeshStandardMaterial | null = null;
+const getTankMat = () => _tankMat ??= new THREE.MeshStandardMaterial({
   color: 0xdddddd, roughness: 0.3, metalness: 0.7, envMapIntensity: 1.0,
 });
-const buildingMat = new THREE.MeshStandardMaterial({
+let _buildingMat: THREE.MeshStandardMaterial | null = null;
+const getBuildingMat = () => _buildingMat ??= new THREE.MeshStandardMaterial({
   color: 0xaabbcc, roughness: 0.6, metalness: 0.1, envMapIntensity: 0.5,
 });
 
@@ -30,33 +32,38 @@ const STATUS_EMISSIVE: Record<TankStatus, { color: string; baseIntensity: number
   maintenance:  { color: '#A78BFA', baseIntensity: 0.12, pulseSpeed: 0.8,  pulseAmplitude: 0.08 },
 };
 
-// Gear geometry (created once, shared via instancing)
-const GEAR_SEGMENTS = 12;
-const gearShape = new THREE.Shape();
-const gearOuterR = 0.35;
-const gearInnerR = 0.25;
-const gearTeethCount = 8;
-for (let i = 0; i < gearTeethCount * 2; i++) {
-  const angle = (i / (gearTeethCount * 2)) * Math.PI * 2;
-  const r = i % 2 === 0 ? gearOuterR : gearInnerR;
-  const x = Math.cos(angle) * r;
-  const y = Math.sin(angle) * r;
-  if (i === 0) gearShape.moveTo(x, y);
-  else gearShape.lineTo(x, y);
+// Gear geometry & material — lazy singletons for SSR safety
+let _gearGeometry: THREE.ExtrudeGeometry | null = null;
+let _gearMaterial: THREE.MeshStandardMaterial | null = null;
+
+function getGearGeometry() {
+  if (_gearGeometry) return _gearGeometry;
+  const shape = new THREE.Shape();
+  const outerR = 0.35, innerR = 0.25, teeth = 8;
+  for (let i = 0; i < teeth * 2; i++) {
+    const angle = (i / (teeth * 2)) * Math.PI * 2;
+    const r = i % 2 === 0 ? outerR : innerR;
+    const x = Math.cos(angle) * r, y = Math.sin(angle) * r;
+    if (i === 0) shape.moveTo(x, y);
+    else shape.lineTo(x, y);
+  }
+  shape.closePath();
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, 0.1, 0, Math.PI * 2, true);
+  shape.holes.push(hole);
+  _gearGeometry = new THREE.ExtrudeGeometry(shape, { depth: 0.06, bevelEnabled: false });
+  return _gearGeometry;
 }
-gearShape.closePath();
-// Center hole
-const holePath = new THREE.Path();
-holePath.absarc(0, 0, 0.1, 0, Math.PI * 2, true);
-gearShape.holes.push(holePath);
-const gearGeometry = new THREE.ExtrudeGeometry(gearShape, { depth: 0.06, bevelEnabled: false });
-const gearMaterial = new THREE.MeshStandardMaterial({
-  color: '#A78BFA',
-  emissive: '#A78BFA',
-  emissiveIntensity: 0.4,
-  metalness: 0.9,
-  roughness: 0.2,
-});
+
+function getGearMaterial() {
+  return _gearMaterial ??= new THREE.MeshStandardMaterial({
+    color: '#A78BFA',
+    emissive: '#A78BFA',
+    emissiveIntensity: 0.4,
+    metalness: 0.9,
+    roughness: 0.2,
+  });
+}
 
 function isClickableNode(name: string, verts: number): boolean {
   if (name.includes('GOOGLE_SAT') || name.includes('EXPORT_GOOGLE')) return false;
@@ -179,7 +186,7 @@ export default function TerminalModel({ selectedMesh, hoveredMesh, onObjectClick
       if (isGround) {
         material = obj.material as THREE.Material;
       } else if (isTank && status && effectsOn) {
-        const mat = tankMat.clone() as THREE.MeshStandardMaterial;
+        const mat = getTankMat().clone() as THREE.MeshStandardMaterial;
         const emCfg = STATUS_EMISSIVE[status];
         mat.emissive = new THREE.Color(emCfg.color);
         mat.emissiveIntensity = emCfg.baseIntensity;
@@ -188,7 +195,7 @@ export default function TerminalModel({ selectedMesh, hoveredMesh, onObjectClick
           animated.push({ material: mat, config: emCfg });
         }
       } else {
-        material = isTank ? tankMat.clone() : buildingMat.clone();
+        material = isTank ? getTankMat().clone() : getBuildingMat().clone();
       }
 
       // Get bounding box for overlays (gears + particles) — only when effects ON
@@ -368,8 +375,8 @@ export default function TerminalModel({ selectedMesh, hoveredMesh, onObjectClick
           <mesh
             key={`gear-${i}`}
             ref={(el) => { if (el) gearRefsArray.current[i] = el; }}
-            geometry={gearGeometry}
-            material={gearMaterial}
+            geometry={getGearGeometry()}
+            material={getGearMaterial()}
             position={[tank.position[0], tank.topY, tank.position[2]]}
             rotation={[Math.PI / 2, 0, 0]}
           />
