@@ -55,7 +55,7 @@ export default function HomeBottomCharts() {
           {kpiItems.map((kpi) => (
             <div
               key={kpi.label}
-              className="bg-card/90 backdrop-blur-sm rounded-xl border border-border/50 px-3 py-2.5 flex items-center gap-2.5 min-w-0 shadow-sm"
+              className="theme-card rounded-xl px-3 py-2.5 flex items-center gap-2.5 min-w-0 shadow-sm"
             >
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"

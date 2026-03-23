@@ -1,7 +1,7 @@
 'use client';
 export function KpiCard({ label, value, unit, icon, accent }: { label: string; value: string; unit?: string; icon?: React.ReactNode; accent?: boolean }) {
   return (
-    <div className="bg-card rounded-xl border border-border p-3 sm:p-4 flex items-center gap-2 sm:gap-3 min-w-0">
+    <div className="theme-card rounded-xl p-3 sm:p-4 flex items-center gap-2 sm:gap-3 min-w-0">
       {icon && <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 bg-muted">{icon}</div>}
       <div className="min-w-0">
         <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{label}</p>

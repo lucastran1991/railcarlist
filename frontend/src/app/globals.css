@@ -119,6 +119,101 @@ body {
   }
 }
 
+/* ── Glassmorphism style theme ── */
+
+/* Light + Glass */
+[data-style="glass"] {
+  --card-blur: 24px;
+  --card-bg-glass: rgba(255, 255, 255, 0.55);
+  --card-border-glass: rgba(255, 255, 255, 0.45);
+  --card-shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --popover-bg-glass: rgba(255, 255, 255, 0.75);
+  --nav-bg-glass: rgba(255, 255, 255, 0.45);
+  --muted-bg-glass: rgba(255, 255, 255, 0.3);
+  --page-bg-glass: linear-gradient(135deg, #e0e7ff 0%, #dbeafe 25%, #e0f2fe 50%, #ecfdf5 75%, #f0fdf4 100%);
+}
+
+/* Dark + Glass */
+.dark[data-style="glass"] {
+  --card-blur: 24px;
+  --card-bg-glass: rgba(15, 18, 30, 0.55);
+  --card-border-glass: rgba(255, 255, 255, 0.08);
+  --card-shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --popover-bg-glass: rgba(15, 18, 30, 0.75);
+  --nav-bg-glass: rgba(8, 10, 17, 0.5);
+  --muted-bg-glass: rgba(255, 255, 255, 0.04);
+  --page-bg-glass: linear-gradient(135deg, #080a11 0%, #0d1117 25%, #111827 50%, #0a1628 75%, #080a11 100%);
+}
+
+/* ── Theme-aware card ── */
+.theme-card {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  transition: all 0.3s ease;
+}
+
+[data-style="glass"] .theme-card {
+  background: var(--card-bg-glass);
+  backdrop-filter: blur(var(--card-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--card-blur)) saturate(180%);
+  border: 1px solid var(--card-border-glass);
+  box-shadow: var(--card-shadow-glass);
+}
+
+/* ── Glass nav bar ── */
+[data-style="glass"] .glass {
+  background: var(--nav-bg-glass) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08), inset 0 -1px 0 var(--card-border-glass);
+}
+
+/* ── Glass dropdowns / popovers ── */
+[data-style="glass"] .bg-popover {
+  background: var(--popover-bg-glass) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+}
+
+/* ── Glass muted backgrounds ── */
+[data-style="glass"] .bg-muted {
+  background: var(--muted-bg-glass) !important;
+}
+
+/* ── Glass page background ── */
+[data-style="glass"] body {
+  background: var(--page-bg-glass) !important;
+  background-attachment: fixed !important;
+}
+
+/* ── Glass input fields ── */
+[data-style="glass"] input,
+[data-style="glass"] select {
+  background: var(--card-bg-glass) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: var(--card-border-glass) !important;
+}
+
+/* ── Glass chart tooltip ── */
+[data-style="glass"] .recharts-default-tooltip {
+  background: var(--popover-bg-glass) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-color: var(--card-border-glass) !important;
+}
+
+/* ── Fallback for no backdrop-filter support ── */
+@supports not (backdrop-filter: blur(1px)) {
+  [data-style="glass"] .theme-card {
+    background: hsl(var(--card) / 0.9);
+  }
+  [data-style="glass"] .glass {
+    background: hsl(var(--background) / 0.92) !important;
+  }
+}
+
 /* ── Utility classes ── */
 .glass {
   background: var(--glass-bg);

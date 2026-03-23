@@ -4,9 +4,10 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { ChevronDown, LogOut, Zap, Activity, Droplets, Gauge, Flame, Menu, X, Bell, AlertTriangle, Info, CheckCircle, Clock, Sparkles } from 'lucide-react';
+import { ChevronDown, LogOut, Zap, Activity, Droplets, Gauge, Flame, Menu, X, Bell, AlertTriangle, Info, CheckCircle, Clock, Sparkles, GitBranch } from 'lucide-react';
 import { getUser, logout } from '@/lib/auth';
 import ThemeToggle from './ThemeToggle';
+import StyleToggle from './StyleToggle';
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -58,6 +59,7 @@ export default function Navigation() {
     { href: '/steam', label: 'Steam', icon: Droplets },
     { href: '/tank', label: 'Tank', icon: Gauge },
     { href: '/boiler', label: 'Boiler', icon: Flame },
+    { href: '/pipeline', label: 'Pipeline', icon: GitBranch },
     { href: '/alerts', label: 'Alerts', icon: Bell },
     { href: '/chat', label: 'Assistant', icon: Sparkles },
   ];
@@ -184,6 +186,7 @@ export default function Navigation() {
                   </div>
                 )}
               </div>
+              <StyleToggle />
               <ThemeToggle />
               {userMenu}
               {/* Mobile hamburger */}
