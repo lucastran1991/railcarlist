@@ -10,7 +10,7 @@ export default function SceneLighting() {
   return (
     <>
       {/* Exponential fog — natural atmospheric haze */}
-      <fogExp2 attach="fog" args={[0xc8d8e8, 0.006]} />
+      <fogExp2 attach="fog" args={[0xc8d8e8, 0.003]} />
 
       {/* Main sun light with shadows */}
       <directionalLight

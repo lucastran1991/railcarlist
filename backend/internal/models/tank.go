@@ -16,7 +16,20 @@ type TankLevel struct {
 	Volume   float64 `json:"volume"`
 	Capacity float64 `json:"capacity"`
 	Color    string  `json:"color"`
+	Status   string  `json:"status"`
 }
+
+// Valid tank statuses for 3D visualization
+const (
+	TankStatusInService    = "in_service"
+	TankStatusReceiving    = "receiving"
+	TankStatusDischarging  = "discharging"
+	TankStatusIdle         = "idle"
+	TankStatusHeating      = "heating"
+	TankStatusWarning      = "warning"
+	TankStatusCritical     = "critical"
+	TankStatusMaintenance  = "maintenance"
+)
 
 type TankInventoryTrend struct {
 	ID        int64   `json:"id"`

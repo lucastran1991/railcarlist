@@ -369,6 +369,64 @@ func (s *SystemGeneratorService) generateBoiler(start, end time.Time, rng *rand.
 	return nil
 }
 
+// assignTankStatus picks a realistic status based on tank level, product, and randomness.
+// Distribution: ~40% in_service, ~15% receiving, ~15% discharging, ~10% idle,
+// ~5% heating (only Crude/Diesel), ~5% warning, ~5% critical, ~5% maintenance
+func assignTankStatus(level float64, product string, rng *rand.Rand) string {
+	// High level tanks are more likely to be warning/critical
+	if level >= 90 {
+		r := rng.Float64()
+		if r < 0.35 {
+			return models.TankStatusWarning
+		}
+		if r < 0.55 {
+			return models.TankStatusCritical
+		}
+		if r < 0.75 {
+			return models.TankStatusDischarging
+		}
+		return models.TankStatusInService
+	}
+	// Very low level tanks tend to be receiving or idle
+	if level <= 20 {
+		r := rng.Float64()
+		if r < 0.40 {
+			return models.TankStatusReceiving
+		}
+		if r < 0.60 {
+			return models.TankStatusIdle
+		}
+		if r < 0.75 {
+			return models.TankStatusMaintenance
+		}
+		return models.TankStatusInService
+	}
+	// Normal range — weighted random
+	r := rng.Float64()
+	switch {
+	case r < 0.35:
+		return models.TankStatusInService
+	case r < 0.50:
+		return models.TankStatusReceiving
+	case r < 0.65:
+		return models.TankStatusDischarging
+	case r < 0.75:
+		return models.TankStatusIdle
+	case r < 0.85:
+		// Heating only for heavy products
+		if product == "Crude" || product == "Diesel" {
+			return models.TankStatusHeating
+		}
+		return models.TankStatusInService
+	case r < 0.90:
+		return models.TankStatusWarning
+	case r < 0.95:
+		return models.TankStatusMaintenance
+	default:
+		return models.TankStatusCritical
+	}
+}
+
 func (s *SystemGeneratorService) generateTank(start, end time.Time, rng *rand.Rand, onProgress func(ProgressEvent)) error {
 	s.db.DeleteAllTankInventoryTrend()
 	s.db.DeleteAllTankThroughput()
@@ -688,7 +746,11 @@ func (s *SystemGeneratorService) generateStaticData(rng *rand.Rand) {
 		level := 15.0 + rng.Float64()*80.0 // 15-95%
 		level = math.Round(level*10) / 10
 		vol := math.Round(level * tk.cap / 100)
-		s.db.InsertTankLevel(models.TankLevel{TankID: tk.id, Product: tk.prod, Level: level, Volume: vol, Capacity: tk.cap, Color: tk.color})
+
+		// Assign realistic status based on level and randomness
+		status := assignTankStatus(level, tk.prod, rng)
+
+		s.db.InsertTankLevel(models.TankLevel{TankID: tk.id, Product: tk.prod, Level: level, Volume: vol, Capacity: tk.cap, Color: tk.color, Status: status})
 		productVolumes[tk.prod] += vol
 	}
 

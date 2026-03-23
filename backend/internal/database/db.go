@@ -1480,13 +1480,13 @@ func (db *DB) ComputeBoilerKPIs(params models.HistoryParams) (*models.BoilerKPIs
 // --- Tank DB Methods ---
 
 func (db *DB) InsertTankLevel(item models.TankLevel) error {
-	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tank_levels (tank_id, product, level, volume, capacity, color) VALUES (%s)", db.placeholders(6)),
-		item.TankID, item.Product, item.Level, item.Volume, item.Capacity, item.Color)
+	_, err := db.conn.Exec(fmt.Sprintf("INSERT INTO tank_levels (tank_id, product, level, volume, capacity, color, status) VALUES (%s)", db.placeholders(7)),
+		item.TankID, item.Product, item.Level, item.Volume, item.Capacity, item.Color, item.Status)
 	return err
 }
 
 func (db *DB) ListTankLevels() ([]models.TankLevel, error) {
-	rows, err := db.conn.Query("SELECT id, tank_id, product, level, volume, capacity, color FROM tank_levels ORDER BY id")
+	rows, err := db.conn.Query("SELECT id, tank_id, product, level, volume, capacity, color, status FROM tank_levels ORDER BY id")
 	if err != nil {
 		return nil, err
 	}
@@ -1494,7 +1494,7 @@ func (db *DB) ListTankLevels() ([]models.TankLevel, error) {
 	var results []models.TankLevel
 	for rows.Next() {
 		var r models.TankLevel
-		if err := rows.Scan(&r.ID, &r.TankID, &r.Product, &r.Level, &r.Volume, &r.Capacity, &r.Color); err != nil {
+		if err := rows.Scan(&r.ID, &r.TankID, &r.Product, &r.Level, &r.Volume, &r.Capacity, &r.Color, &r.Status); err != nil {
 			return nil, err
 		}
 		results = append(results, r)
@@ -2230,7 +2230,8 @@ func (db *DB) migrate() error {
 		level REAL NOT NULL DEFAULT 0,
 		volume REAL NOT NULL DEFAULT 0,
 		capacity REAL NOT NULL DEFAULT 0,
-		color TEXT NOT NULL DEFAULT '#FFFFFF'
+		color TEXT NOT NULL DEFAULT '#FFFFFF',
+		status TEXT NOT NULL DEFAULT 'in_service'
 	)`, autoInc),
 
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS tank_inventory_trend (

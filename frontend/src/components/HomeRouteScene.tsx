@@ -14,6 +14,7 @@ export default function HomeRouteScene() {
   const [selectedObj, setSelectedObj] = useState<ClickedObject | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [raycastInfo, setRaycastInfo] = useState<RaycastDebugInfo | null>(null);
+  const [statusEffects, setStatusEffects] = useState(false);
 
   const onCameraApiReady = useCallback((api: TerminalCameraApi | null) => setCameraApi(api), []);
   const onCameraChange = useCallback((info: CameraInfo) => setCameraInfo(info), []);
@@ -34,6 +35,8 @@ export default function HomeRouteScene() {
           onCameraChange={onCameraChange}
           onSelectionChange={onSelectionChange}
           onRaycastDebug={onRaycastDebug}
+          statusEffects={statusEffects}
+          selectedObj={selectedObj}
         />
       </div>
       <ScenePanel
@@ -42,8 +45,10 @@ export default function HomeRouteScene() {
         mousePos={mousePos}
         selectedObj={selectedObj}
         raycastInfo={raycastInfo}
+        statusEffects={statusEffects}
+        onToggleStatusEffects={() => setStatusEffects(v => !v)}
       />
-      <TankDetailPanel selectedObj={selectedObj} onClose={() => setSelectedObj(null)} />
+      <TankDetailPanel selectedObj={selectedObj} cameraRadius={cameraInfo?.radius} onClose={() => setSelectedObj(null)} />
       <HomeBottomCharts />
     </>
   );

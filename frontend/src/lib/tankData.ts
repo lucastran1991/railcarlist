@@ -76,6 +76,16 @@ export function isMappedTank(osmId: string): boolean {
 
 // --- Tank data types ---
 
+export type TankStatus =
+  | 'in_service'
+  | 'receiving'
+  | 'discharging'
+  | 'idle'
+  | 'heating'
+  | 'warning'
+  | 'critical'
+  | 'maintenance';
+
 export interface TankLevelData {
   id: number;
   tank: string;
@@ -84,7 +94,20 @@ export interface TankLevelData {
   volume: number;
   capacity: number;
   color: string;
+  status: TankStatus;
 }
+
+// Status display config for UI and 3D visualization
+export const TANK_STATUS_CONFIG: Record<TankStatus, { label: string; color: string; icon: string }> = {
+  in_service:  { label: 'In Service',  color: '#5CE5A0', icon: 'check-circle' },
+  receiving:   { label: 'Receiving',   color: '#56CDE7', icon: 'arrow-down' },
+  discharging: { label: 'Discharging', color: '#4D65FF', icon: 'arrow-up' },
+  idle:        { label: 'Idle',        color: '#94A3B8', icon: 'pause-circle' },
+  heating:     { label: 'Heating',     color: '#F6AD55', icon: 'flame' },
+  warning:     { label: 'Warning',     color: '#ECC94B', icon: 'alert-triangle' },
+  critical:    { label: 'Critical',    color: '#E53E3E', icon: 'alert-octagon' },
+  maintenance: { label: 'Maintenance', color: '#A78BFA', icon: 'wrench' },
+};
 
 // --- Fetch tank level by tank ID ---
 

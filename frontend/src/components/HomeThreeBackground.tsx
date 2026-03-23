@@ -9,6 +9,8 @@ export type HomeThreeBackgroundProps = {
   onCameraChange?: (info: CameraInfo) => void;
   onSelectionChange?: (obj: ClickedObject | null) => void;
   onRaycastDebug?: (info: RaycastDebugInfo | null) => void;
+  statusEffects?: boolean;
+  selectedObj?: ClickedObject | null;
 };
 
 export default function HomeThreeBackground({
@@ -16,6 +18,8 @@ export default function HomeThreeBackground({
   onCameraChange,
   onSelectionChange,
   onRaycastDebug,
+  statusEffects,
+  selectedObj,
 }: HomeThreeBackgroundProps) {
   return (
     <div className="absolute inset-0 z-0 pointer-events-auto overflow-hidden" aria-hidden>
@@ -24,6 +28,8 @@ export default function HomeThreeBackground({
         onCameraChange={onCameraChange}
         onSelectionChange={onSelectionChange}
         onRaycastDebug={onRaycastDebug}
+        statusEffects={statusEffects}
+        externalSelectedObj={selectedObj}
       />
     </div>
   );

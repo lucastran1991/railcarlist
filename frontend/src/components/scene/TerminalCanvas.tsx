@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { EffectComposer, Outline } from '@react-three/postprocessing';
 import { BlendFunction, KernelSize } from 'postprocessing';
@@ -19,18 +19,18 @@ interface TerminalCanvasProps {
   onCameraChange?: (info: CameraInfo) => void;
   onSelectionChange?: (obj: ClickedObject | null) => void;
   onRaycastDebug?: (info: RaycastDebugInfo | null) => void;
+  statusEffects?: boolean;
+  externalSelectedObj?: ClickedObject | null;
 }
 
-function SceneContent({ config, onCameraApiReady, onCameraChange, onSelectionChange, onRaycastDebug }: { config: SceneConfig } & TerminalCanvasProps) {
+function SceneContent({ config, onCameraApiReady, onCameraChange, onSelectionChange, onRaycastDebug, statusEffects = true, externalSelectedObj }: { config: SceneConfig } & TerminalCanvasProps) {
   const cameraRef = useRef<CameraControllerHandle>(null);
   const [selectedMesh, setSelectedMesh] = useState<THREE.Object3D | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<THREE.Vector3 | null>(null);
   const [clickedObj, setClickedObj] = useState<ClickedObject | null>(null);
   const [hoveredMesh, setHoveredMesh] = useState<THREE.Mesh | null>(null);
 
-  // Debug: log outline mesh list changes
   const handleHover = useCallback((mesh: THREE.Mesh | null) => {
-    console.log('[CANVAS] setHoveredMesh:', mesh ? `${mesh.name || mesh.parent?.name || '?'} uuid:${mesh.uuid}` : 'null');
     setHoveredMesh(mesh);
   }, []);
 
@@ -45,6 +45,13 @@ function SceneContent({ config, onCameraApiReady, onCameraChange, onSelectionCha
     setClickedObj(null);
   }, []);
 
+  // Sync with parent: when parent clears selection (zoom out, close button), deselect here too
+  useEffect(() => {
+    if (externalSelectedObj === null && clickedObj !== null) {
+      deselect();
+    }
+  }, [externalSelectedObj, clickedObj, deselect]);
+
   const handleObjectClick = useCallback((obj: ClickedObject | null, mesh: THREE.Object3D | null) => {
     if (obj && mesh) {
       setSelectedMesh(mesh);
@@ -58,30 +65,24 @@ function SceneContent({ config, onCameraApiReady, onCameraChange, onSelectionCha
     }
   }, [deselect, onSelectionChange]);
 
-  // Collect meshes for Outline: selected + hovered (deduplicated)
-  const outlineMeshRef = useRef<THREE.Mesh[]>([]);
-  useEffect(() => {
-    const meshes: THREE.Mesh[] = [];
-    if (selectedMesh) meshes.push(selectedMesh as THREE.Mesh);
-    if (hoveredMesh && hoveredMesh !== selectedMesh) meshes.push(hoveredMesh);
-    outlineMeshRef.current = meshes;
-  }, [selectedMesh, hoveredMesh]);
+  // Build outline selection — always keep EffectComposer mounted to avoid
+  // black-screen on first select (shader compilation lag)
+  const outlineSelection: THREE.Mesh[] = [];
+  if (selectedMesh) outlineSelection.push(selectedMesh as THREE.Mesh);
+  if (hoveredMesh && hoveredMesh !== selectedMesh) outlineSelection.push(hoveredMesh);
 
   return (
     <>
       <SceneLighting />
       <CameraController ref={cameraRef} config={config} selectedTarget={selectedTarget} onCameraChange={onCameraChange} />
 
-      <TerminalModel selectedMesh={selectedMesh} hoveredMesh={hoveredMesh} onObjectClick={handleObjectClick} onMissed={deselect} onHover={handleHover} onRaycastDebug={onRaycastDebug} />
+      <TerminalModel selectedMesh={selectedMesh} hoveredMesh={hoveredMesh} onObjectClick={handleObjectClick} onMissed={deselect} onHover={handleHover} onRaycastDebug={onRaycastDebug} statusEffects={statusEffects} />
 
       <TankLabels selectedOsmId={clickedObj?.name ?? null} />
 
-      {/* Popup moved to right panel outside canvas — see TankDetailPanel */}
-
       <EffectComposer multisampling={2} autoClear={false}>
-        {/* Selection outline */}
         <Outline
-          selection={outlineMeshRef.current}
+          selection={outlineSelection}
           visibleEdgeColor={0x5CE5A0}
           hiddenEdgeColor={0x5CE5A0}
           edgeStrength={300}
@@ -97,7 +98,7 @@ function SceneContent({ config, onCameraApiReady, onCameraChange, onSelectionCha
   );
 }
 
-export default function TerminalCanvas({ onCameraApiReady, onCameraChange, onSelectionChange, onRaycastDebug }: TerminalCanvasProps) {
+export default function TerminalCanvas({ onCameraApiReady, onCameraChange, onSelectionChange, onRaycastDebug, statusEffects, externalSelectedObj }: TerminalCanvasProps) {
   const [config, setConfig] = useState<SceneConfig>(DEFAULT_CONFIG);
 
   useEffect(() => { loadSceneConfig().then(setConfig); }, []);
@@ -110,7 +111,7 @@ export default function TerminalCanvas({ onCameraApiReady, onCameraChange, onSel
       camera={{ fov: 50, near: 0.1, far: 500 }}
       style={{ width: '100%', height: '100%' }}
     >
-      <SceneContent config={config} onCameraApiReady={onCameraApiReady} onCameraChange={onCameraChange} onSelectionChange={onSelectionChange} onRaycastDebug={onRaycastDebug} />
+      <SceneContent config={config} onCameraApiReady={onCameraApiReady} onCameraChange={onCameraChange} onSelectionChange={onSelectionChange} onRaycastDebug={onRaycastDebug} statusEffects={statusEffects} externalSelectedObj={externalSelectedObj} />
     </Canvas>
   );
 }

@@ -26,10 +26,14 @@ function Stat({ icon: Icon, label, value, unit, color }: {
 
 interface TankDetailPanelProps {
   selectedObj: ClickedObject | null;
+  cameraRadius?: number;
   onClose: () => void;
 }
 
-export default function TankDetailPanel({ selectedObj, onClose }: TankDetailPanelProps) {
+// Hide panel when camera zooms out beyond this distance
+const ZOOM_OUT_THRESHOLD = 40;
+
+export default function TankDetailPanel({ selectedObj, cameraRadius, onClose }: TankDetailPanelProps) {
   const [tank, setTank] = useState<TankLevelData | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -42,6 +46,13 @@ export default function TankDetailPanel({ selectedObj, onClose }: TankDetailPane
       .catch(() => setTank(null))
       .finally(() => setLoading(false));
   }, [selectedObj]);
+
+  // Auto-close when user zooms out
+  useEffect(() => {
+    if (selectedObj && cameraRadius && cameraRadius > ZOOM_OUT_THRESHOLD) {
+      onClose();
+    }
+  }, [cameraRadius, selectedObj, onClose]);
 
   if (!selectedObj) return null;
 

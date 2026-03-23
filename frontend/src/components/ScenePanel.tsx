@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   ZoomIn, ZoomOut, RotateCcw, RotateCw,
   ChevronUp, ChevronDown, RefreshCw,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, Activity,
 } from 'lucide-react';
 import type { TerminalCameraApi, CameraInfo, ClickedObject } from '@/lib/three/types';
 import type { RaycastDebugInfo } from '@/components/scene/TerminalModel';
@@ -26,9 +26,11 @@ interface ScenePanelProps {
   mousePos: { x: number; y: number };
   selectedObj: ClickedObject | null;
   raycastInfo: RaycastDebugInfo | null;
+  statusEffects: boolean;
+  onToggleStatusEffects: () => void;
 }
 
-export default function ScenePanel({ cameraApi, cameraInfo, mousePos, selectedObj, raycastInfo }: ScenePanelProps) {
+export default function ScenePanel({ cameraApi, cameraInfo, mousePos, selectedObj, raycastInfo, statusEffects, onToggleStatusEffects }: ScenePanelProps) {
   const [expanded, setExpanded] = useState(true);
 
   const btn = (label: string, icon: React.ReactNode, onClick: () => void) => (
@@ -87,6 +89,30 @@ export default function ScenePanel({ cameraApi, cameraInfo, mousePos, selectedOb
               {btn('Tilt down', <ChevronDown size={14} />, () => cameraApi?.tiltDown())}
               {btn('Reset', <RefreshCw size={14} />, () => cameraApi?.reset())}
             </div>
+          </div>
+
+          <div className="border-t border-white/10" />
+
+          {/* Status effects toggle */}
+          <div className="px-3 py-2">
+            <button
+              onClick={onToggleStatusEffects}
+              className={cn(
+                'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                statusEffects
+                  ? 'bg-[var(--color-accent,#5CE5A0)]/15 text-[var(--color-accent,#5CE5A0)] border border-[var(--color-accent,#5CE5A0)]/30'
+                  : 'bg-white/5 text-white/40 border border-white/10 hover:bg-white/10'
+              )}
+            >
+              <Activity size={13} />
+              <span>Status Effects</span>
+              <span className={cn(
+                'ml-auto text-[9px] font-bold uppercase',
+                statusEffects ? 'text-[var(--color-accent,#5CE5A0)]' : 'text-white/30'
+              )}>
+                {statusEffects ? 'ON' : 'OFF'}
+              </span>
+            </button>
           </div>
 
           {/* Divider */}
