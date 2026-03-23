@@ -95,10 +95,12 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
     const onCameraChangeRef = useRef(onCameraChange);
     onCameraChangeRef.current = onCameraChange;
 
-    useFrame((_, delta) => {
+    useFrame((_, rawDelta) => {
       if (!controlsRef.current) return;
 
       if (animating.current) {
+        // Clamp delta to 33ms (30fps min) to prevent jumps after idle frames
+        const delta = Math.min(rawDelta, 0.033);
         animProgress.current = Math.min(1, animProgress.current + delta / 0.6);
         const t = animProgress.current < 0.5
           ? 2 * animProgress.current * animProgress.current
@@ -108,7 +110,11 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
         controlsRef.current.target.lerpVectors(animFrom.current.target, animTo.current.target, t);
         controlsRef.current.update();
 
-        if (animProgress.current >= 1) animating.current = false;
+        if (animProgress.current >= 1) {
+          animating.current = false;
+        }
+        // Keep requesting frames until animation completes
+
       }
 
       // Report camera info only when values change (avoid infinite re-render)

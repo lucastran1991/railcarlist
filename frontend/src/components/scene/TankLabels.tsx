@@ -1,12 +1,24 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Html } from '@react-three/drei';
+import { Billboard, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGLTF } from '@react-three/drei';
 import { osmToTankId, PRODUCT_COLORS } from '@/lib/tankData';
 
-/** Floating 3D labels above mapped tanks showing tank ID */
+function getProductForTank(tankId: string): string {
+  if (tankId.startsWith('TK-1')) return 'Gasoline';
+  if (tankId.startsWith('TK-2')) return 'Diesel';
+  if (tankId.startsWith('TK-3')) return 'Crude Oil';
+  if (tankId.startsWith('TK-4')) return 'Ethanol';
+  const num = parseInt(tankId.replace('TK-', ''));
+  if (num >= 536) return 'LPG';
+  if (num >= 524) return 'Gasoline';
+  if (num >= 501 && num <= 504) return 'Crude Oil';
+  return 'Diesel';
+}
+
+/** WebGL-native tank labels using Drei Billboard + Text (no DOM overhead) */
 export default function TankLabels({ selectedOsmId }: { selectedOsmId: string | null }) {
   const { scene } = useGLTF('/models/terminal.glb');
 
@@ -44,7 +56,7 @@ export default function TankLabels({ selectedOsmId }: { selectedOsmId: string | 
         product: getProductForTank(tankId),
         position: [
           center.x - scaledCenter.x,
-          top + 0.15,
+          top + 0.3,
           center.z - scaledCenter.z,
         ],
       });
@@ -59,62 +71,25 @@ export default function TankLabels({ selectedOsmId }: { selectedOsmId: string | 
         if (label.osmId === selectedOsmId) return null;
         const color = PRODUCT_COLORS[label.product] ?? '#888888';
         return (
-          <Html
-            key={label.tankId}
-            position={label.position}
-            center
-            distanceFactor={12}
-            zIndexRange={[20, 0]}
-            style={{ pointerEvents: 'none' }}
-          >
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              transform: 'translateY(-100%)',
-            }}>
-              <div style={{
-                background: 'rgba(0,0,0,0.75)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: '6px',
-                border: `1px solid ${color}40`,
-                padding: '3px 8px',
-                whiteSpace: 'nowrap',
-              }}>
-                <span style={{
-                  color,
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                  letterSpacing: '0.5px',
-                }}>
-                  {label.tankId}
-                </span>
-              </div>
-              {/* Down arrow */}
-              <div style={{
-                width: 0,
-                height: 0,
-                borderLeft: '5px solid transparent',
-                borderRight: '5px solid transparent',
-                borderTop: `5px solid rgba(0,0,0,0.75)`,
-              }} />
-            </div>
-          </Html>
+          <Billboard key={label.tankId} position={label.position} follow lockX={false} lockY={false} lockZ={false}>
+            {/* Background plate */}
+            <mesh position={[0, 0, -0.01]}>
+              <planeGeometry args={[label.tankId.length * 0.18 + 0.3, 0.35]} />
+              <meshBasicMaterial color="#000000" opacity={0.7} transparent />
+            </mesh>
+            {/* Tank ID text */}
+            <Text
+              fontSize={0.2}
+              color={color}
+              anchorX="center"
+              anchorY="middle"
+              fontWeight={700}
+            >
+              {label.tankId}
+            </Text>
+          </Billboard>
         );
       })}
     </group>
   );
-}
-
-function getProductForTank(tankId: string): string {
-  if (tankId.startsWith('TK-1')) return 'Gasoline';
-  if (tankId.startsWith('TK-2')) return 'Diesel';
-  if (tankId.startsWith('TK-3')) return 'Crude Oil';
-  if (tankId.startsWith('TK-4')) return 'Ethanol';
-  const num = parseInt(tankId.replace('TK-', ''));
-  if (num >= 536) return 'LPG';
-  if (num >= 524) return 'Gasoline';
-  if (num >= 501 && num <= 504) return 'Crude Oil';
-  return 'Diesel';
 }

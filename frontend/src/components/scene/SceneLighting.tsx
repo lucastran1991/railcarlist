@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import * as THREE from 'three';
-import { Environment, Sky, ContactShadows } from '@react-three/drei';
+import { Environment } from '@react-three/drei';
 
 export default function SceneLighting() {
   const dirLightRef = useRef<THREE.DirectionalLight>(null);
@@ -19,8 +19,8 @@ export default function SceneLighting() {
         intensity={3.0}
         color={0xfff5e0}
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
         shadow-camera-left={-60}
         shadow-camera-right={60}
         shadow-camera-top={60}
@@ -39,17 +39,6 @@ export default function SceneLighting() {
 
       {/* Rim/back light — subtle edge definition */}
       <directionalLight position={[20, 20, -30]} intensity={0.5} color={0xaaccff} />
-
-      {/* Soft contact shadows on ground plane */}
-      <ContactShadows
-        position={[0, -0.5, 0]}
-        opacity={0.4}
-        scale={100}
-        blur={2}
-        far={20}
-        resolution={512}
-        color="#334455"
-      />
 
       {/* Self-hosted HDRI — background sky with clouds + PBR reflections */}
       <Environment

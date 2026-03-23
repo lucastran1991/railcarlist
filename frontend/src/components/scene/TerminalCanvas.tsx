@@ -2,44 +2,37 @@
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
-import { EffectComposer, Outline, SSAO } from '@react-three/postprocessing';
+import { EffectComposer, Outline } from '@react-three/postprocessing';
 import { BlendFunction, KernelSize } from 'postprocessing';
 import * as THREE from 'three';
 import TerminalModel from './TerminalModel';
 import SceneLighting from './SceneLighting';
 import TankLabels from './TankLabels';
 import CameraController, { type CameraControllerHandle } from './CameraController';
-import ObjectPopupContent from './ObjectPopupContent';
 import type { SceneConfig, CameraInfo, ClickedObject, TerminalCameraApi } from '@/lib/three/types';
+import type { RaycastDebugInfo } from './TerminalModel';
 import { loadSceneConfig, DEFAULT_CONFIG } from '@/lib/three/types';
 
-/** Drei Html popup attached to selected 3D object */
-function ObjectPopup3D({ mesh, clickedObj }: { mesh: THREE.Object3D; clickedObj: ClickedObject }) {
-  const box = new THREE.Box3().setFromObject(mesh);
-  const top: [number, number, number] = [
-    (box.min.x + box.max.x) / 2,
-    box.max.y + 0.05,
-    (box.min.z + box.max.z) / 2,
-  ];
-
-  return (
-    <Html position={top} center zIndexRange={[30, 0]} style={{ pointerEvents: 'auto' }}>
-      <ObjectPopupContent obj={clickedObj} />
-    </Html>
-  );
-}
 
 interface TerminalCanvasProps {
   onCameraApiReady?: (api: TerminalCameraApi | null) => void;
   onCameraChange?: (info: CameraInfo) => void;
+  onSelectionChange?: (obj: ClickedObject | null) => void;
+  onRaycastDebug?: (info: RaycastDebugInfo | null) => void;
 }
 
-function SceneContent({ config, onCameraApiReady, onCameraChange }: { config: SceneConfig } & TerminalCanvasProps) {
+function SceneContent({ config, onCameraApiReady, onCameraChange, onSelectionChange, onRaycastDebug }: { config: SceneConfig } & TerminalCanvasProps) {
   const cameraRef = useRef<CameraControllerHandle>(null);
   const [selectedMesh, setSelectedMesh] = useState<THREE.Object3D | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<THREE.Vector3 | null>(null);
   const [clickedObj, setClickedObj] = useState<ClickedObject | null>(null);
+  const [hoveredMesh, setHoveredMesh] = useState<THREE.Mesh | null>(null);
+
+  // Debug: log outline mesh list changes
+  const handleHover = useCallback((mesh: THREE.Mesh | null) => {
+    console.log('[CANVAS] setHoveredMesh:', mesh ? `${mesh.name || mesh.parent?.name || '?'} uuid:${mesh.uuid}` : 'null');
+    setHoveredMesh(mesh);
+  }, []);
 
   useEffect(() => {
     if (cameraRef.current) onCameraApiReady?.(cameraRef.current.api);
@@ -58,48 +51,43 @@ function SceneContent({ config, onCameraApiReady, onCameraChange }: { config: Sc
       const box = new THREE.Box3().setFromObject(mesh);
       setSelectedTarget(box.getCenter(new THREE.Vector3()));
       setClickedObj(obj);
+      onSelectionChange?.(obj);
     } else {
       deselect();
+      onSelectionChange?.(null);
     }
-  }, [deselect]);
+  }, [deselect, onSelectionChange]);
 
-  // Collect selected mesh refs for Outline selection prop
-  const selectedMeshRef = useRef<THREE.Mesh[]>([]);
+  // Collect meshes for Outline: selected + hovered (deduplicated)
+  const outlineMeshRef = useRef<THREE.Mesh[]>([]);
   useEffect(() => {
-    selectedMeshRef.current = selectedMesh ? [selectedMesh as THREE.Mesh] : [];
-  }, [selectedMesh]);
+    const meshes: THREE.Mesh[] = [];
+    if (selectedMesh) meshes.push(selectedMesh as THREE.Mesh);
+    if (hoveredMesh && hoveredMesh !== selectedMesh) meshes.push(hoveredMesh);
+    outlineMeshRef.current = meshes;
+  }, [selectedMesh, hoveredMesh]);
 
   return (
     <>
       <SceneLighting />
       <CameraController ref={cameraRef} config={config} selectedTarget={selectedTarget} onCameraChange={onCameraChange} />
 
-      <TerminalModel selectedMesh={selectedMesh} onObjectClick={handleObjectClick} onMissed={deselect} />
+      <TerminalModel selectedMesh={selectedMesh} hoveredMesh={hoveredMesh} onObjectClick={handleObjectClick} onMissed={deselect} onHover={handleHover} onRaycastDebug={onRaycastDebug} />
 
-      {/* Tank ID labels — hidden for selected tank (popup shows instead) */}
       <TankLabels selectedOsmId={clickedObj?.name ?? null} />
 
-      {selectedMesh && clickedObj && <ObjectPopup3D mesh={selectedMesh} clickedObj={clickedObj} />}
+      {/* Popup moved to right panel outside canvas — see TankDetailPanel */}
 
-      <EffectComposer multisampling={4} autoClear={false} enableNormalPass>
-        {/* SSAO — ambient occlusion for depth between tanks/buildings */}
-        <SSAO
-          samples={21}
-          radius={5}
-          intensity={25}
-          luminanceInfluence={0.5}
-          color={new THREE.Color(0x000000)}
-        />
-
+      <EffectComposer multisampling={2} autoClear={false}>
         {/* Selection outline */}
         <Outline
-          selection={selectedMeshRef.current}
+          selection={outlineMeshRef.current}
           visibleEdgeColor={0x5CE5A0}
           hiddenEdgeColor={0x5CE5A0}
           edgeStrength={300}
-          width={4500}
+          width={2000}
           blur
-          kernelSize={KernelSize.MEDIUM}
+          kernelSize={KernelSize.SMALL}
           xRay={false}
           pulseSpeed={0}
           blendFunction={BlendFunction.ALPHA}
@@ -109,7 +97,7 @@ function SceneContent({ config, onCameraApiReady, onCameraChange }: { config: Sc
   );
 }
 
-export default function TerminalCanvas({ onCameraApiReady, onCameraChange }: TerminalCanvasProps) {
+export default function TerminalCanvas({ onCameraApiReady, onCameraChange, onSelectionChange, onRaycastDebug }: TerminalCanvasProps) {
   const [config, setConfig] = useState<SceneConfig>(DEFAULT_CONFIG);
 
   useEffect(() => { loadSceneConfig().then(setConfig); }, []);
@@ -117,11 +105,12 @@ export default function TerminalCanvas({ onCameraApiReady, onCameraChange }: Ter
   return (
     <Canvas
       shadows
+      frameloop="always"
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
       camera={{ fov: 50, near: 0.1, far: 500 }}
       style={{ width: '100%', height: '100%' }}
     >
-      <SceneContent config={config} onCameraApiReady={onCameraApiReady} onCameraChange={onCameraChange} />
+      <SceneContent config={config} onCameraApiReady={onCameraApiReady} onCameraChange={onCameraChange} onSelectionChange={onSelectionChange} onRaycastDebug={onRaycastDebug} />
     </Canvas>
   );
 }
