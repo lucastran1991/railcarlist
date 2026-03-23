@@ -6,10 +6,10 @@ import {
   ChevronUp, ChevronDown, RefreshCw,
   PanelLeftClose, PanelLeftOpen, Activity,
 } from 'lucide-react';
-import type { TerminalCameraApi, CameraInfo, ClickedObject } from '@/lib/three/types';
-import type { RaycastDebugInfo } from '@/components/scene/TerminalModel';
+import type { TerminalCameraApi } from '@/lib/three/types';
 import { osmToTankId } from '@/lib/tankData';
 import { cn } from '@/lib/utils';
+import { useSceneStore } from '@/lib/sceneStore';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -22,16 +22,17 @@ function Row({ label, value }: { label: string; value: string }) {
 
 interface ScenePanelProps {
   cameraApi: TerminalCameraApi | null;
-  cameraInfo: CameraInfo | null;
-  mousePos: { x: number; y: number };
-  selectedObj: ClickedObject | null;
-  raycastInfo: RaycastDebugInfo | null;
-  statusEffects: boolean;
-  onToggleStatusEffects: () => void;
+  mousePos: React.RefObject<{ x: number; y: number }>;
 }
 
-export default function ScenePanel({ cameraApi, cameraInfo, mousePos, selectedObj, raycastInfo, statusEffects, onToggleStatusEffects }: ScenePanelProps) {
+export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
   const [expanded, setExpanded] = useState(true);
+
+  const cameraInfo = useSceneStore(s => s.cameraInfo);
+  const selectedObj = useSceneStore(s => s.selectedObj);
+  const raycastInfo = useSceneStore(s => s.raycastInfo);
+  const statusEffects = useSceneStore(s => s.statusEffects);
+  const toggleStatusEffects = useSceneStore(s => s.toggleStatusEffects);
 
   const btn = (label: string, icon: React.ReactNode, onClick: () => void) => (
     <button
@@ -49,6 +50,7 @@ export default function ScenePanel({ cameraApi, cameraInfo, mousePos, selectedOb
   );
 
   const tankId = selectedObj ? osmToTankId(selectedObj.name) : null;
+  const mouse = mousePos.current;
 
   return (
     <div className="hidden sm:block fixed left-3 top-[72px] z-20">
@@ -96,7 +98,7 @@ export default function ScenePanel({ cameraApi, cameraInfo, mousePos, selectedOb
           {/* Status effects toggle */}
           <div className="px-3 py-2">
             <button
-              onClick={onToggleStatusEffects}
+              onClick={toggleStatusEffects}
               className={cn(
                 'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
                 statusEffects
@@ -140,7 +142,7 @@ export default function ScenePanel({ cameraApi, cameraInfo, mousePos, selectedOb
           <div className="px-3 py-2">
             <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-1">Pointer</p>
             <div className="flex flex-col gap-0.5">
-              <Row label="Screen" value={`${mousePos.x}, ${mousePos.y}`} />
+              <Row label="Screen" value={`${mouse?.x ?? 0}, ${mouse?.y ?? 0}`} />
               {raycastInfo ? (
                 <>
                   <Row label="Target" value={raycastInfo.nearestTankId || raycastInfo.nearestName} />

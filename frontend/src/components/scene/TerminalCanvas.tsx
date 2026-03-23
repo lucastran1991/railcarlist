@@ -9,25 +9,19 @@ import TerminalModel from './TerminalModel';
 import SceneLighting from './SceneLighting';
 import TankLabels from './TankLabels';
 import CameraController, { type CameraControllerHandle } from './CameraController';
-import type { SceneConfig, CameraInfo, ClickedObject, TerminalCameraApi } from '@/lib/three/types';
-import type { RaycastDebugInfo } from './TerminalModel';
+import type { SceneConfig, ClickedObject, TerminalCameraApi } from '@/lib/three/types';
 import { loadSceneConfig, DEFAULT_CONFIG } from '@/lib/three/types';
+import { useSceneStore } from '@/lib/sceneStore';
 
 
 interface TerminalCanvasProps {
   onCameraApiReady?: (api: TerminalCameraApi | null) => void;
-  onCameraChange?: (info: CameraInfo) => void;
-  onSelectionChange?: (obj: ClickedObject | null) => void;
-  onRaycastDebug?: (info: RaycastDebugInfo | null) => void;
-  statusEffects?: boolean;
-  externalSelectedObj?: ClickedObject | null;
 }
 
-function SceneContent({ config, onCameraApiReady, onCameraChange, onSelectionChange, onRaycastDebug, statusEffects = true, externalSelectedObj }: { config: SceneConfig } & TerminalCanvasProps) {
+function SceneContent({ config, onCameraApiReady }: { config: SceneConfig } & TerminalCanvasProps) {
   const cameraRef = useRef<CameraControllerHandle>(null);
   const [selectedMesh, setSelectedMesh] = useState<THREE.Object3D | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<THREE.Vector3 | null>(null);
-  const [clickedObj, setClickedObj] = useState<ClickedObject | null>(null);
   const [hoveredMesh, setHoveredMesh] = useState<THREE.Mesh | null>(null);
 
   const handleHover = useCallback((mesh: THREE.Mesh | null) => {
@@ -42,28 +36,38 @@ function SceneContent({ config, onCameraApiReady, onCameraChange, onSelectionCha
   const deselect = useCallback(() => {
     setSelectedMesh(null);
     setSelectedTarget(null);
-    setClickedObj(null);
+    useSceneStore.getState().select(null);
   }, []);
 
-  // Sync with parent: when parent clears selection (zoom out, close button), deselect here too
+  // Sync with store: when store clears selection (zoom out, close button), deselect here too
+  const storeSelectedObj = useSceneStore(s => s.selectedObj);
+  const prevStoreSelected = useRef(storeSelectedObj);
   useEffect(() => {
-    if (externalSelectedObj === null && clickedObj !== null) {
-      deselect();
+    if (prevStoreSelected.current !== null && storeSelectedObj === null) {
+      setSelectedMesh(null);
+      setSelectedTarget(null);
     }
-  }, [externalSelectedObj, clickedObj, deselect]);
+    prevStoreSelected.current = storeSelectedObj;
+  }, [storeSelectedObj]);
 
   const handleObjectClick = useCallback((obj: ClickedObject | null, mesh: THREE.Object3D | null) => {
     if (obj && mesh) {
       setSelectedMesh(mesh);
       const box = new THREE.Box3().setFromObject(mesh);
       setSelectedTarget(box.getCenter(new THREE.Vector3()));
-      setClickedObj(obj);
-      onSelectionChange?.(obj);
+      useSceneStore.getState().select(obj);
     } else {
       deselect();
-      onSelectionChange?.(null);
     }
-  }, [deselect, onSelectionChange]);
+  }, [deselect]);
+
+  const handleCameraChange = useCallback((info: import('@/lib/three/types').CameraInfo) => {
+    useSceneStore.getState().setCameraInfo(info);
+  }, []);
+
+  const handleRaycastDebug = useCallback((info: import('./TerminalModel').RaycastDebugInfo | null) => {
+    useSceneStore.getState().setRaycastInfo(info);
+  }, []);
 
   // Build outline selection — always keep EffectComposer mounted to avoid
   // black-screen on first select (shader compilation lag)
@@ -74,11 +78,11 @@ function SceneContent({ config, onCameraApiReady, onCameraChange, onSelectionCha
   return (
     <>
       <SceneLighting />
-      <CameraController ref={cameraRef} config={config} selectedTarget={selectedTarget} onCameraChange={onCameraChange} />
+      <CameraController ref={cameraRef} config={config} selectedTarget={selectedTarget} onCameraChange={handleCameraChange} />
 
-      <TerminalModel selectedMesh={selectedMesh} hoveredMesh={hoveredMesh} onObjectClick={handleObjectClick} onMissed={deselect} onHover={handleHover} onRaycastDebug={onRaycastDebug} statusEffects={statusEffects} />
+      <TerminalModel selectedMesh={selectedMesh} hoveredMesh={hoveredMesh} onObjectClick={handleObjectClick} onMissed={deselect} onHover={handleHover} onRaycastDebug={handleRaycastDebug} />
 
-      <TankLabels selectedOsmId={clickedObj?.name ?? null} />
+      <TankLabels />
 
       <EffectComposer multisampling={2} autoClear={false}>
         <Outline
@@ -98,7 +102,7 @@ function SceneContent({ config, onCameraApiReady, onCameraChange, onSelectionCha
   );
 }
 
-export default function TerminalCanvas({ onCameraApiReady, onCameraChange, onSelectionChange, onRaycastDebug, statusEffects, externalSelectedObj }: TerminalCanvasProps) {
+export default function TerminalCanvas({ onCameraApiReady }: TerminalCanvasProps) {
   const [config, setConfig] = useState<SceneConfig>(DEFAULT_CONFIG);
 
   useEffect(() => { loadSceneConfig().then(setConfig); }, []);
@@ -111,7 +115,7 @@ export default function TerminalCanvas({ onCameraApiReady, onCameraChange, onSel
       camera={{ fov: 50, near: 0.1, far: 500 }}
       style={{ width: '100%', height: '100%' }}
     >
-      <SceneContent config={config} onCameraApiReady={onCameraApiReady} onCameraChange={onCameraChange} onSelectionChange={onSelectionChange} onRaycastDebug={onRaycastDebug} statusEffects={statusEffects} externalSelectedObj={externalSelectedObj} />
+      <SceneContent config={config} onCameraApiReady={onCameraApiReady} />
     </Canvas>
   );
 }

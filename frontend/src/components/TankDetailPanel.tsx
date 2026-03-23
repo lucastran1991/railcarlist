@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Droplets, Gauge, Package, ExternalLink, Loader2, Building2, X,
 } from 'lucide-react';
@@ -9,7 +9,7 @@ import {
   fetchTankByOsmId, isMappedTank, fmtVolume, fmtPercent, levelColor,
   PRODUCT_COLORS, osmToTankId, type TankLevelData,
 } from '@/lib/tankData';
-import type { ClickedObject } from '@/lib/three/types';
+import { useSceneStore } from '@/lib/sceneStore';
 
 function Stat({ icon: Icon, label, value, unit, color }: {
   icon: React.FC<{ size?: number; className?: string; color?: string }>; label: string; value: string; unit?: string; color?: string;
@@ -24,16 +24,14 @@ function Stat({ icon: Icon, label, value, unit, color }: {
   );
 }
 
-interface TankDetailPanelProps {
-  selectedObj: ClickedObject | null;
-  cameraRadius?: number;
-  onClose: () => void;
-}
-
 // Hide panel when camera zooms out beyond this distance
 const ZOOM_OUT_THRESHOLD = 40;
 
-export default function TankDetailPanel({ selectedObj, cameraRadius, onClose }: TankDetailPanelProps) {
+export default function TankDetailPanel() {
+  const selectedObj = useSceneStore(s => s.selectedObj);
+  const cameraRadius = useSceneStore(s => s.cameraInfo?.radius);
+  const deselect = useSceneStore(s => s.select);
+
   const [tank, setTank] = useState<TankLevelData | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -47,12 +45,16 @@ export default function TankDetailPanel({ selectedObj, cameraRadius, onClose }: 
       .finally(() => setLoading(false));
   }, [selectedObj]);
 
-  // Auto-close when user zooms out
+  // Auto-close when user zooms out — use ref to track threshold crossing
+  const wasOverThreshold = useRef(false);
   useEffect(() => {
-    if (selectedObj && cameraRadius && cameraRadius > ZOOM_OUT_THRESHOLD) {
-      onClose();
+    if (cameraRadius && cameraRadius > ZOOM_OUT_THRESHOLD && !wasOverThreshold.current) {
+      wasOverThreshold.current = true;
+      deselect(null);
+    } else if (cameraRadius && cameraRadius <= ZOOM_OUT_THRESHOLD) {
+      wasOverThreshold.current = false;
     }
-  }, [cameraRadius, selectedObj, onClose]);
+  }, [cameraRadius, deselect]);
 
   if (!selectedObj) return null;
 
@@ -72,7 +74,7 @@ export default function TankDetailPanel({ selectedObj, cameraRadius, onClose }: 
           <span className="text-[10px] text-white/30 font-mono">{selectedObj.name}</span>
         </div>
         <button
-          onClick={onClose}
+          onClick={() => deselect(null)}
           className="w-6 h-6 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/10 transition-colors"
         >
           <X size={14} />

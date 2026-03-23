@@ -7,6 +7,7 @@ import { ThreeEvent, useFrame } from '@react-three/fiber';
 import type { ClickedObject } from '@/lib/three/types';
 import { osmToTankId, fetchTankLevels, type TankLevelData, type TankStatus, TANK_STATUS_CONFIG } from '@/lib/tankData';
 import TankParticles from './TankParticles';
+import { useSceneStore } from '@/lib/sceneStore';
 
 // PBR materials (StandardMaterial — no clearcoat overhead)
 const tankMat = new THREE.MeshStandardMaterial({
@@ -103,10 +104,10 @@ interface TerminalModelProps {
   onMissed?: () => void;
   onHover?: (mesh: THREE.Mesh | null) => void;
   onRaycastDebug?: (info: RaycastDebugInfo | null) => void;
-  statusEffects?: boolean;
 }
 
-export default function TerminalModel({ selectedMesh, hoveredMesh, onObjectClick, onMissed, onHover, onRaycastDebug, statusEffects = true }: TerminalModelProps) {
+export default function TerminalModel({ selectedMesh, hoveredMesh, onObjectClick, onMissed, onHover, onRaycastDebug }: TerminalModelProps) {
+  const statusEffects = useSceneStore(s => s.statusEffects);
   const { scene } = useGLTF('/models/terminal.glb');
 
   // Fetch tank status data

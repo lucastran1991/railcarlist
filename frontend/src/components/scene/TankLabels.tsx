@@ -5,6 +5,7 @@ import { Billboard, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { useGLTF } from '@react-three/drei';
 import { osmToTankId, PRODUCT_COLORS, fetchTankLevels, TANK_STATUS_CONFIG, type TankLevelData, type TankStatus } from '@/lib/tankData';
+import { useSceneStore } from '@/lib/sceneStore';
 
 function getProductForTank(tankId: string): string {
   if (tankId.startsWith('TK-1')) return 'Gasoline';
@@ -31,7 +32,8 @@ const STATUS_ICONS: Record<TankStatus, string> = {
 };
 
 /** WebGL-native tank labels with status indicator — visible only when a tank is selected */
-export default function TankLabels({ selectedOsmId }: { selectedOsmId: string | null }) {
+export default function TankLabels() {
+  const selectedOsmId = useSceneStore(s => s.selectedObj?.name ?? null);
   const { scene } = useGLTF('/models/terminal.glb');
 
   // Fetch tank data for status
