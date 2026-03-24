@@ -549,7 +549,7 @@ function NodeDetailPopup({ data, onClose }: { data: DomainNodeData; onClose: () 
           <div className="px-5 py-3 border-t border-border">
             <button
               onClick={() => window.location.href = data.href!}
-              className="w-full py-2 rounded-lg text-xs font-medium text-background bg-gradient-to-r from-[#5CE5A0] to-[#56CDE7] hover:opacity-90 transition-opacity"
+              className="w-full py-2 rounded-lg text-xs font-medium text-background gradient-primary"
             >
               Open {data.label} Dashboard →
             </button>

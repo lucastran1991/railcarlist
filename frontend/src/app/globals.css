@@ -275,11 +275,13 @@ body {
 }
 
 .gradient-primary {
-  background: linear-gradient(270deg, var(--color-gradient-from, #5CE5A0) -2.05%, var(--color-gradient-to, #56CDE7) 113.6%);
+  background: linear-gradient(135deg, var(--color-gradient-from, #5CE5A0) 0%, var(--color-gradient-to, #56CDE7) 100%);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 .gradient-primary:hover {
-  filter: brightness(1.1);
+  background: linear-gradient(315deg, var(--color-gradient-from, #5CE5A0) 0%, var(--color-gradient-to, #56CDE7) 100%);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--color-gradient-from, #5CE5A0) 30%, transparent);
 }
 
 /* ── Animations ── */

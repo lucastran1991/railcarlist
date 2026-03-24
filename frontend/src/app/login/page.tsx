@@ -161,7 +161,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-11 gradient-primary text-background font-semibold rounded-xl transition flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent,#5CE5A0)]/50 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full h-11 gradient-primary text-background font-semibold rounded-xl flex items-center justify-center gap-2 focus:outline-none focus:ring-4 focus:ring-[var(--color-accent,#5CE5A0)]/30 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-background/30 border-t-background rounded-full animate-spin" />
