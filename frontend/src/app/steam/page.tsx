@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { formatTs, formatTsTooltip, detectGranularity } from '@/lib/formatTimestamp';
 import type { SteamKPIs, QueryParams } from '@/lib/api-dashboard';
 import FilterBar from '@/components/dashboard/FilterBar';
+import { getChartColors } from '@/lib/chartColors';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { Flame, Activity, Gauge, Thermometer, TrendingUp, Droplets, Waves, Fuel } from 'lucide-react';
@@ -41,6 +42,8 @@ const AXIS = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 export default function SteamPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
+  const [chartColors, setChartColors] = useState(['#5CE5A0','#56CDE7','#F6AD55','#E53E3E','#4D65FF']);
+  useEffect(() => { setChartColors(getChartColors()); }, []);
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
   const { kpis, charts, chartLoading, loading, error } = useDashboardData<SteamKPIs>('steam', filterParams);
 
@@ -74,11 +77,11 @@ export default function SteamPage() {
 
   const lossMax = Math.max(...steamLoss.map((l) => l.loss), 0);
   const getLossColor = (loss: number) => {
-    if (lossMax === 0) return '#5CE5A0';
+    if (lossMax === 0) return chartColors[0];
     const ratio = loss / lossMax;
-    if (ratio > 0.7) return '#E53E3E';
-    if (ratio > 0.4) return '#F6AD55';
-    return '#5CE5A0';
+    if (ratio > 0.7) return chartColors[3];
+    if (ratio > 0.4) return chartColors[2];
+    return chartColors[0];
   };
 
   return (
@@ -92,14 +95,14 @@ export default function SteamPage() {
         {/* KPI Cards */}
         {kpis ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <KpiCard label="Total Production" value={kpis.totalProduction.toFixed(1)} unit="tonnes/h" icon={<Flame className="w-5 h-5 text-[#56CDE7]" />} />
-            <KpiCard label="Total Demand" value={kpis.totalDemand.toFixed(1)} unit="tonnes/h" icon={<Activity className={`w-5 h-5 ${supplyGtDemand ? 'text-[#5CE5A0]' : 'text-[#E53E3E]'}`} />} />
-            <KpiCard label="Header Pressure" value={kpis.headerPressure.toFixed(1)} unit="bar" icon={<Gauge className="w-5 h-5 text-[#5CE5A0]" />} />
-            <KpiCard label="Steam Temperature" value={kpis.steamTemperature.toString()} unit="°C" icon={<Thermometer className="w-5 h-5 text-[#F6AD55]" />} />
-            <KpiCard label="System Efficiency" value={kpis.systemEfficiency.toFixed(1)} unit="%" icon={<TrendingUp className={`w-5 h-5 ${kpis.systemEfficiency > 85 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
-            <KpiCard label="Condensate Recovery" value={kpis.condensateRecovery.toString()} unit="%" icon={<Droplets className={`w-5 h-5 ${kpis.condensateRecovery > 80 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
-            <KpiCard label="Makeup Water" value={kpis.makeupWaterFlow.toFixed(1)} unit="m³/h" icon={<Waves className="w-5 h-5 text-[#56CDE7]" />} />
-            <KpiCard label="Fuel Consumption" value={kpis.fuelConsumption.toLocaleString()} unit="m³/h" icon={<Fuel className="w-5 h-5 text-[#F6AD55]" />} />
+            <KpiCard label="Total Production" value={kpis.totalProduction.toFixed(1)} unit="tonnes/h" icon={<Flame className="w-5 h-5" style={{ color: chartColors[1] }} />} />
+            <KpiCard label="Total Demand" value={kpis.totalDemand.toFixed(1)} unit="tonnes/h" icon={<Activity className="w-5 h-5" style={{ color: supplyGtDemand ? chartColors[0] : chartColors[3] }} />} />
+            <KpiCard label="Header Pressure" value={kpis.headerPressure.toFixed(1)} unit="bar" icon={<Gauge className="w-5 h-5" style={{ color: chartColors[0] }} />} />
+            <KpiCard label="Steam Temperature" value={kpis.steamTemperature.toString()} unit="°C" icon={<Thermometer className="w-5 h-5" style={{ color: chartColors[2] }} />} />
+            <KpiCard label="System Efficiency" value={kpis.systemEfficiency.toFixed(1)} unit="%" icon={<TrendingUp className="w-5 h-5" style={{ color: kpis.systemEfficiency > 85 ? chartColors[0] : chartColors[2] }} />} />
+            <KpiCard label="Condensate Recovery" value={kpis.condensateRecovery.toString()} unit="%" icon={<Droplets className="w-5 h-5" style={{ color: kpis.condensateRecovery > 80 ? chartColors[0] : chartColors[2] }} />} />
+            <KpiCard label="Makeup Water" value={kpis.makeupWaterFlow.toFixed(1)} unit="m³/h" icon={<Waves className="w-5 h-5" style={{ color: chartColors[1] }} />} />
+            <KpiCard label="Fuel Consumption" value={kpis.fuelConsumption.toLocaleString()} unit="m³/h" icon={<Fuel className="w-5 h-5" style={{ color: chartColors[2] }} />} />
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -120,10 +123,10 @@ export default function SteamPage() {
                 <YAxis tick={AXIS} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <Area type="monotone" dataKey="boiler1" stackId="supply" stroke="#4D65FF" fill="#4D65FF" fillOpacity={0.6} name="Boiler 1" />
-                <Area type="monotone" dataKey="boiler2" stackId="supply" stroke="#56CDE7" fill="#56CDE7" fillOpacity={0.6} name="Boiler 2" />
-                <Area type="monotone" dataKey="boiler3" stackId="supply" stroke="#5CE5A0" fill="#5CE5A0" fillOpacity={0.6} name="Boiler 3" />
-                <Line type="monotone" dataKey="demand" stroke="#E53E3E" strokeWidth={2} dot={false} name="Demand" />
+                <Area type="monotone" dataKey="boiler1" stackId="supply" stroke={chartColors[4]} fill={chartColors[4]} fillOpacity={0.6} name="Boiler 1" />
+                <Area type="monotone" dataKey="boiler2" stackId="supply" stroke={chartColors[1]} fill={chartColors[1]} fillOpacity={0.6} name="Boiler 2" />
+                <Area type="monotone" dataKey="boiler3" stackId="supply" stroke={chartColors[0]} fill={chartColors[0]} fillOpacity={0.6} name="Boiler 3" />
+                <Line type="monotone" dataKey="demand" stroke={chartColors[3]} strokeWidth={2} dot={false} name="Demand" />
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -137,9 +140,9 @@ export default function SteamPage() {
                 <YAxis tick={AXIS} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <Line type="monotone" dataKey="hp" stroke="#E53E3E" strokeWidth={2} dot={false} name="HP" />
-                <Line type="monotone" dataKey="mp" stroke="#F6AD55" strokeWidth={2} dot={false} name="MP" />
-                <Line type="monotone" dataKey="lp" stroke="#56CDE7" strokeWidth={2} dot={false} name="LP" />
+                <Line type="monotone" dataKey="hp" stroke={chartColors[3]} strokeWidth={2} dot={false} name="HP" />
+                <Line type="monotone" dataKey="mp" stroke={chartColors[2]} strokeWidth={2} dot={false} name="MP" />
+                <Line type="monotone" dataKey="lp" stroke={chartColors[1]} strokeWidth={2} dot={false} name="LP" />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -179,8 +182,8 @@ export default function SteamPage() {
                 <XAxis dataKey="timestamp" tick={AXIS} tickFormatter={(ts) => formatTs(ts, condensateGranularity)} />
                 <YAxis tick={AXIS} domain={[70, 95]} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
-                <ReferenceLine y={85} stroke="#5CE5A0" strokeDasharray="6 4" label={{ value: 'Target 85%', fill: '#5CE5A0', fontSize: 11 }} />
-                <Area type="monotone" dataKey="recovery" stroke="#56CDE7" fill="#56CDE7" fillOpacity={0.3} name="Recovery %" />
+                <ReferenceLine y={85} stroke={chartColors[0]} strokeDasharray="6 4" label={{ value: 'Target 85%', fill: chartColors[0], fontSize: 11 }} />
+                <Area type="monotone" dataKey="recovery" stroke={chartColors[1]} fill={chartColors[1]} fillOpacity={0.3} name="Recovery %" />
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -193,7 +196,7 @@ export default function SteamPage() {
                 <XAxis type="number" dataKey="fuel" name="Fuel (m³/h)" tick={AXIS} label={{ value: 'Fuel (m³/h)', position: 'insideBottom', offset: -5, style: AXIS }} />
                 <YAxis type="number" dataKey="steam" name="Steam (t/h)" tick={AXIS} label={{ value: 'Steam (t/h)', angle: -90, position: 'insideLeft', style: AXIS }} />
                 <Tooltip {...tooltipStyle} cursor={{ strokeDasharray: '3 3' }} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
-                <Scatter data={fuelVsSteam} fill="#4D65FF" name="Fuel vs Steam" />
+                <Scatter data={fuelVsSteam} fill={chartColors[4]} name="Fuel vs Steam" />
               </ScatterChart>
             </ResponsiveContainer>
           </ChartCard>

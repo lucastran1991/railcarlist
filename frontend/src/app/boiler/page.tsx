@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { type BoilerKPIs, type QueryParams } from '@/lib/api-dashboard';
 import FilterBar from '@/components/dashboard/FilterBar';
+import { getChartColors } from '@/lib/chartColors';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import {
@@ -30,6 +31,8 @@ const AXIS = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 export default function BoilerPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
+  const [chartColors, setChartColors] = useState(['#5CE5A0','#56CDE7','#F6AD55','#E53E3E','#4D65FF']);
+  useEffect(() => { setChartColors(getChartColors()); }, []);
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
   const { kpis, charts, chartLoading, loading, error } = useDashboardData<BoilerKPIs>('boiler', filterParams);
 
@@ -61,50 +64,50 @@ export default function BoilerPage() {
             <KpiCard
               label="Boilers Online"
               value={`${kpis.boilersOnline}/${kpis.boilersTotal}`}
-              icon={<Flame className="w-5 h-5 text-[#5CE5A0]" />}
+              icon={<Flame className="w-5 h-5" style={{ color: chartColors[0] }} />}
               accent
             />
             <KpiCard
               label="Steam Output"
               value={String(kpis.totalSteamOutput)}
               unit="tonnes/h"
-              icon={<Cloud className="w-5 h-5 text-[#56CDE7]" />}
+              icon={<Cloud className="w-5 h-5" style={{ color: chartColors[1] }} />}
             />
             <KpiCard
               label="Fleet Efficiency"
               value={String(kpis.fleetEfficiency)}
               unit="%"
-              icon={<TrendingUp className={`w-5 h-5 ${kpis.fleetEfficiency > 85 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />}
+              icon={<TrendingUp className="w-5 h-5" style={{ color: kpis.fleetEfficiency > 85 ? chartColors[0] : chartColors[2] }} />}
             />
             <KpiCard
               label="Avg Stack Temp"
               value={String(kpis.avgStackTemp)}
               unit="°C"
-              icon={<Thermometer className={`w-5 h-5 ${kpis.avgStackTemp > 200 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />}
+              icon={<Thermometer className="w-5 h-5" style={{ color: kpis.avgStackTemp > 200 ? chartColors[2] : chartColors[0] }} />}
             />
             <KpiCard
               label="Fuel Rate"
               value={String(kpis.totalFuelRate)}
               unit="m³/h"
-              icon={<Droplets className="w-5 h-5 text-[#56CDE7]" />}
+              icon={<Droplets className="w-5 h-5" style={{ color: chartColors[1] }} />}
             />
             <KpiCard
               label="Avg O₂"
               value={String(kpis.avgO2)}
               unit="%"
-              icon={<Wind className={`w-5 h-5 ${kpis.avgO2 >= 2 && kpis.avgO2 <= 4 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />}
+              icon={<Wind className="w-5 h-5" style={{ color: kpis.avgO2 >= 2 && kpis.avgO2 <= 4 ? chartColors[0] : chartColors[2] }} />}
             />
             <KpiCard
               label="CO Emissions"
               value={String(kpis.coEmissions)}
               unit="ppm"
-              icon={<AlertCircle className={`w-5 h-5 ${kpis.coEmissions < 100 ? 'text-[#5CE5A0]' : 'text-[#E53E3E]'}`} />}
+              icon={<AlertCircle className="w-5 h-5" style={{ color: kpis.coEmissions < 100 ? chartColors[0] : chartColors[3] }} />}
             />
             <KpiCard
               label="NOx Emissions"
               value={String(kpis.noxEmissions)}
               unit="mg/Nm³"
-              icon={<AlertTriangle className={`w-5 h-5 ${kpis.noxEmissions > 100 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />}
+              icon={<AlertTriangle className="w-5 h-5" style={{ color: kpis.noxEmissions > 100 ? chartColors[2] : chartColors[0] }} />}
             />
           </div>
         ) : (
@@ -126,9 +129,9 @@ export default function BoilerPage() {
                 <YAxis tick={AXIS} />
                 <Tooltip {...tooltipStyle} />
                 <Legend />
-                <Bar dataKey="efficiency" fill="#5CE5A0" name="Efficiency" />
-                <Bar dataKey="load" fill="#56CDE7" name="Load" />
-                <Bar dataKey="steamOutput" fill="#4D65FF" name="Steam Output" />
+                <Bar dataKey="efficiency" fill={chartColors[0]} name="Efficiency" />
+                <Bar dataKey="load" fill={chartColors[1]} name="Load" />
+                <Bar dataKey="steamOutput" fill={chartColors[4]} name="Steam Output" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -142,10 +145,10 @@ export default function BoilerPage() {
                 <YAxis tick={AXIS} domain={[0, 100]} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <Line type="monotone" dataKey="blr01" stroke="#4D65FF" strokeWidth={2} dot={false} name="BLR-01" />
-                <Line type="monotone" dataKey="blr02" stroke="#56CDE7" strokeWidth={2} dot={false} name="BLR-02" />
-                <Line type="monotone" dataKey="blr03" stroke="#5CE5A0" strokeWidth={2} dot={false} name="BLR-03" />
-                <Line type="monotone" dataKey="blr04" stroke="#F6AD55" strokeWidth={2} dot={false} name="BLR-04" />
+                <Line type="monotone" dataKey="blr01" stroke={chartColors[4]} strokeWidth={2} dot={false} name="BLR-01" />
+                <Line type="monotone" dataKey="blr02" stroke={chartColors[1]} strokeWidth={2} dot={false} name="BLR-02" />
+                <Line type="monotone" dataKey="blr03" stroke={chartColors[0]} strokeWidth={2} dot={false} name="BLR-03" />
+                <Line type="monotone" dataKey="blr04" stroke={chartColors[2]} strokeWidth={2} dot={false} name="BLR-04" />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -159,10 +162,10 @@ export default function BoilerPage() {
                 <YAxis tick={AXIS} />
                 <Tooltip {...tooltipStyle} />
                 <Legend />
-                <Bar dataKey="o2" stackId="a" fill="#56CDE7" name="O₂" />
-                <Bar dataKey="co2" stackId="a" fill="#4D65FF" name="CO₂" />
-                <Bar dataKey="co" stackId="a" fill="#F6AD55" name="CO" />
-                <Bar dataKey="nox" stackId="a" fill="#E53E3E" name="NOx" />
+                <Bar dataKey="o2" stackId="a" fill={chartColors[1]} name="O₂" />
+                <Bar dataKey="co2" stackId="a" fill={chartColors[4]} name="CO₂" />
+                <Bar dataKey="co" stackId="a" fill={chartColors[2]} name="CO" />
+                <Bar dataKey="nox" stackId="a" fill={chartColors[3]} name="NOx" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -177,8 +180,8 @@ export default function BoilerPage() {
                 <YAxis yAxisId="right" orientation="right" tick={AXIS} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <Area yAxisId="left" type="monotone" dataKey="steam" stroke="#56CDE7" fill="#56CDE7" fillOpacity={0.3} name="Steam (tonnes/h)" />
-                <Line yAxisId="right" type="monotone" dataKey="fuel" stroke="#F6AD55" strokeWidth={2} dot={false} name="Fuel (m³/h)" />
+                <Area yAxisId="left" type="monotone" dataKey="steam" stroke={chartColors[1]} fill={chartColors[1]} fillOpacity={0.3} name="Steam (tonnes/h)" />
+                <Line yAxisId="right" type="monotone" dataKey="fuel" stroke={chartColors[2]} strokeWidth={2} dot={false} name="Fuel (m³/h)" />
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -199,7 +202,7 @@ export default function BoilerPage() {
                         className="h-full rounded-full transition-all"
                         style={{
                           width: `${Math.min(100, ratio * 100)}%`,
-                          backgroundColor: ratio < 0.8 ? '#5CE5A0' : ratio < 1 ? '#F6AD55' : '#E53E3E',
+                          backgroundColor: ratio < 0.8 ? chartColors[0] : ratio < 1 ? chartColors[2] : chartColors[3],
                         }}
                       />
                     </div>
@@ -218,10 +221,10 @@ export default function BoilerPage() {
                 <YAxis tick={AXIS} domain={[150, 230]} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <ReferenceLine y={220} stroke="#E53E3E" strokeDasharray="5 5" label={{ value: 'Alarm 220°C', fill: '#E53E3E', fontSize: 10 }} />
-                <Line type="monotone" dataKey="blr01" stroke="#4D65FF" strokeWidth={2} dot={false} name="BLR-01" />
-                <Line type="monotone" dataKey="blr02" stroke="#56CDE7" strokeWidth={2} dot={false} name="BLR-02" />
-                <Line type="monotone" dataKey="blr03" stroke="#5CE5A0" strokeWidth={2} dot={false} name="BLR-03" />
+                <ReferenceLine y={220} stroke={chartColors[3]} strokeDasharray="5 5" label={{ value: 'Alarm 220°C', fill: chartColors[3], fontSize: 10 }} />
+                <Line type="monotone" dataKey="blr01" stroke={chartColors[4]} strokeWidth={2} dot={false} name="BLR-01" />
+                <Line type="monotone" dataKey="blr02" stroke={chartColors[1]} strokeWidth={2} dot={false} name="BLR-02" />
+                <Line type="monotone" dataKey="blr03" stroke={chartColors[0]} strokeWidth={2} dot={false} name="BLR-03" />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>

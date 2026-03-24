@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { type TankKPIs, type QueryParams } from '@/lib/api-dashboard';
 import FilterBar from '@/components/dashboard/FilterBar';
+import { getChartColors } from '@/lib/chartColors';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { Database, BarChart3, CheckCircle, Activity, Thermometer, AlertTriangle, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
@@ -36,6 +37,8 @@ const AXIS = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 export default function TankPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
+  const [chartColors, setChartColors] = useState(['#5CE5A0','#56CDE7','#F6AD55','#E53E3E','#4D65FF']);
+  useEffect(() => { setChartColors(getChartColors()); }, []);
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
   const { kpis, charts, chartLoading, loading, error } = useDashboardData<TankKPIs>('tank', filterParams);
 
@@ -68,14 +71,14 @@ export default function TankPage() {
         {/* KPI Cards */}
         {kpis ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <KpiCard label="Total Inventory" value={kpis.totalInventory.toLocaleString()} unit="bbl" icon={<Database className="w-5 h-5 text-[#56CDE7]" />} />
-            <KpiCard label="Available Capacity" value={kpis.availableCapacity.toString()} unit="%" icon={<BarChart3 className={`w-5 h-5 ${kpis.availableCapacity > 30 ? 'text-[#5CE5A0]' : 'text-[#E53E3E]'}`} />} />
-            <KpiCard label="Tanks Online" value={`${kpis.tanksInOperation}/${kpis.tanksTotal}`} icon={<CheckCircle className="w-5 h-5 text-[#5CE5A0]" />} />
-            <KpiCard label="Throughput" value={kpis.currentThroughput.toLocaleString()} unit="bbl/h" icon={<Activity className="w-5 h-5 text-[#56CDE7]" />} />
-            <KpiCard label="Avg Temperature" value={kpis.avgTemperature.toString()} unit="°C" icon={<Thermometer className="w-5 h-5 text-[#5CE5A0]" />} />
-            <KpiCard label="Active Alarms" value={kpis.activeAlarms.toString()} icon={<AlertTriangle className={`w-5 h-5 ${kpis.activeAlarms > 0 ? 'text-[#E53E3E]' : 'text-[#5CE5A0]'}`} />} />
-            <KpiCard label="Daily Receipts" value={kpis.dailyReceipts.toLocaleString()} unit="bbl" icon={<ArrowDownCircle className="w-5 h-5 text-[#5CE5A0]" />} />
-            <KpiCard label="Daily Dispatches" value={kpis.dailyDispatches.toLocaleString()} unit="bbl" icon={<ArrowUpCircle className="w-5 h-5 text-[#F6AD55]" />} />
+            <KpiCard label="Total Inventory" value={kpis.totalInventory.toLocaleString()} unit="bbl" icon={<Database className="w-5 h-5" style={{ color: chartColors[1] }} />} />
+            <KpiCard label="Available Capacity" value={kpis.availableCapacity.toString()} unit="%" icon={<BarChart3 className="w-5 h-5" style={{ color: kpis.availableCapacity > 30 ? chartColors[0] : chartColors[3] }} />} />
+            <KpiCard label="Tanks Online" value={`${kpis.tanksInOperation}/${kpis.tanksTotal}`} icon={<CheckCircle className="w-5 h-5" style={{ color: chartColors[0] }} />} />
+            <KpiCard label="Throughput" value={kpis.currentThroughput.toLocaleString()} unit="bbl/h" icon={<Activity className="w-5 h-5" style={{ color: chartColors[1] }} />} />
+            <KpiCard label="Avg Temperature" value={kpis.avgTemperature.toString()} unit="°C" icon={<Thermometer className="w-5 h-5" style={{ color: chartColors[0] }} />} />
+            <KpiCard label="Active Alarms" value={kpis.activeAlarms.toString()} icon={<AlertTriangle className="w-5 h-5" style={{ color: kpis.activeAlarms > 0 ? chartColors[3] : chartColors[0] }} />} />
+            <KpiCard label="Daily Receipts" value={kpis.dailyReceipts.toLocaleString()} unit="bbl" icon={<ArrowDownCircle className="w-5 h-5" style={{ color: chartColors[0] }} />} />
+            <KpiCard label="Daily Dispatches" value={kpis.dailyDispatches.toLocaleString()} unit="bbl" icon={<ArrowUpCircle className="w-5 h-5" style={{ color: chartColors[2] }} />} />
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -113,11 +116,11 @@ export default function TankPage() {
                 <YAxis tick={AXIS} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} formatter={(value: number) => value.toLocaleString()} />
                 <Legend />
-                <Line type="monotone" dataKey="gasoline" stroke="#F6AD55" strokeWidth={2} dot={false} name="Gasoline" />
-                <Line type="monotone" dataKey="diesel" stroke="#4D65FF" strokeWidth={2} dot={false} name="Diesel" />
-                <Line type="monotone" dataKey="crude" stroke="#56CDE7" strokeWidth={2} dot={false} name="Crude" />
-                <Line type="monotone" dataKey="ethanol" stroke="#5CE5A0" strokeWidth={2} dot={false} name="Ethanol" />
-                <Line type="monotone" dataKey="lpg" stroke="#9F7AEA" strokeWidth={2} dot={false} name="LPG" />
+                <Line type="monotone" dataKey="gasoline" stroke={chartColors[2]} strokeWidth={2} dot={false} name="Gasoline" />
+                <Line type="monotone" dataKey="diesel" stroke={chartColors[4]} strokeWidth={2} dot={false} name="Diesel" />
+                <Line type="monotone" dataKey="crude" stroke={chartColors[1]} strokeWidth={2} dot={false} name="Crude" />
+                <Line type="monotone" dataKey="ethanol" stroke={chartColors[0]} strokeWidth={2} dot={false} name="Ethanol" />
+                <Line type="monotone" dataKey="lpg" stroke={chartColors[5] ?? '#9F7AEA'} strokeWidth={2} dot={false} name="LPG" />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -131,8 +134,8 @@ export default function TankPage() {
                 <YAxis tick={AXIS} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} formatter={(value: number) => value.toLocaleString()} />
                 <Legend />
-                <Bar dataKey="receipts" fill="#5CE5A0" name="Receipts" />
-                <Bar dataKey="dispatches" fill="#F6AD55" name="Dispatches" />
+                <Bar dataKey="receipts" fill={chartColors[0]} name="Receipts" />
+                <Bar dataKey="dispatches" fill={chartColors[2]} name="Dispatches" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -174,7 +177,7 @@ export default function TankPage() {
                 <Tooltip {...tooltipStyle} formatter={(value: number) => value.toLocaleString()} />
                 <Bar dataKey="change" name="Change (bbl)">
                   {tankLevelChanges.map((entry, i) => (
-                    <Cell key={i} fill={entry.change >= 0 ? '#5CE5A0' : '#E53E3E'} />
+                    <Cell key={i} fill={entry.change >= 0 ? chartColors[0] : chartColors[3]} />
                   ))}
                 </Bar>
               </BarChart>
@@ -190,10 +193,10 @@ export default function TankPage() {
                 <YAxis tick={AXIS} unit="°C" />
                 <Tooltip {...tooltipStyle} />
                 <Legend />
-                <Bar dataKey="t00" fill="#4D65FF" name="00:00" />
-                <Bar dataKey="t06" fill="#56CDE7" name="06:00" />
-                <Bar dataKey="t12" fill="#F6AD55" name="12:00" />
-                <Bar dataKey="t18" fill="#5CE5A0" name="18:00" />
+                <Bar dataKey="t00" fill={chartColors[4]} name="00:00" />
+                <Bar dataKey="t06" fill={chartColors[1]} name="06:00" />
+                <Bar dataKey="t12" fill={chartColors[2]} name="12:00" />
+                <Bar dataKey="t18" fill={chartColors[0]} name="18:00" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>

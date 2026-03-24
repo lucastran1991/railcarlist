@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import type { ElectricityKPIs, QueryParams } from '@/lib/api-dashboard';
 import FilterBar from '@/components/dashboard/FilterBar';
+import { getChartColors } from '@/lib/chartColors';
 import { formatTs, formatTsTooltip, detectGranularity } from '@/lib/formatTimestamp';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
@@ -40,6 +41,8 @@ const AXIS_STYLE = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 export default function ElectricityPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
+  const [chartColors, setChartColors] = useState(['#5CE5A0','#56CDE7','#F6AD55','#E53E3E','#4D65FF']);
+  useEffect(() => { setChartColors(getChartColors()); }, []);
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
   const { kpis, charts, chartLoading, loading, error } = useDashboardData<ElectricityKPIs>('electricity', filterParams);
 
@@ -85,14 +88,14 @@ export default function ElectricityPage() {
         {/* KPI Grid */}
         {kpis ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <KpiCard label="Total Consumption" value={kpis.totalConsumption.toLocaleString()} unit="kWh" icon={<Zap className="w-5 h-5 text-[#56CDE7]" />} />
-            <KpiCard label="Real-time Demand" value={kpis.realTimeDemand.toLocaleString()} unit="kW" icon={<Activity className="w-5 h-5 text-[#5CE5A0]" />} />
-            <KpiCard label="Peak Demand" value={kpis.peakDemand.toLocaleString()} unit="kW" icon={<TrendingUp className="w-5 h-5 text-[#F6AD55]" />} />
-            <KpiCard label="Power Factor" value={kpis.powerFactor.toFixed(2)} icon={<Gauge className={`w-5 h-5 ${kpis.powerFactor > 0.93 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
-            <KpiCard label="Energy Cost" value={`$${kpis.energyCost.toLocaleString()}`} icon={<DollarSign className="w-5 h-5 text-[#56CDE7]" />} />
-            <KpiCard label="Carbon Emissions" value={kpis.carbonEmissions.toFixed(2)} unit="tonnes" icon={<Cloud className="w-5 h-5 text-[#5CE5A0]" />} />
-            <KpiCard label="Grid Availability" value={kpis.gridAvailability.toFixed(1)} unit="%" icon={<Shield className="w-5 h-5 text-[#5CE5A0]" />} />
-            <KpiCard label="Transformer Load" value={kpis.transformerLoad.toString()} unit="%" icon={<Thermometer className={`w-5 h-5 ${kpis.transformerLoad > 80 ? 'text-[#F6AD55]' : 'text-[#56CDE7]'}`} />} />
+            <KpiCard label="Total Consumption" value={kpis.totalConsumption.toLocaleString()} unit="kWh" icon={<Zap className="w-5 h-5" style={{ color: chartColors[1] }} />} />
+            <KpiCard label="Real-time Demand" value={kpis.realTimeDemand.toLocaleString()} unit="kW" icon={<Activity className="w-5 h-5" style={{ color: chartColors[0] }} />} />
+            <KpiCard label="Peak Demand" value={kpis.peakDemand.toLocaleString()} unit="kW" icon={<TrendingUp className="w-5 h-5" style={{ color: chartColors[2] }} />} />
+            <KpiCard label="Power Factor" value={kpis.powerFactor.toFixed(2)} icon={<Gauge className="w-5 h-5" style={{ color: kpis.powerFactor > 0.93 ? chartColors[0] : chartColors[2] }} />} />
+            <KpiCard label="Energy Cost" value={`$${kpis.energyCost.toLocaleString()}`} icon={<DollarSign className="w-5 h-5" style={{ color: chartColors[1] }} />} />
+            <KpiCard label="Carbon Emissions" value={kpis.carbonEmissions.toFixed(2)} unit="tonnes" icon={<Cloud className="w-5 h-5" style={{ color: chartColors[0] }} />} />
+            <KpiCard label="Grid Availability" value={kpis.gridAvailability.toFixed(1)} unit="%" icon={<Shield className="w-5 h-5" style={{ color: chartColors[0] }} />} />
+            <KpiCard label="Transformer Load" value={kpis.transformerLoad.toString()} unit="%" icon={<Thermometer className="w-5 h-5" style={{ color: kpis.transformerLoad > 80 ? chartColors[2] : chartColors[1] }} />} />
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -113,9 +116,9 @@ export default function ElectricityPage() {
                 <YAxis tick={AXIS_STYLE} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <ReferenceLine y={4000} stroke="#E53E3E" strokeDasharray="6 3" label={{ value: 'Threshold', fill: '#E53E3E', fontSize: 10 }} />
-                <Area type="monotone" dataKey="actual" stroke="#4D65FF" fill="#4D65FF" fillOpacity={0.3} strokeWidth={2} name="Actual" />
-                <Line type="monotone" dataKey="planned" stroke="#5CE5A0" strokeWidth={2} dot={false} name="Planned" />
+                <ReferenceLine y={4000} stroke={chartColors[3]} strokeDasharray="6 3" label={{ value: 'Threshold', fill: chartColors[3], fontSize: 10 }} />
+                <Area type="monotone" dataKey="actual" stroke={chartColors[4]} fill={chartColors[4]} fillOpacity={0.3} strokeWidth={2} name="Actual" />
+                <Line type="monotone" dataKey="planned" stroke={chartColors[0]} strokeWidth={2} dot={false} name="Planned" />
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -129,8 +132,8 @@ export default function ElectricityPage() {
                 <YAxis tick={AXIS_STYLE} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <Bar dataKey="thisWeek" fill="#56CDE7" name="This Week" />
-                <Bar dataKey="lastWeek" fill="#4D65FF" name="Last Week" />
+                <Bar dataKey="thisWeek" fill={chartColors[1]} name="This Week" />
+                <Bar dataKey="lastWeek" fill={chartColors[4]} name="Last Week" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -143,8 +146,8 @@ export default function ElectricityPage() {
                 <XAxis dataKey="timestamp" tickFormatter={(ts) => formatTs(ts, powerFactorGranularity)} tick={AXIS_STYLE} />
                 <YAxis domain={[0.88, 1.0]} tick={AXIS_STYLE} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
-                <ReferenceLine y={0.95} stroke="#5CE5A0" strokeDasharray="6 3" label={{ value: 'Target 0.95', fill: '#5CE5A0', fontSize: 10 }} />
-                <Line type="monotone" dataKey="value" stroke="#F6AD55" strokeWidth={2} dot={{ r: 3 }} name="Power Factor" />
+                <ReferenceLine y={0.95} stroke={chartColors[0]} strokeDasharray="6 3" label={{ value: 'Target 0.95', fill: chartColors[0], fontSize: 10 }} />
+                <Line type="monotone" dataKey="value" stroke={chartColors[2]} strokeWidth={2} dot={{ r: 3 }} name="Power Factor" />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -184,8 +187,8 @@ export default function ElectricityPage() {
                 <XAxis dataKey="timestamp" tickFormatter={(ts) => formatTs(ts, peakDemandGranularity)} tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
-                <ReferenceLine y={4200} stroke="#E53E3E" strokeDasharray="6 3" label={{ value: 'Contract 4200 kW', fill: '#E53E3E', fontSize: 10 }} />
-                <Area type="monotone" dataKey="peak" stroke="#F6AD55" fill="#F6AD55" fillOpacity={0.25} strokeWidth={2} name="Peak Demand" />
+                <ReferenceLine y={4200} stroke={chartColors[3]} strokeDasharray="6 3" label={{ value: 'Contract 4200 kW', fill: chartColors[3], fontSize: 10 }} />
+                <Area type="monotone" dataKey="peak" stroke={chartColors[2]} fill={chartColors[2]} fillOpacity={0.25} strokeWidth={2} name="Peak Demand" />
               </AreaChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -199,9 +202,9 @@ export default function ElectricityPage() {
                 <YAxis tick={AXIS_STYLE} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <Bar dataKey="phaseA" fill="#E53E3E" name="Phase A" />
-                <Bar dataKey="phaseB" fill="#F6AD55" name="Phase B" />
-                <Bar dataKey="phaseC" fill="#4D65FF" name="Phase C" />
+                <Bar dataKey="phaseA" fill={chartColors[3]} name="Phase A" />
+                <Bar dataKey="phaseB" fill={chartColors[2]} name="Phase B" />
+                <Bar dataKey="phaseC" fill={chartColors[4]} name="Phase C" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Flame, Gauge, BarChart3, Droplets, Zap, Thermometer, TrendingUp, TrendingDown } from 'lucide-react';
 import { fetchAllKPIs, type AllKPIs } from '@/lib/api-dashboard';
+import { getChartColors } from '@/lib/chartColors';
 
 interface HomeKpi {
   label: string;
@@ -17,36 +18,38 @@ interface HomeKpi {
 // KPIs now fetched from backend via fetchAllKPIs()
 
 function TrendBadge({ trend, value }: { trend: 'up' | 'down' | 'flat'; value: string }) {
-  const color = trend === 'up' ? 'text-[#5CE5A0]' : trend === 'down' ? 'text-[#E53E3E]' : 'text-muted-foreground';
+  const colorStyle = trend === 'up' ? 'var(--color-accent,#5CE5A0)' : trend === 'down' ? 'var(--color-danger,#E53E3E)' : undefined;
   const Icon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : TrendingUp;
   return (
-    <span className={`flex items-center gap-0.5 text-[10px] font-medium ${color}`}>
+    <span className={`flex items-center gap-0.5 text-[10px] font-medium ${!colorStyle ? 'text-muted-foreground' : ''}`} style={colorStyle ? { color: colorStyle } : undefined}>
       <Icon size={10} />
       {value}
     </span>
   );
 }
 
-function buildKpis(data: AllKPIs | null): HomeKpi[] {
+function buildKpis(data: AllKPIs | null, colors: string[]): HomeKpi[] {
   if (!data) return [];
   return [
-    { label: 'Steam Production', value: String(data.steam.totalProduction), unit: 'tonnes/h', icon: <Flame size={16} />, trend: 'up' as const, trendValue: '+3.2%', color: '#5CE5A0' },
-    { label: 'Header Pressure', value: String(data.steam.headerPressure), unit: 'bar', icon: <Gauge size={16} />, trend: 'down' as const, trendValue: '-1.8%', color: '#56CDE7' },
-    { label: 'Throughput', value: data.tank.currentThroughput.toLocaleString(), unit: 'bbl/d', icon: <BarChart3 size={16} />, trend: 'up' as const, trendValue: '+5.1%', color: '#4D65FF' },
-    { label: 'Tank Capacity', value: String(data.tank.availableCapacity), unit: '%', icon: <Droplets size={16} />, trend: 'flat' as const, trendValue: '0.0%', color: '#5CE5A0' },
-    { label: 'Power Load', value: data.electricity.realTimeDemand.toLocaleString(), unit: 'kW', icon: <Zap size={16} />, trend: 'up' as const, trendValue: '+2.4%', color: '#F6AD55' },
-    { label: 'Boiler Efficiency', value: String(data.boiler.fleetEfficiency), unit: '%', icon: <Thermometer size={16} />, trend: 'down' as const, trendValue: '-0.5%', color: '#56CDE7' },
+    { label: 'Steam Production', value: String(data.steam.totalProduction), unit: 'tonnes/h', icon: <Flame size={16} />, trend: 'up' as const, trendValue: '+3.2%', color: colors[0] },
+    { label: 'Header Pressure', value: String(data.steam.headerPressure), unit: 'bar', icon: <Gauge size={16} />, trend: 'down' as const, trendValue: '-1.8%', color: colors[1] },
+    { label: 'Throughput', value: data.tank.currentThroughput.toLocaleString(), unit: 'bbl/d', icon: <BarChart3 size={16} />, trend: 'up' as const, trendValue: '+5.1%', color: colors[4] },
+    { label: 'Tank Capacity', value: String(data.tank.availableCapacity), unit: '%', icon: <Droplets size={16} />, trend: 'flat' as const, trendValue: '0.0%', color: colors[0] },
+    { label: 'Power Load', value: data.electricity.realTimeDemand.toLocaleString(), unit: 'kW', icon: <Zap size={16} />, trend: 'up' as const, trendValue: '+2.4%', color: colors[2] },
+    { label: 'Boiler Efficiency', value: String(data.boiler.fleetEfficiency), unit: '%', icon: <Thermometer size={16} />, trend: 'down' as const, trendValue: '-0.5%', color: colors[1] },
   ];
 }
 
 export default function HomeBottomCharts() {
   const [allKpis, setAllKpis] = useState<AllKPIs | null>(null);
+  const [chartColors, setChartColors] = useState(['#5CE5A0','#56CDE7','#F6AD55','#E53E3E','#4D65FF']);
 
   useEffect(() => {
     fetchAllKPIs().then(setAllKpis).catch(() => {});
+    setChartColors(getChartColors());
   }, []);
 
-  const kpiItems = buildKpis(allKpis);
+  const kpiItems = buildKpis(allKpis, chartColors);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-20 pointer-events-auto">

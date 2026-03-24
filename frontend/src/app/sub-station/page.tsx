@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { type SubStationKPIs, type QueryParams } from '@/lib/api-dashboard';
 import FilterBar from '@/components/dashboard/FilterBar';
+import { getChartColors } from '@/lib/chartColors';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import { Zap, Activity, Thermometer, Radio, BarChart3, Shield, AlertTriangle, Gauge } from 'lucide-react';
@@ -33,16 +34,18 @@ const tooltipStyle = {
 const GRID_STROKE = 'hsl(var(--border))';
 const AXIS_STYLE = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 
-function getLoadingColor(loading: number) {
-  if (loading > 90) return '#E53E3E';
-  if (loading >= 70) return '#F6AD55';
-  return '#5CE5A0';
-}
-
 export default function SubStationPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
+  const [chartColors, setChartColors] = useState(['#5CE5A0','#56CDE7','#F6AD55','#E53E3E','#4D65FF']);
+  useEffect(() => { setChartColors(getChartColors()); }, []);
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
+
+  const getLoadingColor = (loading: number) => {
+    if (loading > 90) return chartColors[3];
+    if (loading >= 70) return chartColors[2];
+    return chartColors[0];
+  };
   const { kpis, charts, chartLoading, loading, error } = useDashboardData<SubStationKPIs>('substation', filterParams);
 
   // Chart data extraction
@@ -78,14 +81,14 @@ export default function SubStationPage() {
         {/* KPI Grid */}
         {kpis ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <KpiCard label="Incoming Voltage" value={kpis.incomingVoltage.toFixed(2)} unit="kV" icon={<Zap className="w-5 h-5 text-[#5CE5A0]" />} />
-            <KpiCard label="Total Load" value={kpis.totalLoad.toFixed(1)} unit="MW" icon={<Activity className="w-5 h-5 text-[#56CDE7]" />} />
-            <KpiCard label="Transformer Temp" value={kpis.transformerTemp.toString()} unit="°C" icon={<Thermometer className={`w-5 h-5 ${kpis.transformerTemp > 65 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />} />
-            <KpiCard label="Frequency" value={kpis.frequency.toFixed(2)} unit="Hz" icon={<Radio className="w-5 h-5 text-[#5CE5A0]" />} />
-            <KpiCard label="THD" value={kpis.thd.toFixed(1)} unit="%" icon={<BarChart3 className={`w-5 h-5 ${kpis.thd > 5 ? 'text-[#F6AD55]' : 'text-[#5CE5A0]'}`} />} />
-            <KpiCard label="Breakers" value={`${kpis.breakersClosed}/${kpis.breakersTotal}`} icon={<Shield className="w-5 h-5 text-[#5CE5A0]" />} />
-            <KpiCard label="Fault Events (24h)" value={kpis.faultEvents24h.toString()} icon={<AlertTriangle className={`w-5 h-5 ${kpis.faultEvents24h > 0 ? 'text-[#E53E3E]' : 'text-[#5CE5A0]'}`} />} />
-            <KpiCard label="Busbar Balance" value={kpis.busbarBalance.toFixed(1)} unit="%" icon={<Gauge className={`w-5 h-5 ${kpis.busbarBalance < 10 ? 'text-[#5CE5A0]' : 'text-[#F6AD55]'}`} />} />
+            <KpiCard label="Incoming Voltage" value={kpis.incomingVoltage.toFixed(2)} unit="kV" icon={<Zap className="w-5 h-5" style={{ color: chartColors[0] }} />} />
+            <KpiCard label="Total Load" value={kpis.totalLoad.toFixed(1)} unit="MW" icon={<Activity className="w-5 h-5" style={{ color: chartColors[1] }} />} />
+            <KpiCard label="Transformer Temp" value={kpis.transformerTemp.toString()} unit="°C" icon={<Thermometer className="w-5 h-5" style={{ color: kpis.transformerTemp > 65 ? chartColors[2] : chartColors[0] }} />} />
+            <KpiCard label="Frequency" value={kpis.frequency.toFixed(2)} unit="Hz" icon={<Radio className="w-5 h-5" style={{ color: chartColors[0] }} />} />
+            <KpiCard label="THD" value={kpis.thd.toFixed(1)} unit="%" icon={<BarChart3 className="w-5 h-5" style={{ color: kpis.thd > 5 ? chartColors[2] : chartColors[0] }} />} />
+            <KpiCard label="Breakers" value={`${kpis.breakersClosed}/${kpis.breakersTotal}`} icon={<Shield className="w-5 h-5" style={{ color: chartColors[0] }} />} />
+            <KpiCard label="Fault Events (24h)" value={kpis.faultEvents24h.toString()} icon={<AlertTriangle className="w-5 h-5" style={{ color: kpis.faultEvents24h > 0 ? chartColors[3] : chartColors[0] }} />} />
+            <KpiCard label="Busbar Balance" value={kpis.busbarBalance.toFixed(1)} unit="%" icon={<Gauge className="w-5 h-5" style={{ color: kpis.busbarBalance < 10 ? chartColors[0] : chartColors[2] }} />} />
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -106,10 +109,10 @@ export default function SubStationPage() {
                 <YAxis domain={[10.7, 11.1]} tick={AXIS_STYLE} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <ReferenceLine y={11.0} stroke="#5CE5A0" strokeDasharray="6 3" label={{ value: 'Nominal 11kV', fill: '#5CE5A0', fontSize: 10 }} />
-                <Line type="monotone" dataKey="vRY" stroke="#E53E3E" strokeWidth={2} dot={{ r: 2 }} name="V(RY)" />
-                <Line type="monotone" dataKey="vYB" stroke="#F6AD55" strokeWidth={2} dot={{ r: 2 }} name="V(YB)" />
-                <Line type="monotone" dataKey="vBR" stroke="#4D65FF" strokeWidth={2} dot={{ r: 2 }} name="V(BR)" />
+                <ReferenceLine y={11.0} stroke={chartColors[0]} strokeDasharray="6 3" label={{ value: 'Nominal 11kV', fill: chartColors[0], fontSize: 10 }} />
+                <Line type="monotone" dataKey="vRY" stroke={chartColors[3]} strokeWidth={2} dot={{ r: 2 }} name="V(RY)" />
+                <Line type="monotone" dataKey="vYB" stroke={chartColors[2]} strokeWidth={2} dot={{ r: 2 }} name="V(YB)" />
+                <Line type="monotone" dataKey="vBR" stroke={chartColors[4]} strokeWidth={2} dot={{ r: 2 }} name="V(BR)" />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -139,10 +142,10 @@ export default function SubStationPage() {
                 <XAxis dataKey="order" tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} />
                 <Tooltip {...tooltipStyle} />
-                <ReferenceLine y={5.0} stroke="#E53E3E" strokeDasharray="6 3" label={{ value: 'IEEE 519 Limit', fill: '#E53E3E', fontSize: 10 }} />
-                <Bar dataKey="magnitude" name="THD %" fill="#56CDE7" radius={[4, 4, 0, 0]}>
+                <ReferenceLine y={5.0} stroke={chartColors[3]} strokeDasharray="6 3" label={{ value: 'IEEE 519 Limit', fill: chartColors[3], fontSize: 10 }} />
+                <Bar dataKey="magnitude" name="THD %" fill={chartColors[1]} radius={[4, 4, 0, 0]}>
                   {harmonicSpectrum.map((entry, i) => (
-                    <Cell key={i} fill={entry.magnitude > 5 ? '#E53E3E' : '#56CDE7'} />
+                    <Cell key={i} fill={entry.magnitude > 5 ? chartColors[3] : chartColors[1]} />
                   ))}
                 </Bar>
               </BarChart>
@@ -158,10 +161,10 @@ export default function SubStationPage() {
                 <YAxis tick={AXIS_STYLE} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <ReferenceLine y={75} stroke="#F6AD55" strokeDasharray="6 3" label={{ value: 'Warning', fill: '#F6AD55', fontSize: 10 }} />
-                <ReferenceLine y={85} stroke="#E53E3E" strokeDasharray="6 3" label={{ value: 'Alarm', fill: '#E53E3E', fontSize: 10 }} />
-                <Line type="monotone" dataKey="oilTemp" stroke="#F6AD55" strokeWidth={2} dot={{ r: 2 }} name="Oil Temp" />
-                <Line type="monotone" dataKey="windingTemp" stroke="#E53E3E" strokeWidth={2} dot={{ r: 2 }} name="Winding Temp" />
+                <ReferenceLine y={75} stroke={chartColors[2]} strokeDasharray="6 3" label={{ value: 'Warning', fill: chartColors[2], fontSize: 10 }} />
+                <ReferenceLine y={85} stroke={chartColors[3]} strokeDasharray="6 3" label={{ value: 'Alarm', fill: chartColors[3], fontSize: 10 }} />
+                <Line type="monotone" dataKey="oilTemp" stroke={chartColors[2]} strokeWidth={2} dot={{ r: 2 }} name="Oil Temp" />
+                <Line type="monotone" dataKey="windingTemp" stroke={chartColors[3]} strokeWidth={2} dot={{ r: 2 }} name="Winding Temp" />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -175,11 +178,11 @@ export default function SubStationPage() {
                 <YAxis tick={AXIS_STYLE} />
                 <Tooltip {...tooltipStyle} labelFormatter={(ts) => formatTsTooltip(ts as number)} />
                 <Legend />
-                <Bar dataKey="feeder1" stackId="a" fill="#4D65FF" name="Feeder 1" />
-                <Bar dataKey="feeder2" stackId="a" fill="#56CDE7" name="Feeder 2" />
-                <Bar dataKey="feeder3" stackId="a" fill="#5CE5A0" name="Feeder 3" />
-                <Bar dataKey="feeder4" stackId="a" fill="#F6AD55" name="Feeder 4" />
-                <Bar dataKey="feeder5" stackId="a" fill="#E53E3E" name="Feeder 5" />
+                <Bar dataKey="feeder1" stackId="a" fill={chartColors[4]} name="Feeder 1" />
+                <Bar dataKey="feeder2" stackId="a" fill={chartColors[1]} name="Feeder 2" />
+                <Bar dataKey="feeder3" stackId="a" fill={chartColors[0]} name="Feeder 3" />
+                <Bar dataKey="feeder4" stackId="a" fill={chartColors[2]} name="Feeder 4" />
+                <Bar dataKey="feeder5" stackId="a" fill={chartColors[3]} name="Feeder 5" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -192,7 +195,7 @@ export default function SubStationPage() {
                 <XAxis dataKey="day" tick={AXIS_STYLE} />
                 <YAxis tick={AXIS_STYLE} allowDecimals={false} />
                 <Tooltip {...tooltipStyle} />
-                <Bar dataKey="total" fill="#E53E3E" name="Fault Events" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="total" fill={chartColors[3]} name="Fault Events" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>

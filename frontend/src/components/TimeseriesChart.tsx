@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, TooltipProps,
@@ -8,6 +8,7 @@ import {
 import { AlertCircle } from 'lucide-react';
 import { TimeseriesResponse } from '@/types/api';
 import { format } from 'date-fns';
+import { getChartColors, getChartAxisColors } from '@/lib/chartColors';
 
 const MAX_DATA_POINTS = 2000;
 
@@ -29,10 +30,8 @@ function formatYAxisValue(value: number): string {
   return value.toFixed(1);
 }
 
-const CHART_COLORS = [
-  '#5CE5A0', '#56CDE7', '#F6AD55', '#E53E3E',
-  '#4D65FF', '#319795', '#D53F8C', '#00B5D8',
-];
+// Theme-aware chart colors — read from CSS vars on mount
+const FALLBACK_COLORS = ['#5CE5A0', '#56CDE7', '#F6AD55', '#E53E3E', '#4D65FF', '#319795', '#D53F8C', '#00B5D8'];
 
 function formatTooltipLabel(label: string): string {
   if (!label) return '';
@@ -62,6 +61,16 @@ interface TimeseriesChartProps {
 }
 
 export default function TimeseriesChart({ data, disableAnimation = false, aggregateMode }: TimeseriesChartProps) {
+  const [CHART_COLORS, setColors] = useState(FALLBACK_COLORS);
+  const [axisColors, setAxisColors] = useState({ grid: '#2C2E39', axis: '#2C2E39', tick: '#6B7280' });
+  useEffect(() => {
+    setColors(getChartColors());
+    setAxisColors(getChartAxisColors());
+    // Re-read when theme changes
+    const observer = new MutationObserver(() => { setColors(getChartColors()); setAxisColors(getChartAxisColors()); });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+    return () => observer.disconnect();
+  }, []);
   const { chartData, isSampled, originalCount } = useMemo(() => {
     const tags = Object.keys(data.result);
     if (tags.length === 0) return { chartData: [], isSampled: false, originalCount: 0 };
@@ -122,19 +131,19 @@ export default function TimeseriesChart({ data, disableAnimation = false, aggreg
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 16, right: 24, left: 8, bottom: 16 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke={axisColors.grid} vertical={false} />
             <XAxis
               dataKey="timestamp"
-              tick={{ fontSize: 12, fill: '#4A5568' }}
-              axisLine={{ stroke: '#E2E8F0' }}
-              tickLine={{ stroke: '#E2E8F0' }}
+              tick={{ fontSize: 12, fill: axisColors.tick }}
+              axisLine={{ stroke: axisColors.axis }}
+              tickLine={{ stroke: axisColors.axis }}
               interval="preserveStartEnd"
               tickFormatter={formatXTick}
             />
             <YAxis
-              tick={{ fontSize: 12, fill: '#4A5568' }}
-              axisLine={{ stroke: '#E2E8F0' }}
-              tickLine={{ stroke: '#E2E8F0' }}
+              tick={{ fontSize: 12, fill: axisColors.tick }}
+              axisLine={{ stroke: axisColors.axis }}
+              tickLine={{ stroke: axisColors.axis }}
               tickFormatter={(v) => formatYAxisValue(Number(v))}
             />
             <Tooltip content={({ active, payload, label }) => (
