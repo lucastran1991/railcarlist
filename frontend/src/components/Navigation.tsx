@@ -97,7 +97,7 @@ export default function Navigation() {
   return (
     <>
       <nav className={cn(
-        'py-1.5 z-30 pointer-events-auto sticky top-0 topbar-surface border-b border-border/50',
+        'py-1.5 z-30 pointer-events-auto fixed top-0 left-0 right-0 topbar-surface border-b border-border/50',
       )}>
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">

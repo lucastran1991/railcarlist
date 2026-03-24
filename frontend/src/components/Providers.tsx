@@ -22,7 +22,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             ? ''
             : isHome
               ? 'bg-transparent min-h-screen pointer-events-none'
-              : 'min-h-[calc(100vh-48px)] pointer-events-auto'
+              : 'min-h-[calc(100vh-48px)] pt-[48px] pointer-events-auto'
         }`}
       >
         {children}
