@@ -15,6 +15,21 @@ function getDefaultApiBaseUrl(): string {
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || getDefaultApiBaseUrl();
 
+/**
+ * Fetch wrapper that auto-injects X-Terminal-Id header from terminal store.
+ * Use this for all API calls that should be terminal-scoped.
+ */
+export function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  let terminalId = 'savannah';
+  if (typeof window !== 'undefined') {
+    // Read from localStorage directly to avoid importing store (circular deps)
+    terminalId = localStorage.getItem('vopak_active_terminal') || 'savannah';
+  }
+  const headers = new Headers(options?.headers);
+  headers.set('X-Terminal-Id', terminalId);
+  return fetch(url, { ...options, headers });
+}
+
 export const API_ENDPOINTS = {
   health: '/health',
   config: '/api/config',

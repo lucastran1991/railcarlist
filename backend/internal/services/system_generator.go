@@ -22,6 +22,7 @@ type GenerateRequest struct {
 	StartDate     string `json:"startDate"`     // "2024-01-01", default if empty
 	EndDate       string `json:"endDate"`       // "2026-03-22", default now
 	ClearExisting bool   `json:"clearExisting"` // wipe tables first
+	Seed          int64  `json:"seed"`          // random seed for deterministic generation (0 = use 42)
 }
 
 type ProgressEvent struct {
@@ -117,7 +118,11 @@ func (s *SystemGeneratorService) Generate(req GenerateRequest, onProgress func(P
 		}
 	}
 
-	rng := rand.New(rand.NewSource(42)) // deterministic for reproducibility
+	seed := req.Seed
+	if seed == 0 {
+		seed = 42
+	}
+	rng := rand.New(rand.NewSource(seed)) // deterministic for reproducibility
 
 	// Clear existing if requested
 	if req.ClearExisting {

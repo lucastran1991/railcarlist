@@ -27,7 +27,7 @@ import {
   Power, Lightbulb, Cog, Radio, BarChart3,
   Anvil, Waves, Filter, CircleDot, Truck, CloudOff,
 } from 'lucide-react';
-import { API_BASE_URL } from '@/lib/config';
+import { API_BASE_URL, apiFetch } from '@/lib/config';
 import '@xyflow/react/dist/style.css';
 
 // ============================================================
@@ -390,7 +390,7 @@ function PipelineDAGInner() {
   // Fetch DAG from backend API
   useEffect(() => {
     const view = detailed ? 'detailed' : 'overview';
-    fetch(`${API_BASE_URL}/api/pipeline/dag?view=${view}`)
+    apiFetch(`${API_BASE_URL}/api/pipeline/dag?view=${view}`)
       .then(r => r.json())
       .then(data => setDagData({ nodes: data.nodes ?? [], edges: data.edges ?? [] }))
       .catch(() => setDagData({ nodes: [], edges: [] }));

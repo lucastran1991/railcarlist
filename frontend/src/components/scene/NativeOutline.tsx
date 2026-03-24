@@ -43,6 +43,11 @@ export default function NativeOutline() {
     return { composer: comp, outlinePassSelected: outlineSelected, outlinePassHovered: outlineHovered };
   }, [gl, scene, camera]);
 
+  // Reset warmedUp when modelLoaded goes false (terminal switch)
+  useEffect(() => {
+    if (!modelLoaded) setWarmedUp(false);
+  }, [modelLoaded]);
+
   // When model loaded: warm up shaders then signal ready
   useEffect(() => {
     if (!modelLoaded || warmedUp) return;

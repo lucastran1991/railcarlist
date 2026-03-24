@@ -1,4 +1,4 @@
-import { API_BASE_URL, API_ENDPOINTS } from './config';
+import { API_BASE_URL, API_ENDPOINTS, apiFetch } from './config';
 
 // --- OSM ID → Tank ID mapping ---
 // Maps 3D scene object names (OSM building IDs) to our tank database IDs.
@@ -115,7 +115,7 @@ let tankLevelsCache: TankLevelData[] | null = null;
 
 export async function fetchTankLevels(): Promise<TankLevelData[]> {
   if (tankLevelsCache) return tankLevelsCache;
-  const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.tank}/levels`);
+  const res = await apiFetch(`${API_BASE_URL}${API_ENDPOINTS.tank}/levels`);
   if (!res.ok) throw new Error(`Failed to fetch tank levels: ${res.status}`);
   const data = await res.json();
   tankLevelsCache = (Array.isArray(data) ? data : data.data ?? []) as TankLevelData[];

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { ChevronDown, LogOut, Zap, Activity, Droplets, Gauge, Flame, Menu, X, Bell, AlertTriangle, Info, CheckCircle, Clock, Sparkles, GitBranch } from 'lucide-react';
 import { getUser, logout } from '@/lib/auth';
-import { API_BASE_URL } from '@/lib/config';
+import { API_BASE_URL, apiFetch } from '@/lib/config';
 import ThemeToggle from './ThemeToggle';
 import StyleToggle from './StyleToggle';
 
@@ -59,7 +59,7 @@ export default function Navigation() {
 
   // Fetch alerts from API
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/alerts?limit=5`)
+    apiFetch(`${API_BASE_URL}/api/alerts?limit=5`)
       .then(r => r.json())
       .then(data => setAlerts(Array.isArray(data?.data) ? data.data : []))
       .catch(() => {});

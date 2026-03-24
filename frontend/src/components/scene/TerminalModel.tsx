@@ -8,6 +8,7 @@ import type { ClickedObject } from '@/lib/three/types';
 import { osmToTankId, fetchTankLevels, type TankLevelData, type TankStatus, TANK_STATUS_CONFIG } from '@/lib/tankData';
 import TankParticles from './TankParticles';
 import { useSceneStore } from '@/lib/sceneStore';
+import { useTerminalStore } from '@/lib/terminalStore';
 
 // PBR materials — lazy singletons for SSR safety
 let _tankMat: THREE.MeshStandardMaterial | null = null;
@@ -128,7 +129,10 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
   const setTankLabelPositions = useSceneStore(s => s.setTankLabelPositions);
   const [hoveredName, setHoveredName] = useState<string | null>(null);
   useCursor(!!hoveredName, 'pointer', 'default');
-  const { scene } = useGLTF('/models/terminal.glb');
+
+  // Load GLB dynamically based on active terminal
+  const modelPath = useTerminalStore(s => s.activeTerminal.modelPath);
+  const { scene } = useGLTF(modelPath);
 
   // Signal that GLB model is loaded
   useEffect(() => {
@@ -409,4 +413,7 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
   );
 }
 
-useGLTF.preload('/models/terminal.glb');
+// Preload all terminal GLBs for fast switching
+useGLTF.preload('/models/savannah.glb');
+useGLTF.preload('/models/los-angeles.glb');
+useGLTF.preload('/models/tarragona.glb');

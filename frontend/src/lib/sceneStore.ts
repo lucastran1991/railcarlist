@@ -32,6 +32,9 @@ interface SceneState {
   setModelLoaded: (loaded: boolean) => void;
   sceneReady: boolean;
   setSceneReady: (ready: boolean) => void;
+
+  // Reset everything on terminal switch
+  resetScene: () => void;
 }
 
 export const useSceneStore = create<SceneState>((set) => ({
@@ -58,4 +61,14 @@ export const useSceneStore = create<SceneState>((set) => ({
   setModelLoaded: (loaded) => set({ modelLoaded: loaded }),
   sceneReady: false,
   setSceneReady: (ready) => set({ sceneReady: ready }),
+
+  resetScene: () => set({
+    selectedObj: null,
+    hoveredMeshUuid: null,
+    hoveredObjName: null,
+    tankLabelPositions: new Map(),
+    modelLoaded: false,
+    sceneReady: false,
+    raycastInfo: null,
+  }),
 }));

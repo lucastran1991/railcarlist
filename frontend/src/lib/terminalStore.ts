@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { useSceneStore } from '@/lib/sceneStore';
+import { invalidateTankCache } from '@/lib/tankData';
 
 export interface Terminal {
   id: string;
@@ -19,53 +21,31 @@ const TERMINALS: Terminal[] = [
     location: 'Georgia, USA',
     country: 'US',
     flag: '🇺🇸',
-    modelPath: '/models/terminal.glb',
+    modelPath: '/models/savannah.glb',
     tankCount: 59,
     capacity: '2.1M bbl',
     status: 'online',
   },
   {
-    id: 'rotterdam',
-    name: 'Europoort',
-    location: 'Rotterdam, Netherlands',
-    country: 'NL',
-    flag: '🇳🇱',
-    modelPath: '/models/terminal.glb',
-    tankCount: 84,
-    capacity: '3.8M bbl',
-    status: 'online',
-  },
-  {
-    id: 'singapore',
-    name: 'Banyan',
-    location: 'Jurong Island, Singapore',
-    country: 'SG',
-    flag: '🇸🇬',
-    modelPath: '/models/terminal.glb',
-    tankCount: 72,
-    capacity: '2.9M bbl',
-    status: 'online',
-  },
-  {
-    id: 'fujairah',
-    name: 'Horizon',
-    location: 'Fujairah, UAE',
-    country: 'AE',
-    flag: '🇦🇪',
-    modelPath: '/models/terminal.glb',
-    tankCount: 46,
-    capacity: '1.6M bbl',
-    status: 'maintenance',
-  },
-  {
-    id: 'houston',
-    name: 'Deer Park',
-    location: 'Houston, TX, USA',
+    id: 'los-angeles',
+    name: 'Los Angeles',
+    location: 'California, USA',
     country: 'US',
     flag: '🇺🇸',
-    modelPath: '/models/terminal.glb',
-    tankCount: 63,
-    capacity: '2.4M bbl',
+    modelPath: '/models/los-angeles.glb',
+    tankCount: 42,
+    capacity: '1.8M bbl',
+    status: 'online',
+  },
+  {
+    id: 'tarragona',
+    name: 'Terquimsa Tarragona',
+    location: 'Tarragona, Spain',
+    country: 'ES',
+    flag: '🇪🇸',
+    modelPath: '/models/tarragona.glb',
+    tankCount: 36,
+    capacity: '1.2M bbl',
     status: 'online',
   },
 ];
@@ -90,6 +70,9 @@ export const useTerminalStore = create<TerminalState>((set) => {
         if (typeof window !== 'undefined') {
           localStorage.setItem(STORAGE_KEY, id);
         }
+        // Reset 3D scene state + data caches before switching
+        useSceneStore.getState().resetScene();
+        invalidateTankCache();
         set({ activeTerminalId: id, activeTerminal: terminal });
       }
     },

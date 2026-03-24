@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import PipelineDAG from '@/components/PipelineDAG';
 import { GitBranch, Zap, Flame, Droplets, Gauge, Activity, TrendingUp, TrendingDown, Minus, ArrowRight } from 'lucide-react';
-import { API_BASE_URL } from '@/lib/config';
+import { API_BASE_URL, apiFetch } from '@/lib/config';
 
 const fmt = (v: number | undefined, d = 0) => v != null ? v.toLocaleString(undefined, { maximumFractionDigits: d }) : '—';
 const fmtF = (v: number | undefined, d = 1) => v != null ? v.toFixed(d) : '—';
@@ -51,11 +51,11 @@ export default function PipelinePage() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API_BASE_URL}/api/electricity/kpis`).then(r => r.json()).catch(() => ({})),
-      fetch(`${API_BASE_URL}/api/substation/kpis`).then(r => r.json()).catch(() => ({})),
-      fetch(`${API_BASE_URL}/api/boiler/kpis`).then(r => r.json()).catch(() => ({})),
-      fetch(`${API_BASE_URL}/api/steam/kpis`).then(r => r.json()).catch(() => ({})),
-      fetch(`${API_BASE_URL}/api/tank/kpis`).then(r => r.json()).catch(() => ({})),
+      apiFetch(`${API_BASE_URL}/api/electricity/kpis`).then(r => r.json()).catch(() => ({})),
+      apiFetch(`${API_BASE_URL}/api/substation/kpis`).then(r => r.json()).catch(() => ({})),
+      apiFetch(`${API_BASE_URL}/api/boiler/kpis`).then(r => r.json()).catch(() => ({})),
+      apiFetch(`${API_BASE_URL}/api/steam/kpis`).then(r => r.json()).catch(() => ({})),
+      apiFetch(`${API_BASE_URL}/api/tank/kpis`).then(r => r.json()).catch(() => ({})),
     ]).then(([elec, sub, boil, steam, tank]) => {
       setKpis({ electricity: elec, substation: sub, boiler: boil, steam: steam, tank: tank });
     });

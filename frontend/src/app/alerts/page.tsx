@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
-import { API_BASE_URL } from '@/lib/config';
+import { API_BASE_URL, apiFetch } from '@/lib/config';
 import { AlertTriangle, Info, CheckCircle, Bell, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 
 interface Alert {
@@ -83,7 +83,7 @@ export default function AlertsPage() {
   const fetchAlerts = useCallback(async (p: number) => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/alerts?page=${p}&limit=${LIMIT}`);
+      const res = await apiFetch(`${API_BASE_URL}/api/alerts?page=${p}&limit=${LIMIT}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: PaginatedResponse = await res.json();
       setAlerts(data.data ?? []);
@@ -97,7 +97,7 @@ export default function AlertsPage() {
 
   const fetchKPIs = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/alerts/kpis`);
+      const res = await apiFetch(`${API_BASE_URL}/api/alerts/kpis`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: AlertKPIs = await res.json();
       setKpis(data);
