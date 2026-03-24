@@ -576,64 +576,69 @@ func (s *SystemGeneratorService) clearAllTables() {
 func (s *SystemGeneratorService) updateAllKPIs(now time.Time, rng *rand.Rand) {
 	sf := seasonFactor(now, "electricity")
 	hf := hourFactor(now.Hour())
+	// Per-terminal variation: rng seeded differently per terminal
+	v := func(base, pct float64) float64 { return noise(rng, base, pct) }
 
 	s.db.UpsertElectricityKPIs(models.ElectricityKPIs{
-		TotalConsumption: math.Round(42850 * sf),
-		RealTimeDemand:   math.Round(3200 * sf * hf),
-		PeakDemand:       math.Round(3950 * sf),
-		PowerFactor:      0.94,
-		EnergyCost:       math.Round(12450 * sf),
-		CarbonEmissions:  math.Round(18.6*sf*10) / 10,
-		GridAvailability: 99.7,
-		TransformerLoad:  math.Round(72 * hf),
+		TotalConsumption: math.Round(v(42850, 0.15) * sf),
+		RealTimeDemand:   math.Round(v(3200, 0.12) * sf * hf),
+		PeakDemand:       math.Round(v(3950, 0.10) * sf),
+		PowerFactor:      math.Round(clamp(v(0.94, 0.03), 0.85, 0.99)*100) / 100,
+		EnergyCost:       math.Round(v(12450, 0.15) * sf),
+		CarbonEmissions:  math.Round(v(18.6, 0.12)*sf*10) / 10,
+		GridAvailability: math.Round(clamp(v(99.7, 0.003), 98.5, 99.99)*10) / 10,
+		TransformerLoad:  math.Round(clamp(v(72, 0.15)*hf, 20, 98)),
 	})
 
 	ssf := seasonFactor(now, "steam")
+	steamProd := math.Round(v(55.5, 0.12)*ssf*10) / 10
 	s.db.UpsertSteamKPIs(models.SteamKPIs{
-		TotalProduction:    math.Round(55.5*ssf*10) / 10,
-		TotalDemand:        math.Round(52.8*ssf*10) / 10,
-		HeaderPressure:     40.2,
-		SteamTemperature:   285,
-		SystemEfficiency:   87.5,
-		CondensateRecovery: 83,
-		MakeupWaterFlow:    4.2,
-		FuelConsumption:    math.Round(680 * ssf),
+		TotalProduction:    steamProd,
+		TotalDemand:        math.Round(v(52.8, 0.10)*ssf*10) / 10,
+		HeaderPressure:     math.Round(clamp(v(40.2, 0.05), 36, 44)*10) / 10,
+		SteamTemperature:   math.Round(v(285, 0.04)),
+		SystemEfficiency:   math.Round(clamp(v(87.5, 0.04), 82, 95)*10) / 10,
+		CondensateRecovery: math.Round(clamp(v(83, 0.06), 70, 95)),
+		MakeupWaterFlow:    math.Round(v(4.2, 0.15)*10) / 10,
+		FuelConsumption:    math.Round(v(680, 0.12) * ssf),
 	})
 
 	s.db.UpsertBoilerKPIs(models.BoilerKPIs{
-		BoilersOnline:    3,
+		BoilersOnline:    2 + rng.Intn(3), // 2-4
 		BoilersTotal:     4,
-		TotalSteamOutput: math.Round(55.5*ssf*10) / 10,
-		FleetEfficiency:  87.5,
-		AvgStackTemp:     185,
-		TotalFuelRate:    math.Round(680 * ssf),
-		AvgO2:            3.4,
-		CoEmissions:      85,
-		NoxEmissions:     120,
+		TotalSteamOutput: steamProd,
+		FleetEfficiency:  math.Round(clamp(v(87.5, 0.04), 80, 95)*10) / 10,
+		AvgStackTemp:     math.Round(v(185, 0.08)),
+		TotalFuelRate:    math.Round(v(680, 0.12) * ssf),
+		AvgO2:            math.Round(clamp(v(3.4, 0.10), 2.0, 5.0)*10) / 10,
+		CoEmissions:      math.Round(v(85, 0.20)),
+		NoxEmissions:     math.Round(v(120, 0.15)),
 	})
 
+	tankTotal := 59
+	tankOp := tankTotal - 2 - rng.Intn(4) // 53-57 operating
 	s.db.UpsertTankKPIs(models.TankKPIs{
-		TotalInventory:    1450000,
-		AvailableCapacity: 35,
-		TanksInOperation:  55,
-		TanksTotal:        59,
-		CurrentThroughput: 8500,
-		AvgTemperature:    38,
-		ActiveAlarms:      3,
-		DailyReceipts:     52000,
-		DailyDispatches:   46000,
+		TotalInventory:    math.Round(v(1450000, 0.15)),
+		AvailableCapacity: math.Round(clamp(v(35, 0.20), 15, 55)),
+		TanksInOperation:  tankOp,
+		TanksTotal:        tankTotal,
+		CurrentThroughput: math.Round(v(8500, 0.18)),
+		AvgTemperature:    math.Round(v(38, 0.10)),
+		ActiveAlarms:      rng.Intn(6),
+		DailyReceipts:     math.Round(v(52000, 0.15)),
+		DailyDispatches:   math.Round(v(46000, 0.12)),
 	})
 
 	s.db.UpsertSubStationKPIs(models.SubStationKPIs{
-		IncomingVoltage: 10.95,
-		TotalLoad:       8.2,
-		TransformerTemp: 62,
-		Frequency:       50.02,
-		THD:             4.8,
-		BreakersClosed:  12,
+		IncomingVoltage: math.Round(clamp(v(10.95, 0.02), 10.5, 11.4)*100) / 100,
+		TotalLoad:       math.Round(v(8.2, 0.12)*10) / 10,
+		TransformerTemp: math.Round(v(62, 0.10)),
+		Frequency:       math.Round(clamp(v(50.02, 0.002), 49.9, 50.1)*100) / 100,
+		THD:             math.Round(clamp(v(4.8, 0.15), 2.0, 8.0)*10) / 10,
+		BreakersClosed:  12 + rng.Intn(3) - 1, // 11-14
 		BreakersTotal:   14,
-		FaultEvents24h:  2,
-		BusbarBalance:   5.2,
+		FaultEvents24h:  rng.Intn(5),
+		BusbarBalance:   math.Round(clamp(v(5.2, 0.20), 2.0, 8.0)*10) / 10,
 	})
 }
 
