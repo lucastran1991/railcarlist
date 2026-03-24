@@ -61,7 +61,7 @@ export default function Navigation() {
     { href: '/boiler', label: 'Boiler', icon: Flame },
     { href: '/pipeline', label: 'Pipeline', icon: GitBranch },
     { href: '/alerts', label: 'Alerts', icon: Bell },
-    { href: '/chat', label: 'Assistant', icon: Sparkles },
+    { href: '/chat', label: 'AI', icon: Sparkles },
   ];
 
   const userMenu = (
@@ -108,8 +108,8 @@ export default function Navigation() {
               <span className="text-lg font-semibold gradient-text">Vopak Terminal</span>
             </Link>
 
-            {/* Desktop nav */}
-            <div className="hidden md:flex items-center gap-1">
+            {/* Desktop nav — icon-only on md, labels on lg+ */}
+            <div className="hidden md:flex items-center gap-0.5">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname.startsWith(item.href);
@@ -117,15 +117,16 @@ export default function Navigation() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    title={item.label}
                     className={cn(
-                      'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm transition-all duration-200',
+                      'flex items-center gap-1 px-2 lg:px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200',
                       isActive
                         ? 'font-bold text-foreground bg-gradient-to-r from-[#5CE5A0]/10 to-[#56CDE7]/10 border border-[#5CE5A0]/30 shadow-[0_0_12px_rgba(92,229,160,0.15)]'
                         : 'font-normal text-foreground/70 hover:text-[#5DDFFF] hover:bg-muted/50 border border-transparent'
                     )}
                   >
                     <Icon size={14} />
-                    {item.label}
+                    <span className="hidden lg:inline">{item.label}</span>
                   </Link>
                 );
               })}

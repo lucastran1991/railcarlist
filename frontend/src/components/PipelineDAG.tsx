@@ -49,6 +49,7 @@ interface DomainNodeData {
   trendValue: string;
   href?: string;
   isSubNode?: boolean;
+  onNodeClick?: (data: DomainNodeData) => void;
 }
 
 // ============================================================
@@ -132,8 +133,8 @@ function DomainNode({ data }: { data: DomainNodeData }) {
   return (
     <div className="relative" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <div
-        className={`theme-card rounded-xl border-2 ${STATUS_BORDER[data.status]} px-3 py-2.5 ${minW} transition-all duration-200 hover:scale-[1.03] hover:shadow-xl ${data.href ? 'cursor-pointer' : ''}`}
-        onClick={() => data.href && (window.location.href = data.href)}
+        className={`theme-card rounded-xl border-2 ${STATUS_BORDER[data.status]} px-3 py-2.5 ${minW} transition-all duration-200 hover:scale-[1.03] hover:shadow-xl cursor-pointer`}
+        onClick={() => data.onNodeClick?.(data)}
       >
         <Handle type="target" position={Position.Left} className="!w-2.5 !h-2.5 !bg-muted-foreground/40 !border-2 !border-background" />
 
@@ -494,9 +495,73 @@ function buildDetailedEdges(k: Record<string, any>) {
 // Main Component
 // ============================================================
 
+// ============================================================
+// Node Detail Popup
+// ============================================================
+
+function NodeDetailPopup({ data, onClose }: { data: DomainNodeData; onClose: () => void }) {
+  return (
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-[2px]" onClick={onClose}>
+      <div
+        className="theme-card rounded-2xl border border-border shadow-2xl w-[340px] max-h-[80%] overflow-y-auto animate-[scaleIn_0.15s_ease-out]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className={`px-5 py-4 border-b border-border flex items-center gap-3`}>
+          <div className={`w-2.5 h-2.5 rounded-full ${STATUS_DOT[data.status]}`} />
+          {ICONS[data.icon]}
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold text-foreground">{data.label}</h3>
+            <p className="text-[10px] text-muted-foreground capitalize">{data.status} status</p>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-muted text-muted-foreground text-lg">×</button>
+        </div>
+
+        {/* Main KPI */}
+        <div className="px-5 py-3 border-b border-border/50">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-foreground">{data.kpiValue}</span>
+            <span className="text-xs text-muted-foreground">{data.unit}</span>
+            <div className="flex items-center gap-0.5 ml-auto">
+              {TREND_ICON[data.trend]}
+              <span className={`text-xs font-medium ${data.trend === 'up' ? 'text-[#5CE5A0]' : data.trend === 'down' ? 'text-[#E53E3E]' : 'text-muted-foreground'}`}>
+                {data.trendValue}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* All KPIs */}
+        <div className="px-5 py-3 space-y-2">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Detailed Metrics</p>
+          {data.kpis.map((kpi, i) => (
+            <div key={i} className="flex justify-between items-center py-1 border-b border-border/20 last:border-0">
+              <span className="text-xs text-muted-foreground">{kpi.label}</span>
+              <span className="text-xs font-mono font-medium text-foreground">{kpi.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Navigate button */}
+        {data.href && (
+          <div className="px-5 py-3 border-t border-border">
+            <button
+              onClick={() => window.location.href = data.href!}
+              className="w-full py-2 rounded-lg text-xs font-medium text-background bg-gradient-to-r from-[#5CE5A0] to-[#56CDE7] hover:opacity-90 transition-opacity"
+            >
+              Open {data.label} Dashboard →
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function PipelineDAG() {
   const [kpis, setKpis] = useState<Record<string, any>>({});
   const [detailed, setDetailed] = useState(false);
+  const [popupData, setPopupData] = useState<DomainNodeData | null>(null);
   const nodeTypes = useMemo(() => ({ domain: DomainNode }), []);
   const edgeTypes = useMemo(() => ({ flow: FlowEdge }), []);
 
@@ -512,7 +577,14 @@ export default function PipelineDAG() {
     });
   }, []);
 
-  const rawNodes = useMemo(() => detailed ? buildDetailedNodes(kpis) : buildOverviewNodes(kpis), [kpis, detailed]);
+  const onNodeClick = useMemo(() => (data: DomainNodeData) => setPopupData(data), []);
+
+  // Inject onNodeClick into all nodes
+  const rawNodes = useMemo(() => {
+    const nodes = detailed ? buildDetailedNodes(kpis) : buildOverviewNodes(kpis);
+    return nodes.map(n => ({ ...n, data: { ...n.data, onNodeClick } }));
+  }, [kpis, detailed, onNodeClick]);
+
   const rawEdges = useMemo(() => detailed ? buildDetailedEdges(kpis) : buildOverviewEdges(kpis), [kpis, detailed]);
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
     () => layoutDAG(rawNodes, rawEdges, detailed ? 190 : 210, detailed ? 105 : 115),
@@ -522,7 +594,6 @@ export default function PipelineDAG() {
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
 
-  // Sync layout when view mode or data changes
   useEffect(() => {
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
@@ -564,6 +635,9 @@ export default function PipelineDAG() {
           className="!bg-card !border-border !shadow-lg [&>button]:!bg-card [&>button]:!border-border [&>button]:!fill-foreground"
         />
       </ReactFlow>
+
+      {/* Node detail popup */}
+      {popupData && <NodeDetailPopup data={popupData} onClose={() => setPopupData(null)} />}
     </div>
   );
 }
