@@ -77,7 +77,7 @@ export default function Navigation() {
       </button>
 
       {menuOpen && (
-        <div className="absolute right-0 mt-2 w-56 dropdown-surface border border-border/50 rounded-xl shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-3 w-56 dropdown-surface border border-border/50 rounded-xl shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="px-4 py-3 border-b border-border">
             <p className="text-sm font-semibold text-foreground">{user?.name ?? 'Admin'}</p>
             <p className="text-xs text-muted-foreground">{user?.role ?? 'Administrator'}</p>
@@ -97,7 +97,7 @@ export default function Navigation() {
   return (
     <>
       <nav className={cn(
-        'py-3 z-30 pointer-events-auto sticky top-0 topbar-surface border-b border-border/50',
+        'py-1.5 z-30 pointer-events-auto sticky top-0 topbar-surface border-b border-border/50',
       )}>
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
@@ -144,7 +144,7 @@ export default function Navigation() {
                   )}
                 </button>
                 {alertOpen && (
-                  <div className="absolute right-0 mt-2 w-[360px] max-h-[420px] rounded-xl border border-border/50 dropdown-surface shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute right-0 mt-3 w-[360px] max-h-[420px] rounded-xl border border-border/50 dropdown-surface shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-foreground">Alerts</h3>
                       <span className="text-[10px] text-muted-foreground">{unreadCount} unread</span>
@@ -201,7 +201,7 @@ export default function Navigation() {
 
       {/* Mobile nav drawer */}
       {mobileNavOpen && (
-        <div className="md:hidden fixed inset-x-0 top-[57px] z-30 dropdown-surface border-b border-border/50 pointer-events-auto animate-[fadeIn_0.15s_ease-out]">
+        <div className="md:hidden fixed inset-x-0 top-[48px] z-30 dropdown-surface border-b border-border/50 pointer-events-auto animate-[fadeIn_0.15s_ease-out]">
           <div className="px-4 py-3 flex flex-col gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
