@@ -80,6 +80,8 @@ func main() {
 	subStationHandler := handlers.NewSubStationHandler(subStationSvc)
 	systemHandler := handlers.NewSystemHandler(systemGenSvc)
 	alertHandler := handlers.NewAlertHandler(alertSvc)
+	pipelineSvc := services.NewPipelineService(db)
+	pipelineHandler := handlers.NewPipelineHandler(pipelineSvc)
 
 	// Setup router
 	router := mux.NewRouter()
@@ -153,6 +155,8 @@ func main() {
 	// Alert API
 	api.HandleFunc("/alerts", alertHandler.HandleList).Methods("GET")
 	api.HandleFunc("/alerts/kpis", alertHandler.HandleGetKPIs).Methods("GET")
+	// Pipeline DAG API
+	api.HandleFunc("/pipeline/dag", pipelineHandler.HandleGetDAG).Methods("GET")
 	// System data generation
 	api.HandleFunc("/system/generate", systemHandler.HandleGenerate).Methods("POST")
 	// Handle timeseriesdata with flexible path matching
