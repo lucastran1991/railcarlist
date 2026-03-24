@@ -9,7 +9,7 @@ import (
 	"railcarlist/internal/services"
 )
 
-// MultiTenantHandler wraps all domain handlers, resolving the correct DB per request
+// MultiTenantHandler resolves the correct DB per request via X-Terminal-Id header
 type MultiTenantHandler struct {
 	mgr *database.DBManager
 }
@@ -23,79 +23,46 @@ func (h *MultiTenantHandler) resolveDB(r *http.Request) *database.DB {
 	return h.mgr.Get(tid)
 }
 
-func jsonResponse(w http.ResponseWriter, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+// Electricity — wrap any ElectricityHandler method
+func (h *MultiTenantHandler) Electricity(method func(*ElectricityHandler, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		method(NewElectricityHandler(services.NewElectricityService(h.resolveDB(r))), w, r)
+	}
 }
 
-func jsonError(w http.ResponseWriter, err error, code int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+// SubStation — wrap any SubStationHandler method
+func (h *MultiTenantHandler) SubStation(method func(*SubStationHandler, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		method(NewSubStationHandler(services.NewSubStationService(h.resolveDB(r))), w, r)
+	}
 }
 
-// Electricity KPIs
-func (h *MultiTenantHandler) ElectricityKPIs(w http.ResponseWriter, r *http.Request) {
-	db := h.resolveDB(r)
-	svc := services.NewElectricityService(db)
-	handler := NewElectricityHandler(svc)
-	handler.HandleGetKPIs(w, r)
+// Boiler — wrap any BoilerHandler method
+func (h *MultiTenantHandler) Boiler(method func(*BoilerHandler, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		method(NewBoilerHandler(services.NewBoilerService(h.resolveDB(r))), w, r)
+	}
 }
 
-// SubStation KPIs
-func (h *MultiTenantHandler) SubStationKPIs(w http.ResponseWriter, r *http.Request) {
-	db := h.resolveDB(r)
-	svc := services.NewSubStationService(db)
-	handler := NewSubStationHandler(svc)
-	handler.HandleGetKPIs(w, r)
+// Steam — wrap any SteamHandler method
+func (h *MultiTenantHandler) Steam(method func(*SteamHandler, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		method(NewSteamHandler(services.NewSteamService(h.resolveDB(r))), w, r)
+	}
 }
 
-// Boiler KPIs
-func (h *MultiTenantHandler) BoilerKPIs(w http.ResponseWriter, r *http.Request) {
-	db := h.resolveDB(r)
-	svc := services.NewBoilerService(db)
-	handler := NewBoilerHandler(svc)
-	handler.HandleGetKPIs(w, r)
+// Tank — wrap any TankHandler method
+func (h *MultiTenantHandler) Tank(method func(*TankHandler, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		method(NewTankHandler(services.NewTankService(h.resolveDB(r))), w, r)
+	}
 }
 
-// Steam KPIs
-func (h *MultiTenantHandler) SteamKPIs(w http.ResponseWriter, r *http.Request) {
-	db := h.resolveDB(r)
-	svc := services.NewSteamService(db)
-	handler := NewSteamHandler(svc)
-	handler.HandleGetKPIs(w, r)
-}
-
-// Tank KPIs
-func (h *MultiTenantHandler) TankKPIs(w http.ResponseWriter, r *http.Request) {
-	db := h.resolveDB(r)
-	svc := services.NewTankService(db)
-	handler := NewTankHandler(svc)
-	handler.HandleGetKPIs(w, r)
-}
-
-// Tank Levels
-func (h *MultiTenantHandler) TankLevels(w http.ResponseWriter, r *http.Request) {
-	db := h.resolveDB(r)
-	svc := services.NewTankService(db)
-	handler := NewTankHandler(svc)
-	handler.HandleGetLevels(w, r)
-}
-
-// Alerts
-func (h *MultiTenantHandler) Alerts(w http.ResponseWriter, r *http.Request) {
-	db := h.resolveDB(r)
-	svc := services.NewAlertService(db)
-	handler := NewAlertHandler(svc)
-	handler.HandleList(w, r)
-}
-
-// Alert KPIs
-func (h *MultiTenantHandler) AlertKPIs(w http.ResponseWriter, r *http.Request) {
-	db := h.resolveDB(r)
-	svc := services.NewAlertService(db)
-	handler := NewAlertHandler(svc)
-	handler.HandleGetKPIs(w, r)
+// Alert — wrap any AlertHandler method
+func (h *MultiTenantHandler) Alert(method func(*AlertHandler, http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		method(NewAlertHandler(services.NewAlertService(h.resolveDB(r))), w, r)
+	}
 }
 
 // Pipeline DAG
@@ -132,14 +99,7 @@ func (h *MultiTenantHandler) GenerateAll(w http.ResponseWriter, r *http.Request)
 
 		writeEvent(services.ProgressEvent{Event: "progress", Message: fmt.Sprintf("=== Generating data for terminal: %s ===", tid)})
 
-		var req services.GenerateRequest
-		if r.Body != nil {
-			json.NewDecoder(r.Body).Decode(&req)
-		}
-		if req.StartDate == "" {
-			req.ClearExisting = true
-		}
-		req.Seed = seeds[tid]
+		req := services.GenerateRequest{ClearExisting: true, Seed: seeds[tid]}
 
 		if err := svc.Generate(req, writeEvent); err != nil {
 			writeEvent(services.ProgressEvent{Event: "error", Message: fmt.Sprintf("terminal %s: %s", tid, err.Error())})

@@ -1,4 +1,4 @@
-import { API_BASE_URL, API_ENDPOINTS } from './config';
+import { API_BASE_URL, API_ENDPOINTS, apiFetch } from './config';
 
 // --- Shared types ---
 
@@ -34,7 +34,7 @@ async function fetchJSON<T>(path: string, params?: QueryParams): Promise<T> {
     if (params.page) url.searchParams.set('page', String(params.page));
     if (params.limit) url.searchParams.set('limit', String(params.limit));
   }
-  const res = await fetch(url.toString());
+  const res = await apiFetch(url.toString());
   if (!res.ok) throw new Error(`API error ${res.status}: ${path}`);
   return res.json();
 }

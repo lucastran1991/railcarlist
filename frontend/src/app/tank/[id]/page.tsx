@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
-import { API_BASE_URL, API_ENDPOINTS } from '@/lib/config';
+import { API_BASE_URL, API_ENDPOINTS, apiFetch } from '@/lib/config';
 import { formatTs, formatTsTooltip, detectGranularity } from '@/lib/formatTimestamp';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
@@ -54,9 +54,9 @@ export default function TankDetailPage() {
     const end = now.toISOString().split('T')[0];
 
     Promise.all([
-      fetch(`${base}/levels`).then(r => r.json()),
-      fetch(`${base}/inventory-trend?start=${start}&end=${end}`).then(r => r.json()),
-      fetch(`${base}/throughput?start=${start}&end=${end}`).then(r => r.json()),
+      apiFetch(`${base}/levels`).then(r => r.json()),
+      apiFetch(`${base}/inventory-trend?start=${start}&end=${end}`).then(r => r.json()),
+      apiFetch(`${base}/throughput?start=${start}&end=${end}`).then(r => r.json()),
     ]).then(([levels, trendResp, throughputResp]) => {
       const allLevels: TankLevel[] = Array.isArray(levels) ? levels : levels.data ?? [];
       setTank(allLevels.find(t => t.tank === tankId) ?? null);

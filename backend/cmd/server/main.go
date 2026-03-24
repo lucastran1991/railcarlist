@@ -41,10 +41,10 @@ func main() {
 
 	log.Printf("Databases initialized for terminals: %v", database.Terminals)
 
-	// Default DB for legacy (non-tenant) endpoints
+	// Default DB for legacy non-domain endpoints
 	db := dbMgr.Default()
 
-	// Legacy services (use default DB)
+	// Legacy services (non-domain, use default DB)
 	loader := services.NewLoader(db)
 	queryService := services.NewQueryService(db)
 	generator := services.NewGenerator(db)
@@ -63,22 +63,16 @@ func main() {
 	tagsHandler := handlers.NewTagsHandler(tagsService)
 	railcarHandler := handlers.NewRailcarHandler(railcarService)
 
-	// Multi-tenant handler (resolves DB per request via X-Terminal-Id header)
+	// Multi-tenant handler
 	mt := handlers.NewMultiTenantHandler(dbMgr)
-
-	// --- Legacy single-tenant handlers for domain detail pages ---
-	// These use default DB; kept for backward compatibility with detail endpoints
-	electricityHandler := handlers.NewElectricityHandler(services.NewElectricityService(db))
-	steamHandler := handlers.NewSteamHandler(services.NewSteamService(db))
-	boilerHandler := handlers.NewBoilerHandler(services.NewBoilerService(db))
-	tankHandler := handlers.NewTankHandler(services.NewTankService(db))
-	subStationHandler := handlers.NewSubStationHandler(services.NewSubStationService(db))
 
 	// Router
 	router := mux.NewRouter()
 	router.HandleFunc("/api/railcars/all", railcarHandler.HandleDeleteAll).Methods("DELETE")
 
 	api := router.PathPrefix("/api").Subrouter()
+
+	// --- Non-domain endpoints (default DB) ---
 	api.HandleFunc("/config", configHandler.Handle).Methods("GET")
 	api.HandleFunc("/load", loadHandler.Handle).Methods("POST")
 	api.HandleFunc("/generate-dummy", generatorHandler.Handle).Methods("POST")
@@ -94,57 +88,69 @@ func main() {
 	api.HandleFunc("/railcars/{id}", railcarHandler.HandleDelete).Methods("DELETE")
 	api.HandleFunc("/railcars", railcarHandler.HandleList).Methods("GET")
 	api.HandleFunc("/railcars", railcarHandler.HandleCreate).Methods("POST")
+	api.PathPrefix("/timeseriesdata/").HandlerFunc(queryHandler.Handle).Methods("GET")
 
-	// === Multi-tenant KPI routes (resolve DB via X-Terminal-Id header) ===
-	api.HandleFunc("/electricity/kpis", mt.ElectricityKPIs).Methods("GET")
-	api.HandleFunc("/substation/kpis", mt.SubStationKPIs).Methods("GET")
-	api.HandleFunc("/boiler/kpis", mt.BoilerKPIs).Methods("GET")
-	api.HandleFunc("/steam/kpis", mt.SteamKPIs).Methods("GET")
-	api.HandleFunc("/tank/kpis", mt.TankKPIs).Methods("GET")
-	api.HandleFunc("/tank/levels", mt.TankLevels).Methods("GET")
-	api.HandleFunc("/alerts", mt.Alerts).Methods("GET")
-	api.HandleFunc("/alerts/kpis", mt.AlertKPIs).Methods("GET")
+	// --- Multi-tenant: ALL domain endpoints resolve DB via X-Terminal-Id ---
+
+	// Electricity
+	api.HandleFunc("/electricity/kpis", mt.Electricity((*handlers.ElectricityHandler).HandleGetKPIs)).Methods("GET")
+	api.HandleFunc("/electricity/load-profiles", mt.Electricity((*handlers.ElectricityHandler).HandleGetLoadProfiles)).Methods("GET")
+	api.HandleFunc("/electricity/weekly-consumption", mt.Electricity((*handlers.ElectricityHandler).HandleGetWeeklyConsumption)).Methods("GET")
+	api.HandleFunc("/electricity/power-factor", mt.Electricity((*handlers.ElectricityHandler).HandleGetPowerFactor)).Methods("GET")
+	api.HandleFunc("/electricity/cost-breakdown", mt.Electricity((*handlers.ElectricityHandler).HandleGetCostBreakdown)).Methods("GET")
+	api.HandleFunc("/electricity/peak-demand", mt.Electricity((*handlers.ElectricityHandler).HandleGetPeakDemand)).Methods("GET")
+	api.HandleFunc("/electricity/phase-balance", mt.Electricity((*handlers.ElectricityHandler).HandleGetPhaseBalance)).Methods("GET")
+	api.HandleFunc("/electricity/ingest", mt.Electricity((*handlers.ElectricityHandler).HandleIngest)).Methods("POST")
+
+	// Steam
+	api.HandleFunc("/steam/kpis", mt.Steam((*handlers.SteamHandler).HandleGetKPIs)).Methods("GET")
+	api.HandleFunc("/steam/balance", mt.Steam((*handlers.SteamHandler).HandleGetBalance)).Methods("GET")
+	api.HandleFunc("/steam/header-pressure", mt.Steam((*handlers.SteamHandler).HandleGetHeaderPressure)).Methods("GET")
+	api.HandleFunc("/steam/distribution", mt.Steam((*handlers.SteamHandler).HandleGetDistribution)).Methods("GET")
+	api.HandleFunc("/steam/condensate", mt.Steam((*handlers.SteamHandler).HandleGetCondensate)).Methods("GET")
+	api.HandleFunc("/steam/fuel-ratio", mt.Steam((*handlers.SteamHandler).HandleGetFuelRatio)).Methods("GET")
+	api.HandleFunc("/steam/loss", mt.Steam((*handlers.SteamHandler).HandleGetLoss)).Methods("GET")
+	api.HandleFunc("/steam/ingest", mt.Steam((*handlers.SteamHandler).HandleIngest)).Methods("POST")
+
+	// Boiler
+	api.HandleFunc("/boiler/kpis", mt.Boiler((*handlers.BoilerHandler).HandleGetKPIs)).Methods("GET")
+	api.HandleFunc("/boiler/readings", mt.Boiler((*handlers.BoilerHandler).HandleGetReadings)).Methods("GET")
+	api.HandleFunc("/boiler/efficiency-trend", mt.Boiler((*handlers.BoilerHandler).HandleGetEfficiencyTrend)).Methods("GET")
+	api.HandleFunc("/boiler/combustion", mt.Boiler((*handlers.BoilerHandler).HandleGetCombustion)).Methods("GET")
+	api.HandleFunc("/boiler/steam-fuel", mt.Boiler((*handlers.BoilerHandler).HandleGetSteamFuel)).Methods("GET")
+	api.HandleFunc("/boiler/emissions", mt.Boiler((*handlers.BoilerHandler).HandleGetEmissions)).Methods("GET")
+	api.HandleFunc("/boiler/stack-temp", mt.Boiler((*handlers.BoilerHandler).HandleGetStackTemp)).Methods("GET")
+	api.HandleFunc("/boiler/ingest", mt.Boiler((*handlers.BoilerHandler).HandleIngest)).Methods("POST")
+
+	// Tank
+	api.HandleFunc("/tank/kpis", mt.Tank((*handlers.TankHandler).HandleGetKPIs)).Methods("GET")
+	api.HandleFunc("/tank/levels", mt.Tank((*handlers.TankHandler).HandleGetLevels)).Methods("GET")
+	api.HandleFunc("/tank/inventory-trend", mt.Tank((*handlers.TankHandler).HandleGetInventoryTrend)).Methods("GET")
+	api.HandleFunc("/tank/throughput", mt.Tank((*handlers.TankHandler).HandleGetThroughput)).Methods("GET")
+	api.HandleFunc("/tank/product-distribution", mt.Tank((*handlers.TankHandler).HandleGetProductDistribution)).Methods("GET")
+	api.HandleFunc("/tank/level-changes", mt.Tank((*handlers.TankHandler).HandleGetLevelChanges)).Methods("GET")
+	api.HandleFunc("/tank/temperatures", mt.Tank((*handlers.TankHandler).HandleGetTemperatures)).Methods("GET")
+	api.HandleFunc("/tank/ingest", mt.Tank((*handlers.TankHandler).HandleIngest)).Methods("POST")
+
+	// SubStation
+	api.HandleFunc("/substation/kpis", mt.SubStation((*handlers.SubStationHandler).HandleGetKPIs)).Methods("GET")
+	api.HandleFunc("/substation/voltage-profile", mt.SubStation((*handlers.SubStationHandler).HandleGetVoltageProfile)).Methods("GET")
+	api.HandleFunc("/substation/transformers", mt.SubStation((*handlers.SubStationHandler).HandleGetTransformers)).Methods("GET")
+	api.HandleFunc("/substation/harmonics", mt.SubStation((*handlers.SubStationHandler).HandleGetHarmonics)).Methods("GET")
+	api.HandleFunc("/substation/transformer-temp", mt.SubStation((*handlers.SubStationHandler).HandleGetTransformerTemp)).Methods("GET")
+	api.HandleFunc("/substation/feeder-distribution", mt.SubStation((*handlers.SubStationHandler).HandleGetFeederDistribution)).Methods("GET")
+	api.HandleFunc("/substation/fault-events", mt.SubStation((*handlers.SubStationHandler).HandleGetFaultEvents)).Methods("GET")
+	api.HandleFunc("/substation/ingest", mt.SubStation((*handlers.SubStationHandler).HandleIngest)).Methods("POST")
+
+	// Alerts
+	api.HandleFunc("/alerts", mt.Alert((*handlers.AlertHandler).HandleList)).Methods("GET")
+	api.HandleFunc("/alerts/kpis", mt.Alert((*handlers.AlertHandler).HandleGetKPIs)).Methods("GET")
+
+	// Pipeline DAG
 	api.HandleFunc("/pipeline/dag", mt.PipelineDAG).Methods("GET")
 
-	// === Multi-tenant data generation (generates all terminals at once) ===
+	// System data generation (all terminals)
 	api.HandleFunc("/system/generate", mt.GenerateAll).Methods("POST")
-
-	// === Legacy detail endpoints (use default DB for now) ===
-	api.HandleFunc("/electricity/load-profiles", electricityHandler.HandleGetLoadProfiles).Methods("GET")
-	api.HandleFunc("/electricity/weekly-consumption", electricityHandler.HandleGetWeeklyConsumption).Methods("GET")
-	api.HandleFunc("/electricity/power-factor", electricityHandler.HandleGetPowerFactor).Methods("GET")
-	api.HandleFunc("/electricity/cost-breakdown", electricityHandler.HandleGetCostBreakdown).Methods("GET")
-	api.HandleFunc("/electricity/peak-demand", electricityHandler.HandleGetPeakDemand).Methods("GET")
-	api.HandleFunc("/electricity/phase-balance", electricityHandler.HandleGetPhaseBalance).Methods("GET")
-	api.HandleFunc("/electricity/ingest", electricityHandler.HandleIngest).Methods("POST")
-	api.HandleFunc("/steam/balance", steamHandler.HandleGetBalance).Methods("GET")
-	api.HandleFunc("/steam/header-pressure", steamHandler.HandleGetHeaderPressure).Methods("GET")
-	api.HandleFunc("/steam/distribution", steamHandler.HandleGetDistribution).Methods("GET")
-	api.HandleFunc("/steam/condensate", steamHandler.HandleGetCondensate).Methods("GET")
-	api.HandleFunc("/steam/fuel-ratio", steamHandler.HandleGetFuelRatio).Methods("GET")
-	api.HandleFunc("/steam/loss", steamHandler.HandleGetLoss).Methods("GET")
-	api.HandleFunc("/steam/ingest", steamHandler.HandleIngest).Methods("POST")
-	api.HandleFunc("/boiler/readings", boilerHandler.HandleGetReadings).Methods("GET")
-	api.HandleFunc("/boiler/efficiency-trend", boilerHandler.HandleGetEfficiencyTrend).Methods("GET")
-	api.HandleFunc("/boiler/combustion", boilerHandler.HandleGetCombustion).Methods("GET")
-	api.HandleFunc("/boiler/steam-fuel", boilerHandler.HandleGetSteamFuel).Methods("GET")
-	api.HandleFunc("/boiler/emissions", boilerHandler.HandleGetEmissions).Methods("GET")
-	api.HandleFunc("/boiler/stack-temp", boilerHandler.HandleGetStackTemp).Methods("GET")
-	api.HandleFunc("/boiler/ingest", boilerHandler.HandleIngest).Methods("POST")
-	api.HandleFunc("/tank/inventory-trend", tankHandler.HandleGetInventoryTrend).Methods("GET")
-	api.HandleFunc("/tank/throughput", tankHandler.HandleGetThroughput).Methods("GET")
-	api.HandleFunc("/tank/product-distribution", tankHandler.HandleGetProductDistribution).Methods("GET")
-	api.HandleFunc("/tank/level-changes", tankHandler.HandleGetLevelChanges).Methods("GET")
-	api.HandleFunc("/tank/temperatures", tankHandler.HandleGetTemperatures).Methods("GET")
-	api.HandleFunc("/tank/ingest", tankHandler.HandleIngest).Methods("POST")
-	api.HandleFunc("/substation/voltage-profile", subStationHandler.HandleGetVoltageProfile).Methods("GET")
-	api.HandleFunc("/substation/transformers", subStationHandler.HandleGetTransformers).Methods("GET")
-	api.HandleFunc("/substation/harmonics", subStationHandler.HandleGetHarmonics).Methods("GET")
-	api.HandleFunc("/substation/transformer-temp", subStationHandler.HandleGetTransformerTemp).Methods("GET")
-	api.HandleFunc("/substation/feeder-distribution", subStationHandler.HandleGetFeederDistribution).Methods("GET")
-	api.HandleFunc("/substation/fault-events", subStationHandler.HandleGetFaultEvents).Methods("GET")
-	api.HandleFunc("/substation/ingest", subStationHandler.HandleIngest).Methods("POST")
-	api.PathPrefix("/timeseriesdata/").HandlerFunc(queryHandler.Handle).Methods("GET")
 
 	// Health check
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -169,7 +175,6 @@ func main() {
 	addr := fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 	log.Printf("Server starting on %s", addr)
 	log.Printf("Multi-tenant terminals: %v", database.Terminals)
-	log.Printf("POST /api/system/generate — generates data for ALL terminals")
 
 	if err := http.ListenAndServe(addr, corsMiddleware(router)); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
