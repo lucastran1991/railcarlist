@@ -24,6 +24,8 @@ import {
   TrendingUp, TrendingDown, Minus,
   Thermometer, Shield, Wind, Fuel, AlertTriangle,
   ArrowDownToLine, ArrowUpFromLine, Database, ToggleLeft, ToggleRight,
+  Power, Lightbulb, Cog, Radio, BarChart3,
+  Anvil, Waves, Filter, CircleDot, Truck, CloudOff,
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/config';
 import '@xyflow/react/dist/style.css';
@@ -77,6 +79,31 @@ const ICONS: Record<string, React.ReactNode> = {
   dispatches: <ArrowUpFromLine size={16} className="text-[#4D65FF]" />,
   inventory: <Database size={16} className="text-[#5CE5A0]" />,
   alert: <AlertTriangle size={16} className="text-[#ECC94B]" />,
+  generator: <Power size={16} className="text-[#F6AD55]" />,
+  mcc: <Cog size={16} className="text-[#F6AD55]" />,
+  lighting: <Lightbulb size={16} className="text-[#F6AD55]" />,
+  pumpmotors: <Cog size={16} className="text-[#F6AD55]" />,
+  busbar: <Activity size={16} className="text-[#4D65FF]" />,
+  capacitor: <CircleDot size={16} className="text-[#4D65FF]" />,
+  relay: <Shield size={16} className="text-[#4D65FF]" />,
+  metering: <BarChart3 size={16} className="text-[#4D65FF]" />,
+  fuelstorage: <Fuel size={16} className="text-[#E53E3E]" />,
+  fueltreat: <Filter size={16} className="text-[#E53E3E]" />,
+  economizer: <Thermometer size={16} className="text-[#E53E3E]" />,
+  feedwater: <Waves size={16} className="text-[#56CDE7]" />,
+  hpsteam: <Droplets size={16} className="text-[#E53E3E]" />,
+  lpsteam: <Droplets size={16} className="text-[#56CDE7]" />,
+  prs: <Gauge size={16} className="text-[#56CDE7]" />,
+  condensate: <Waves size={16} className="text-[#56CDE7]" />,
+  deaerator: <Radio size={16} className="text-[#56CDE7]" />,
+  steamtrace: <Thermometer size={16} className="text-[#F6AD55]" />,
+  manifold: <Anvil size={16} className="text-[#5CE5A0]" />,
+  gauging: <Gauge size={16} className="text-[#5CE5A0]" />,
+  heatingcoils: <Thermometer size={16} className="text-[#F6AD55]" />,
+  pumpstation: <Cog size={16} className="text-[#5CE5A0]" />,
+  loadingbay: <Truck size={16} className="text-[#4D65FF]" />,
+  vru: <CloudOff size={16} className="text-[#94A3B8]" />,
+  stack: <Wind size={16} className="text-[#94A3B8]" />,
 };
 
 const STATUS_BORDER: Record<Status, string> = {
@@ -224,7 +251,7 @@ function FlowEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targ
 
 function layoutDAG(nodes, edges, nodeWidth = 210, nodeHeight = 110) {
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'LR', nodesep: 40, ranksep: 100, marginx: 30, marginy: 30 });
+  g.setGraph({ rankdir: 'LR', nodesep: 35, ranksep: 90, marginx: 30, marginy: 30 });
   nodes.forEach((n) => g.setNode(n.id, { width: nodeWidth, height: nodeHeight }));
   edges.forEach((e) => g.setEdge(e.source, e.target));
   Dagre.layout(g);
@@ -354,102 +381,189 @@ function buildDetailedNodes(k: Record<string, any>) {
 
   const surplusSteam = (s.totalProduction ?? 0) - (s.totalDemand ?? 0);
   const netFlow = (t.dailyReceipts ?? 0) - (t.dailyDispatches ?? 0);
+  const hpPressure = s.headerPressure ?? 42;
+  const lpPressure = hpPressure * 0.28;
+  const condensateRate = (s.totalProduction ?? 18) * ((s.condensateRecovery ?? 82) / 100);
+  const makeupWater = s.makeupWaterFlow ?? 3.2;
+  const fuelStorageLevel = 78; // plausible %
+  const stackTempVal = b.avgStackTemp ?? 185;
+  const economizerRecovery = stackTempVal > 160 ? 12.5 : 8.2; // % heat recovery
 
   const n = (id: string, label: string, icon: string, kpiValue: string, unit: string, kpis: NodeKPI[], status: Status, trend: Trend = 'flat', trendValue = '0.0%', href?: string) =>
     ({ id, type: 'domain', position: { x: 0, y: 0 }, data: { label, icon, kpiValue, unit, kpis, status, trend, trendValue, href, isSubNode: true } as DomainNodeData });
 
   return [
-    // --- Electricity ---
+    // ===================== Electricity =====================
     n('elec-grid', 'Power Grid', 'electricity',
       fmt(e.realTimeDemand), 'kW',
-      [{ label: 'Peak Demand', value: `${fmt(e.peakDemand)} kW` }, { label: 'Availability', value: `${fmtF(e.gridAvailability)}%` }],
+      [{ label: 'Peak Demand', value: `${fmt(e.peakDemand)} kW` }, { label: 'Availability', value: `${fmtF(e.gridAvailability)}%` }, { label: 'Voltage', value: '33 kV' }],
       calcStatus([[e.transformerLoad > 95, 'critical'], [e.transformerLoad > 85, 'warning']]),
       ...Object.values(calcTrend(e.realTimeDemand, e.peakDemand ? e.peakDemand * 0.48 : undefined)),
       '/electricity',
     ),
+    n('elec-gen', 'Emergency Generator', 'generator',
+      'Standby', '',
+      [{ label: 'Capacity', value: '2,500 kVA' }, { label: 'Fuel Level', value: '92%' }, { label: 'Last Test', value: '3d ago' }],
+      'normal',
+    ),
+    n('elec-mcc', 'Power Distribution', 'mcc',
+      fmt(Math.round((e.realTimeDemand ?? 2400) * 0.85)), 'kW',
+      [{ label: 'MCC Load', value: `${fmtF((e.realTimeDemand ?? 2400) * 0.85 / (e.peakDemand ?? 3200) * 100)}%` }, { label: 'Active Feeders', value: '24/28' }, { label: 'Trip Events', value: '0' }],
+      calcStatus([[(e.realTimeDemand ?? 0) > (e.peakDemand ?? 9999) * 0.9, 'warning']]),
+    ),
+    n('elec-hvac', 'Lighting & HVAC', 'lighting',
+      fmt(Math.round((e.realTimeDemand ?? 2400) * 0.12)), 'kW',
+      [{ label: 'HVAC Load', value: `${fmt(Math.round((e.realTimeDemand ?? 2400) * 0.08))} kW` }, { label: 'Lighting', value: `${fmt(Math.round((e.realTimeDemand ?? 2400) * 0.04))} kW` }],
+      'normal',
+    ),
+    n('elec-pumps', 'Pump Motors', 'pumpmotors',
+      fmt(Math.round((e.realTimeDemand ?? 2400) * 0.35)), 'kW',
+      [{ label: 'Running', value: '8/12 motors' }, { label: 'Avg Load', value: '76%' }, { label: 'VFD Active', value: '6/8' }],
+      calcStatus([[(e.realTimeDemand ?? 0) > (e.peakDemand ?? 9999) * 0.95, 'warning']]),
+    ),
     n('elec-cost', 'Energy & Carbon', 'alert',
       `$${fmt(e.energyCost)}`, '/month',
-      [{ label: 'Carbon Emissions', value: `${fmtF(e.carbonEmissions)} t CO₂` }, { label: 'Power Factor', value: `${fmtF(e.powerFactor, 2)}` }],
+      [{ label: 'Carbon Emissions', value: `${fmtF(e.carbonEmissions)} t CO₂` }, { label: 'Power Factor', value: `${fmtF(e.powerFactor, 2)}` }, { label: 'Tariff Rate', value: '$0.087/kWh' }],
       calcStatus([[(e.powerFactor ?? 1) < 0.9, 'warning'], [(e.powerFactor ?? 1) < 0.85, 'critical']]),
     ),
 
-    // --- Substation ---
-    n('sub-xfmr', 'Transformer', 'transformer',
+    // ===================== Substation =====================
+    n('sub-xfmr', 'Main Transformer', 'transformer',
       fmtF(ss.incomingVoltage, 2), 'kV',
-      [{ label: 'Temperature', value: `${fmt(ss.transformerTemp)}°C` }, { label: 'Load', value: `${fmtF(ss.totalLoad)} MW` }],
+      [{ label: 'Temperature', value: `${fmt(ss.transformerTemp)}°C` }, { label: 'Load', value: `${fmtF(ss.totalLoad)} MW` }, { label: 'Tap Position', value: '7/21' }],
       calcStatus([[(ss.transformerTemp ?? 0) > 90, 'critical'], [(ss.transformerTemp ?? 0) > 75, 'warning']]),
       'flat', '0.0%', '/sub-station',
     ),
-    n('sub-swgr', 'Switchgear', 'switchgear',
-      `${ss.breakersClosed ?? 0}/${ss.breakersTotal ?? 0}`, 'breakers',
-      [{ label: 'Faults (24h)', value: `${ss.faultEvents24h ?? 0}` }, { label: 'Bus Balance', value: `${fmtF(ss.busbarBalance)}%` }],
-      calcStatus([[(ss.faultEvents24h ?? 0) > 3, 'critical'], [(ss.faultEvents24h ?? 0) > 0, 'warning'], [(ss.breakersClosed ?? 0) < (ss.breakersTotal ?? 0) - 2, 'critical']]),
+    n('sub-busA', 'Bus Section A', 'busbar',
+      fmtF((ss.totalLoad ?? 4.2) * 0.55), 'MW',
+      [{ label: 'Feeders', value: '14/16 closed' }, { label: 'Current', value: `${fmt(Math.round((ss.totalLoad ?? 4.2) * 0.55 * 1000 / 11))} A` }],
+      calcStatus([[(ss.faultEvents24h ?? 0) > 2, 'warning']]),
     ),
-    n('sub-pq', 'Power Quality', 'powerquality',
+    n('sub-busB', 'Bus Section B', 'busbar',
+      fmtF((ss.totalLoad ?? 4.2) * 0.45), 'MW',
+      [{ label: 'Feeders', value: '12/14 closed' }, { label: 'Current', value: `${fmt(Math.round((ss.totalLoad ?? 4.2) * 0.45 * 1000 / 11))} A` }],
+      calcStatus([[(ss.faultEvents24h ?? 0) > 2, 'warning']]),
+    ),
+    n('sub-cap', 'Capacitor Bank', 'capacitor',
+      fmtF(e.powerFactor ?? 0.94, 2), 'PF',
+      [{ label: 'Reactive Power', value: `${fmt(Math.round((ss.totalLoad ?? 4.2) * 300))} kVAR` }, { label: 'Steps Active', value: '4/6' }, { label: 'Target PF', value: '0.95' }],
+      calcStatus([[(e.powerFactor ?? 1) < 0.9, 'warning'], [(e.powerFactor ?? 1) < 0.85, 'critical']]),
+    ),
+    n('sub-relay', 'Protection Relays', 'relay',
+      `${ss.breakersClosed ?? 0}/${ss.breakersTotal ?? 0}`, 'active',
+      [{ label: 'Faults (24h)', value: `${ss.faultEvents24h ?? 0}` }, { label: 'Last Trip', value: '14d ago' }, { label: 'Auto-reclose', value: 'Armed' }],
+      calcStatus([[(ss.faultEvents24h ?? 0) > 3, 'critical'], [(ss.faultEvents24h ?? 0) > 0, 'warning']]),
+    ),
+    n('sub-meter', 'Metering & Monitor', 'metering',
       `${fmtF(ss.thd)}%`, 'THD',
-      [{ label: 'Frequency', value: `${fmtF(ss.frequency, 2)} Hz` }, { label: 'Bus Balance', value: `${fmtF(ss.busbarBalance)}%` }],
+      [{ label: 'Frequency', value: `${fmtF(ss.frequency, 2)} Hz` }, { label: 'Bus Balance', value: `${fmtF(ss.busbarBalance)}%` }, { label: 'Data Points', value: '1,284/s' }],
       calcStatus([[(ss.thd ?? 0) > 8, 'critical'], [(ss.thd ?? 0) > 5, 'warning']]),
     ),
 
-    // --- Boiler ---
-    n('boil-fuel', 'Fuel System', 'fuel',
-      fmt(b.totalFuelRate), 'L/h',
-      [{ label: 'Consumption Rate', value: `${fmt(b.totalFuelRate)} L/h` }],
-      'normal',
+    // ===================== Boiler =====================
+    n('boil-store', 'Fuel Storage', 'fuelstorage',
+      `${fuelStorageLevel}%`, 'level',
+      [{ label: 'Volume', value: '156,000 L' }, { label: 'Days Remaining', value: '12.4 d' }, { label: 'Last Delivery', value: '3d ago' }],
+      calcStatus([[fuelStorageLevel < 20, 'critical'], [fuelStorageLevel < 35, 'warning']]),
     ),
-    n('boil-comb', 'Combustion', 'combustion',
+    n('boil-treat', 'Fuel Treatment', 'fueltreat',
+      fmt(b.totalFuelRate), 'L/h',
+      [{ label: 'Filter ΔP', value: '0.8 bar' }, { label: 'Viscosity', value: '12.4 cSt' }, { label: 'Temp Out', value: '98°C' }],
+      calcStatus([[(b.totalFuelRate ?? 0) > 600, 'warning']]),
+    ),
+    n('boil-comb', 'Combustion Chamber', 'combustion',
       `${b.boilersOnline ?? 0}/${b.boilersTotal ?? 0}`, 'online',
-      [{ label: 'Efficiency', value: `${fmtF(b.fleetEfficiency)}%` }, { label: 'Stack Temp', value: `${fmt(b.avgStackTemp)}°C` }, { label: 'O₂ Level', value: `${fmtF(b.avgO2)}%` }],
+      [{ label: 'Efficiency', value: `${fmtF(b.fleetEfficiency)}%` }, { label: 'Stack Temp', value: `${fmt(b.avgStackTemp)}°C` }, { label: 'O₂ Level', value: `${fmtF(b.avgO2)}%` }, { label: 'Firebox Press', value: '-2.1 mmH₂O' }],
       calcStatus([[(b.boilersOnline ?? 0) < (b.boilersTotal ?? 0) - 1, 'critical'], [(b.fleetEfficiency ?? 100) < 85, 'warning']]),
       'flat', '0.0%', '/boiler',
     ),
-    n('boil-emit', 'Emissions', 'emissions',
+    n('boil-econ', 'Economizer', 'economizer',
+      `${fmtF(economizerRecovery)}%`, 'recovery',
+      [{ label: 'Inlet Temp', value: `${fmt(stackTempVal)}°C` }, { label: 'Outlet Temp', value: `${fmt(Math.round(stackTempVal * 0.72))}°C` }, { label: 'Energy Saved', value: `${fmtF(economizerRecovery * 8.5)} kW` }],
+      'normal',
+    ),
+    n('boil-stack', 'Stack & Emissions', 'stack',
       fmt(b.coEmissions), 'ppm CO',
-      [{ label: 'NOx', value: `${fmt(b.noxEmissions)} ppm` }, { label: 'O₂', value: `${fmtF(b.avgO2)}%` }],
+      [{ label: 'NOx', value: `${fmt(b.noxEmissions)} ppm` }, { label: 'O₂', value: `${fmtF(b.avgO2)}%` }, { label: 'Opacity', value: '4.2%' }, { label: 'Stack Height', value: '45 m' }],
       calcStatus([[(b.coEmissions ?? 0) > 150, 'critical'], [(b.coEmissions ?? 0) > 100, 'warning']]),
     ),
+    n('boil-fw', 'Feedwater System', 'feedwater',
+      fmtF(makeupWater), 'm³/h',
+      [{ label: 'Feed Temp', value: '105°C' }, { label: 'Conductivity', value: '12 µS/cm' }, { label: 'pH', value: '9.2' }, { label: 'Deaerator Press', value: '0.2 bar' }],
+      calcStatus([[makeupWater > 5, 'warning']]),
+    ),
 
-    // --- Steam ---
-    n('stm-header', 'Steam Header', 'header',
-      fmtF(s.totalProduction), 'T/h',
-      [{ label: 'Pressure', value: `${fmtF(s.headerPressure)} bar` }, { label: 'Temperature', value: `${fmt(s.steamTemperature)}°C` }],
-      calcStatus([[(s.headerPressure ?? 40) < 36, 'critical'], [(s.headerPressure ?? 40) < 38, 'warning']]),
+    // ===================== Steam =====================
+    n('stm-hp', 'HP Steam Header', 'hpsteam',
+      fmtF(hpPressure), 'bar',
+      [{ label: 'Temperature', value: `${fmt(s.steamTemperature ?? 260)}°C` }, { label: 'Flow', value: `${fmtF(s.totalProduction)} T/h` }, { label: 'Quality', value: '99.5%' }],
+      calcStatus([[hpPressure < 36, 'critical'], [hpPressure < 38, 'warning']]),
       ...Object.values(calcTrend(s.totalProduction, s.totalDemand)),
       '/steam',
     ),
-    n('stm-dist', 'Distribution', 'distribution',
-      fmtF(s.totalDemand), 'T/h',
-      [{ label: 'Condensate Recovery', value: `${s.condensateRecovery ?? '—'}%` }, { label: 'Makeup Water', value: `${fmtF(s.makeupWaterFlow)} m³/h` }, { label: 'Surplus', value: `${fmtF(surplusSteam)} T/h` }],
+    n('stm-prs', 'Pressure Reducing Stn', 'prs',
+      `${fmtF(hpPressure)}→${fmtF(lpPressure)}`, 'bar',
+      [{ label: 'ΔP', value: `${fmtF(hpPressure - lpPressure)} bar` }, { label: 'Valve Position', value: '62%' }, { label: 'Desuperheat', value: 'Active' }],
+      'normal',
+    ),
+    n('stm-lp', 'LP Steam Header', 'lpsteam',
+      fmtF(lpPressure), 'bar',
+      [{ label: 'Temperature', value: `${fmt(Math.round((s.steamTemperature ?? 260) * 0.65))}°C` }, { label: 'Flow', value: `${fmtF((s.totalDemand ?? 14) * 0.6)} T/h` }],
+      calcStatus([[lpPressure < 8, 'warning']]),
+    ),
+    n('stm-cond', 'Condensate Collection', 'condensate',
+      fmtF(condensateRate), 'T/h',
+      [{ label: 'Recovery Rate', value: `${s.condensateRecovery ?? 82}%` }, { label: 'Temperature', value: '85°C' }, { label: 'Flash Steam', value: `${fmtF(condensateRate * 0.08)} T/h` }],
       calcStatus([[(s.condensateRecovery ?? 100) < 70, 'critical'], [(s.condensateRecovery ?? 100) < 80, 'warning']]),
     ),
+    n('stm-deaer', 'Deaerator', 'deaerator',
+      '0.2', 'bar',
+      [{ label: 'Temperature', value: '105°C' }, { label: 'O₂ Content', value: '< 7 ppb' }, { label: 'Level', value: '68%' }, { label: 'Vent Rate', value: '0.3 kg/h' }],
+      'normal',
+    ),
+    n('stm-trace', 'Steam Tracing', 'steamtrace',
+      fmtF(surplusSteam > 0 ? surplusSteam * 0.7 : 2.1), 'T/h',
+      [{ label: 'Circuits Active', value: '34/38' }, { label: 'Avg Pipe Temp', value: '68°C' }, { label: 'Trap Failures', value: '2' }],
+      calcStatus([[surplusSteam < 1, 'warning']]),
+    ),
 
-    // --- Tank Farm ---
-    n('tank-heat', 'Tank Heating', 'heating',
-      fmt(t.avgTemperature), '°C',
-      [{ label: 'Steam Input', value: `${fmtF(surplusSteam)} T/h` }],
-      calcStatus([[(t.avgTemperature ?? 0) > 55, 'critical'], [(t.avgTemperature ?? 0) > 45, 'warning']]),
-    ),
-    n('tank-recv', 'Receipts', 'receipts',
+    // ===================== Tank Farm =====================
+    n('tank-manif', 'Receiving Manifold', 'manifold',
       fmt(t.dailyReceipts), 'bbl/d',
-      [{ label: 'Daily Inflow', value: `${fmt(t.dailyReceipts)} bbl` }],
+      [{ label: 'Active Lines', value: '3/4' }, { label: 'Pressure', value: '4.2 bar' }, { label: 'Pipeline Temp', value: '52°C' }],
       'normal',
     ),
-    n('tank-disp', 'Dispatches', 'dispatches',
-      fmt(t.dailyDispatches), 'bbl/d',
-      [{ label: 'Daily Outflow', value: `${fmt(t.dailyDispatches)} bbl` }],
-      'normal',
-    ),
-    n('tank-inv', 'Inventory', 'inventory',
+    n('tank-gauge', 'Tank Gauging System', 'gauging',
       `${t.tanksInOperation ?? '—'}/${t.tanksTotal ?? 59}`, 'tanks',
       [
         { label: 'Total Volume', value: `${fmt(t.totalInventory)} bbl` },
         { label: 'Available', value: `${t.availableCapacity ?? '—'}%` },
-        { label: 'Net Flow', value: `${netFlow >= 0 ? '+' : ''}${fmt(netFlow)} bbl/d` },
+        { label: 'Radar Gauges', value: '59/59 online' },
         { label: 'Active Alarms', value: `${t.activeAlarms ?? 0}` },
       ],
       calcStatus([[(t.activeAlarms ?? 0) > 5, 'critical'], [(t.activeAlarms ?? 0) > 0, 'warning']]),
       ...Object.values(calcTrend(netFlow + 10000, 10000)),
       '/tank',
+    ),
+    n('tank-coils', 'Heating Coils', 'heatingcoils',
+      fmt(t.avgTemperature), '°C',
+      [{ label: 'Steam Input', value: `${fmtF(surplusSteam > 0 ? surplusSteam * 0.7 : 2.1)} T/h` }, { label: 'Tanks Heated', value: '22/59' }, { label: 'ΔT Avg', value: '+8.3°C' }],
+      calcStatus([[(t.avgTemperature ?? 0) > 55, 'critical'], [(t.avgTemperature ?? 0) > 45, 'warning']]),
+    ),
+    n('tank-pump', 'Pumping Station', 'pumpstation',
+      '8/12', 'running',
+      [{ label: 'Total Flow', value: `${fmt(t.currentThroughput)} bbl/d` }, { label: 'Discharge Press', value: '6.8 bar' }, { label: 'Power Draw', value: `${fmt(Math.round((e.realTimeDemand ?? 2400) * 0.35))} kW` }],
+      calcStatus([[(t.currentThroughput ?? 0) > 50000, 'warning']]),
+    ),
+    n('tank-load', 'Loading / Dispatch', 'loadingbay',
+      fmt(t.dailyDispatches), 'bbl/d',
+      [{ label: 'Active Bays', value: '4/6' }, { label: 'Trucks Today', value: '38' }, { label: 'Avg Load Time', value: '42 min' }],
+      'normal',
+    ),
+    n('tank-vru', 'Vapor Recovery Unit', 'vru',
+      '98.2%', 'efficiency',
+      [{ label: 'VOC Capture', value: '2.4 T/d' }, { label: 'Vent Rate', value: '0.04 T/d' }, { label: 'Compressor', value: 'Running' }],
+      calcStatus([[false, 'warning']]),  // normally fine
     ),
   ];
 }
@@ -457,39 +571,66 @@ function buildDetailedNodes(k: Record<string, any>) {
 function buildDetailedEdges(k: Record<string, any>) {
   const e = k.electricity ?? {}, ss = k.substation ?? {}, b = k.boiler ?? {}, s = k.steam ?? {}, t = k.tank ?? {};
   const surplusSteam = (s.totalProduction ?? 0) - (s.totalDemand ?? 0);
+  const hpPressure = s.headerPressure ?? 42;
+  const lpPressure = hpPressure * 0.28;
+  const condensateRate = (s.totalProduction ?? 18) * ((s.condensateRecovery ?? 82) / 100);
 
   return [
-    // Electricity → Substation
+    // ========== Electricity internal ==========
     { id: 'd-e1', source: 'elec-grid', target: 'sub-xfmr', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'HV Feed', flowValue: `${fmtF(ss.incomingVoltage, 1)} kV` } },
     { id: 'd-e1b', source: 'elec-grid', target: 'elec-cost', type: 'flow', animated: false, style: dashedEdge(dangerEdge), markerEnd: dangerMarker, data: { label: 'Metering' } },
+    { id: 'd-e-gen-mcc', source: 'elec-gen', target: 'elec-mcc', type: 'flow', animated: false, style: dashedEdge(warningEdge), markerEnd: warningMarker, data: { label: 'Backup Path' } },
+    { id: 'd-e-grid-mcc', source: 'elec-grid', target: 'elec-mcc', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'Main Feed', flowValue: `${fmt(Math.round((e.realTimeDemand ?? 2400) * 0.85))} kW` } },
+    { id: 'd-e-mcc-hvac', source: 'elec-mcc', target: 'elec-hvac', type: 'flow', animated: false, style: dashedEdge(secondaryEdge), markerEnd: secondaryMarker, data: { label: 'Aux Load' } },
+    { id: 'd-e-mcc-pumps', source: 'elec-mcc', target: 'elec-pumps', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'Motor Feed', flowValue: `${fmt(Math.round((e.realTimeDemand ?? 2400) * 0.35))} kW` } },
 
-    // Substation internal
-    { id: 'd-e2', source: 'sub-xfmr', target: 'sub-swgr', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'MV Bus', flowValue: `${fmtF(ss.totalLoad)} MW` } },
-    { id: 'd-e2b', source: 'sub-xfmr', target: 'sub-pq', type: 'flow', animated: false, style: dashedEdge(secondaryEdge), markerEnd: secondaryMarker, data: { label: 'Monitoring' } },
+    // ========== Substation internal ==========
+    { id: 'd-e2', source: 'sub-xfmr', target: 'sub-busA', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'Bus A', flowValue: `${fmtF((ss.totalLoad ?? 4.2) * 0.55)} MW` } },
+    { id: 'd-e2c', source: 'sub-xfmr', target: 'sub-busB', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'Bus B', flowValue: `${fmtF((ss.totalLoad ?? 4.2) * 0.45)} MW` } },
+    { id: 'd-e-busA-cap', source: 'sub-busA', target: 'sub-cap', type: 'flow', animated: false, style: dashedEdge(secondaryEdge), markerEnd: secondaryMarker, data: { label: 'PF Correction' } },
+    { id: 'd-e-busA-relay', source: 'sub-busA', target: 'sub-relay', type: 'flow', animated: false, style: dashedEdge(dangerEdge), markerEnd: dangerMarker, data: { label: 'Protection' } },
+    { id: 'd-e-busB-relay', source: 'sub-busB', target: 'sub-relay', type: 'flow', animated: false, style: dashedEdge(dangerEdge), markerEnd: dangerMarker, data: { label: 'Protection' } },
+    { id: 'd-e-xfmr-meter', source: 'sub-xfmr', target: 'sub-meter', type: 'flow', animated: false, style: dashedEdge(secondaryEdge), markerEnd: secondaryMarker, data: { label: 'Monitoring' } },
 
-    // Substation → Boiler
-    { id: 'd-e3', source: 'sub-swgr', target: 'boil-fuel', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'Power Supply' } },
+    // ========== Substation → Boiler power ==========
+    { id: 'd-e3', source: 'sub-busA', target: 'boil-treat', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'Power Supply' } },
 
-    // Boiler internal
-    { id: 'd-e4', source: 'boil-fuel', target: 'boil-comb', type: 'flow', animated: true, style: warningEdge, markerEnd: warningMarker, data: { label: 'Fuel Feed', flowValue: `${fmt(b.totalFuelRate)} L/h` } },
-    { id: 'd-e4b', source: 'boil-comb', target: 'boil-emit', type: 'flow', animated: false, style: dashedEdge(dangerEdge), markerEnd: dangerMarker, data: { label: 'Exhaust' } },
+    // ========== Boiler internal ==========
+    { id: 'd-e-store-treat', source: 'boil-store', target: 'boil-treat', type: 'flow', animated: true, style: warningEdge, markerEnd: warningMarker, data: { label: 'Fuel Supply' } },
+    { id: 'd-e4', source: 'boil-treat', target: 'boil-comb', type: 'flow', animated: true, style: warningEdge, markerEnd: warningMarker, data: { label: 'Treated Fuel', flowValue: `${fmt(b.totalFuelRate)} L/h` } },
+    { id: 'd-e-comb-econ', source: 'boil-comb', target: 'boil-econ', type: 'flow', animated: true, style: warningEdge, markerEnd: warningMarker, data: { label: 'Flue Gas' } },
+    { id: 'd-e-econ-stack', source: 'boil-econ', target: 'boil-stack', type: 'flow', animated: false, style: dashedEdge(dangerEdge), markerEnd: dangerMarker, data: { label: 'Exhaust', flowValue: `${fmt(b.coEmissions)} ppm` } },
+    { id: 'd-e-econ-fw', source: 'boil-econ', target: 'boil-fw', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'Heat Recovery', flowValue: `${fmtF(12.5)}%` } },
+    { id: 'd-e-fw-comb', source: 'boil-fw', target: 'boil-comb', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'Feedwater', flowValue: `${fmtF(s.makeupWaterFlow ?? 3.2)} m³/h` } },
 
-    // Boiler → Steam
-    { id: 'd-e5', source: 'boil-comb', target: 'stm-header', type: 'flow', animated: true, style: warningEdge, markerEnd: warningMarker, data: { label: 'Steam Output', flowValue: `${fmtF(b.totalSteamOutput)} T/h` } },
+    // ========== Boiler → Steam ==========
+    { id: 'd-e5', source: 'boil-comb', target: 'stm-hp', type: 'flow', animated: true, style: warningEdge, markerEnd: warningMarker, data: { label: 'Steam Output', flowValue: `${fmtF(b.totalSteamOutput)} T/h` } },
 
-    // Steam internal
-    { id: 'd-e6', source: 'stm-header', target: 'stm-dist', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'Demand', flowValue: `${fmtF(s.totalDemand)} T/h` } },
+    // ========== Steam internal ==========
+    { id: 'd-e-hp-prs', source: 'stm-hp', target: 'stm-prs', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'HP→LP', flowValue: `${fmtF(hpPressure)} bar` } },
+    { id: 'd-e-prs-lp', source: 'stm-prs', target: 'stm-lp', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'Reduced', flowValue: `${fmtF(lpPressure)} bar` } },
+    { id: 'd-e-lp-trace', source: 'stm-lp', target: 'stm-trace', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'Tracing Steam' } },
+    { id: 'd-e-lp-cond', source: 'stm-lp', target: 'stm-cond', type: 'flow', animated: false, style: dashedEdge(secondaryEdge), markerEnd: secondaryMarker, data: { label: 'Return', flowValue: `${fmtF(condensateRate)} T/h` } },
+    { id: 'd-e-cond-deaer', source: 'stm-cond', target: 'stm-deaer', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'Condensate', flowValue: `${fmtF(condensateRate)} T/h` } },
+    { id: 'd-e-deaer-fw', source: 'stm-deaer', target: 'boil-fw', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'Deaerated Water' } },
 
-    // Steam → Tank
-    { id: 'd-e7', source: 'stm-dist', target: 'tank-heat', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'Heating Steam', flowValue: `${fmtF(surplusSteam)} T/h` } },
+    // ========== Steam → Tank (cross-domain) ==========
+    { id: 'd-e-trace-coils', source: 'stm-trace', target: 'tank-coils', type: 'flow', animated: true, style: warningEdge, markerEnd: warningMarker, data: { label: 'Heating Steam', flowValue: `${fmtF(surplusSteam > 0 ? surplusSteam * 0.7 : 2.1)} T/h` } },
 
-    // Tank internal
-    { id: 'd-e8', source: 'tank-heat', target: 'tank-inv', type: 'flow', animated: false, style: dashedEdge(warningEdge), markerEnd: warningMarker, data: { label: 'Temperature Control' } },
-    { id: 'd-e9', source: 'tank-recv', target: 'tank-inv', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'Inflow', flowValue: `+${fmt(t.dailyReceipts)}` } },
-    { id: 'd-e10', source: 'tank-inv', target: 'tank-disp', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'Outflow', flowValue: `-${fmt(t.dailyDispatches)}` } },
+    // ========== Tank Farm internal ==========
+    { id: 'd-e-manif-gauge', source: 'tank-manif', target: 'tank-gauge', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'Inflow', flowValue: `+${fmt(t.dailyReceipts)} bbl` } },
+    { id: 'd-e-gauge-coils', source: 'tank-gauge', target: 'tank-coils', type: 'flow', animated: false, style: dashedEdge(warningEdge), markerEnd: warningMarker, data: { label: 'Temp Control' } },
+    { id: 'd-e-coils-pump', source: 'tank-coils', target: 'tank-pump', type: 'flow', animated: true, style: primaryEdge, markerEnd: primaryMarker, data: { label: 'Heated Product' } },
+    { id: 'd-e-pump-load', source: 'tank-pump', target: 'tank-load', type: 'flow', animated: true, style: secondaryEdge, markerEnd: secondaryMarker, data: { label: 'Dispatch', flowValue: `${fmt(t.dailyDispatches)} bbl/d` } },
+    { id: 'd-e-load-vru', source: 'tank-load', target: 'tank-vru', type: 'flow', animated: false, style: dashedEdge(dangerEdge), markerEnd: dangerMarker, data: { label: 'Vapor Recovery' } },
 
-    // Cross-domain: Electricity → Tank pumps
-    { id: 'd-e11', source: 'sub-swgr', target: 'tank-recv', type: 'flow', animated: false, style: dashedEdge(secondaryEdge), markerEnd: secondaryMarker, data: { label: 'Pump Power' } },
+    // ========== Cross-domain connections ==========
+    // Electricity → Tank Farm (pump power)
+    { id: 'd-e-pumps-station', source: 'elec-pumps', target: 'tank-pump', type: 'flow', animated: true, style: dashedEdge(primaryEdge), markerEnd: primaryMarker, data: { label: 'Pump Power', flowValue: `${fmt(Math.round((e.realTimeDemand ?? 2400) * 0.35))} kW` } },
+    // Substation Bus B → Boiler (secondary power)
+    { id: 'd-e-busB-boil', source: 'sub-busB', target: 'boil-comb', type: 'flow', animated: false, style: dashedEdge(primaryEdge), markerEnd: primaryMarker, data: { label: 'Aux Power' } },
+    // HP Steam direct to process (some HP consumers)
+    { id: 'd-e-hp-direct', source: 'stm-hp', target: 'stm-cond', type: 'flow', animated: false, style: dashedEdge(secondaryEdge), markerEnd: secondaryMarker, data: { label: 'HP Consumers' } },
   ];
 }
 
@@ -609,7 +750,7 @@ function PipelineDAGInner() {
   }, []);
 
   return (
-    <div className="relative w-full h-[450px] sm:h-[550px] rounded-xl border border-border overflow-hidden">
+    <div className={`relative w-full ${detailed ? 'h-[550px] sm:h-[700px]' : 'h-[450px] sm:h-[550px]'} rounded-xl border border-border overflow-hidden transition-all duration-300`}>
       {/* View toggle */}
       <div className="absolute top-3 right-3 z-10">
         <button
