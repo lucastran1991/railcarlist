@@ -31,11 +31,11 @@ export default function StyleToggle() {
         <Palette size={16} className="text-foreground/70" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-5 w-56 rounded-xl border border-border/50 dropdown-surface shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-5 w-64 max-h-[420px] rounded-xl border border-border/50 dropdown-surface shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="px-3 py-2 border-b border-border/50">
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Color Theme</p>
           </div>
-          <div className="p-2 grid grid-cols-2 gap-1.5">
+          <div className="p-2 grid grid-cols-2 gap-1.5 overflow-y-auto max-h-[360px]">
             {THEMES.map((t) => (
               <button
                 key={t.id}
