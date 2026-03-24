@@ -113,8 +113,8 @@ export const THEMES: ThemeConfig[] = [
       '--color-gradient-to': '#00F0FF',
       '--gradient-text-from': '#FF2D95',
       '--gradient-text-to': '#00F0FF',
-      '--shadow-card': '0 0 20px rgba(255,45,149,0.12), 0 0 40px rgba(0,240,255,0.06)',
-      '--shadow-card-hover': '0 0 25px rgba(255,45,149,0.2), 0 0 50px rgba(0,240,255,0.1)',
+      '--shadow-card': '0 1px 4px rgba(255,45,149,0.08)',
+      '--shadow-card-hover': '0 2px 8px rgba(255,45,149,0.15)',
     },
   },
 
@@ -188,8 +188,8 @@ export const THEMES: ThemeConfig[] = [
       '--color-gradient-to': '#06B6D4',
       '--gradient-text-from': '#93C5FD',
       '--gradient-text-to': '#67E8F9',
-      '--shadow-card': '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-      '--shadow-card-hover': '0 4px 12px rgba(59,130,246,0.12)',
+      '--shadow-card': '0 1px 3px rgba(0,0,0,0.05)',
+      '--shadow-card-hover': '0 2px 8px rgba(59,130,246,0.1)',
     },
   },
 
@@ -263,8 +263,8 @@ export const THEMES: ThemeConfig[] = [
       '--color-gradient-to': '#F97316',
       '--gradient-text-from': '#FCD34D',
       '--gradient-text-to': '#FDBA74',
-      '--shadow-card': '0 2px 4px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)',
-      '--shadow-card-hover': '0 4px 16px rgba(245,158,11,0.15)',
+      '--shadow-card': '0 1px 3px rgba(0,0,0,0.08)',
+      '--shadow-card-hover': '0 2px 8px rgba(245,158,11,0.12)',
     },
   },
 ];
