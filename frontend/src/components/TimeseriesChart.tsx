@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, TooltipProps,
@@ -8,7 +8,7 @@ import {
 import { AlertCircle } from 'lucide-react';
 import { TimeseriesResponse } from '@/types/api';
 import { format } from 'date-fns';
-import { getChartColors, getChartAxisColors } from '@/lib/chartColors';
+import { useChartColors } from '@/lib/chartColors';
 
 const MAX_DATA_POINTS = 2000;
 
@@ -29,9 +29,6 @@ function formatYAxisValue(value: number): string {
   if (Number.isInteger(value)) return String(value);
   return value.toFixed(1);
 }
-
-// Theme-aware chart colors — read from CSS vars on mount
-const FALLBACK_COLORS = ['#5CE5A0', '#56CDE7', '#F6AD55', '#E53E3E', '#4D65FF', '#319795', '#D53F8C', '#00B5D8'];
 
 function formatTooltipLabel(label: string): string {
   if (!label) return '';
@@ -61,16 +58,7 @@ interface TimeseriesChartProps {
 }
 
 export default function TimeseriesChart({ data, disableAnimation = false, aggregateMode }: TimeseriesChartProps) {
-  const [CHART_COLORS, setColors] = useState(FALLBACK_COLORS);
-  const [axisColors, setAxisColors] = useState({ grid: '#2C2E39', axis: '#2C2E39', tick: '#6B7280' });
-  useEffect(() => {
-    setColors(getChartColors());
-    setAxisColors(getChartAxisColors());
-    // Re-read when theme changes
-    const observer = new MutationObserver(() => { setColors(getChartColors()); setAxisColors(getChartAxisColors()); });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
-    return () => observer.disconnect();
-  }, []);
+  const { colors: CHART_COLORS, axis: axisColors } = useChartColors();
   const { chartData, isSampled, originalCount } = useMemo(() => {
     const tags = Object.keys(data.result);
     if (tags.length === 0) return { chartData: [], isSampled: false, originalCount: 0 };

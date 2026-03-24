@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { type BoilerKPIs, type QueryParams } from '@/lib/api-dashboard';
 import FilterBar from '@/components/dashboard/FilterBar';
-import { getChartColors } from '@/lib/chartColors';
+import { useChartColors } from '@/lib/chartColors';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
 import {
@@ -31,8 +31,7 @@ const AXIS = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
 export default function BoilerPage() {
   const ready = useAuth();
   const [filterParams, setFilterParams] = useState<QueryParams>({});
-  const [chartColors, setChartColors] = useState(['#5CE5A0','#56CDE7','#F6AD55','#E53E3E','#4D65FF']);
-  useEffect(() => { setChartColors(getChartColors()); }, []);
+  const { colors: chartColors } = useChartColors();
   const handleFilterChange = useCallback((p: QueryParams) => setFilterParams(p), []);
   const { kpis, charts, chartLoading, loading, error } = useDashboardData<BoilerKPIs>('boiler', filterParams);
 

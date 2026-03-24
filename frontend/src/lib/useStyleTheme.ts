@@ -1,46 +1,69 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
+import { create } from 'zustand';
 import { applyTheme, clearTheme, reapplyTheme } from './themes';
 
 const THEME_KEY = 'vopak_color_theme';
 
-export function useStyleTheme() {
-  const [themeId, setThemeIdState] = useState('default');
-  const [mounted, setMounted] = useState(false);
+interface ThemeStore {
+  themeId: string;
+  mounted: boolean;
+  setColorTheme: (id: string) => void;
+  _init: () => void;
+}
 
-  useEffect(() => {
-    const storedTheme = localStorage.getItem(THEME_KEY) || 'default';
-    setThemeIdState(storedTheme);
-    if (storedTheme !== 'default') {
-      applyTheme(storedTheme);
-    }
-    setMounted(true);
-  }, []);
-
-  // Re-apply theme when dark/light mode toggles
-  useEffect(() => {
-    if (!mounted) return;
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.attributeName === 'class') {
-          reapplyTheme();
-        }
-      }
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, [mounted]);
-
-  const setColorTheme = useCallback((id: string) => {
-    setThemeIdState(id);
+export const useThemeStore = create<ThemeStore>((set) => ({
+  themeId: 'default',
+  mounted: false,
+  setColorTheme: (id: string) => {
+    set({ themeId: id });
     localStorage.setItem(THEME_KEY, id);
     if (id === 'default') {
       clearTheme();
     } else {
       applyTheme(id);
     }
-  }, []);
+  },
+  _init: () => {
+    const stored = localStorage.getItem(THEME_KEY) || 'default';
+    set({ themeId: stored, mounted: true });
+    if (stored !== 'default') {
+      applyTheme(stored);
+    }
+  },
+}));
 
+/**
+ * Hook to initialize theme on mount + watch dark/light mode changes.
+ * Call once in Providers.tsx.
+ */
+export function useThemeInit() {
+  const _init = useThemeStore(s => s._init);
+  const mounted = useThemeStore(s => s.mounted);
+
+  useEffect(() => {
+    _init();
+  }, [_init]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.attributeName === 'class') reapplyTheme();
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, [mounted]);
+}
+
+/**
+ * Convenience hook — same API as before for backward compat.
+ */
+export function useStyleTheme() {
+  const themeId = useThemeStore(s => s.themeId);
+  const setColorTheme = useThemeStore(s => s.setColorTheme);
+  const mounted = useThemeStore(s => s.mounted);
   return { themeId, setColorTheme, mounted };
 }

@@ -5,9 +5,11 @@ import { usePathname } from 'next/navigation';
 import Navigation from './Navigation';
 import HomeRouteScene from './HomeRouteScene';
 import { useSystemConfig } from '@/lib/useSystemConfig';
+import { useThemeInit } from '@/lib/useStyleTheme';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  useSystemConfig(); // loads colors from system.cfg.json → CSS vars
+  useSystemConfig();
+  useThemeInit(); // loads colors from system.cfg.json → CSS vars
   const pathname = usePathname();
   const isHome = pathname === '/';
   const isLogin = pathname === '/login';

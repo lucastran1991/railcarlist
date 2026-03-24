@@ -2,11 +2,18 @@
  * Chart colors derived from the current theme's CSS variables.
  * Falls back to Terminal theme defaults if variables aren't set.
  *
- * Usage:
- *   import { getChartColors } from '@/lib/chartColors';
- *   const colors = getChartColors(); // returns 8 hex colors
+ * Usage in components:
+ *   import { useChartColors } from '@/lib/chartColors';
+ *   const { colors, axis } = useChartColors();
  *   <Line stroke={colors[0]} />
+ *
+ * Or imperative:
+ *   import { getChartColors } from '@/lib/chartColors';
+ *   const colors = getChartColors();
  */
+
+import { useMemo } from 'react';
+import { useThemeStore } from './useStyleTheme';
 
 function hslToHex(hsl: string): string {
   const parts = hsl.trim().split(/\s+/);
@@ -82,4 +89,17 @@ export function getChartAxisColors(): { grid: string; axis: string; tick: string
     axis: borderHsl ? hslToHex(borderHsl) : '#2C2E39',
     tick: mutedFgHsl ? hslToHex(mutedFgHsl) : '#6B7280',
   };
+}
+
+/**
+ * React hook — re-reads chart colors when themeId changes in Zustand store.
+ * Components using this will re-render on theme switch.
+ */
+export function useChartColors() {
+  const themeId = useThemeStore(s => s.themeId);
+  return useMemo(() => ({
+    colors: getChartColors(),
+    axis: getChartAxisColors(),
+    themeId, // included so useMemo deps track changes
+  }), [themeId]);
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Flame, Gauge, BarChart3, Droplets, Zap, Thermometer, TrendingUp, TrendingDown } from 'lucide-react';
 import { fetchAllKPIs, type AllKPIs } from '@/lib/api-dashboard';
-import { getChartColors } from '@/lib/chartColors';
+import { useChartColors } from '@/lib/chartColors';
 
 interface HomeKpi {
   label: string;
@@ -42,11 +42,10 @@ function buildKpis(data: AllKPIs | null, colors: string[]): HomeKpi[] {
 
 export default function HomeBottomCharts() {
   const [allKpis, setAllKpis] = useState<AllKPIs | null>(null);
-  const [chartColors, setChartColors] = useState(['#5CE5A0','#56CDE7','#F6AD55','#E53E3E','#4D65FF']);
+  const { colors: chartColors } = useChartColors();
 
   useEffect(() => {
     fetchAllKPIs().then(setAllKpis).catch(() => {});
-    setChartColors(getChartColors());
   }, []);
 
   const kpiItems = buildKpis(allKpis, chartColors);
