@@ -66,6 +66,16 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
+# Build artifacts
+.next/
+console.log
+
+# Resources / screenshots
+resources/
+
+# Example/temp files
+*.example
+
 # Base sources
 Savana/
 docs/
