@@ -116,10 +116,10 @@ export default function Navigation() {
                     href={item.href}
                     title={item.label}
                     className={cn(
-                      'flex items-center gap-1 px-2 lg:px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200',
+                      'nav-item flex items-center gap-1 px-2 lg:px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200 border',
                       isActive
-                        ? 'font-bold text-foreground bg-gradient-to-r from-[var(--color-accent,#5CE5A0)]/10 to-[var(--color-secondary,#56CDE7)]/10 border border-[var(--color-accent,#5CE5A0)]/30 shadow-[0_0_12px_rgba(92,229,160,0.15)]'
-                        : 'font-normal text-foreground/70 hover:text-[var(--color-hover,#5DDFFF)] hover:bg-muted/50 border border-transparent'
+                        ? 'nav-item-active font-bold text-foreground'
+                        : 'nav-item-inactive font-normal text-foreground/70 border-transparent'
                     )}
                   >
                     <Icon size={14} />
@@ -211,10 +211,10 @@ export default function Navigation() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-3 rounded-lg text-sm transition-all duration-200',
+                    'nav-item flex items-center gap-2 px-4 py-3 rounded-lg text-sm transition-all duration-200 border',
                     isActive
-                      ? 'font-bold text-foreground bg-gradient-to-r from-[#5CE5A0]/10 to-[#56CDE7]/10 border border-[#5CE5A0]/30 shadow-[0_0_12px_rgba(92,229,160,0.15)]'
-                      : 'font-normal text-foreground/70 hover:text-foreground hover:bg-muted/50 border border-transparent'
+                      ? 'nav-item-active font-bold text-foreground'
+                      : 'nav-item-inactive font-normal text-foreground/70 border-transparent'
                   )}
                 >
                   <Icon size={16} />
