@@ -68,8 +68,9 @@ export default function TerminalCanvas({ onCameraApiReady }: TerminalCanvasProps
       frameloop={statusEffects ? "always" : "demand"}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
       camera={{ fov: 50, near: 0.1, far: 500 }}
-      style={{ width: '100%', height: '100%' }}
+      style={{ width: '100%', height: '100%', background: '#1a1a1a' }}
     >
+      <color attach="background" args={['#1a1a1a']} />
       <SceneContent config={config} onCameraApiReady={onCameraApiReady} />
     </Canvas>
   );
