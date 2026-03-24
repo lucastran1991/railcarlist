@@ -25,7 +25,7 @@ export default function TerminalSelector() {
   }, []);
 
   return (
-    <div className="fixed top-[52px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto" ref={ref}>
+    <div className="fixed top-[57px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 px-3 h-9 rounded-lg border border-border hover:bg-muted transition-colors topbar-surface shadow-sm"
