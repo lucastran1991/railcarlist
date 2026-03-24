@@ -10,6 +10,12 @@ export default function TerminalSelector() {
   const ref = useRef<HTMLDivElement>(null);
   const { terminals, activeTerminal, setActiveTerminal } = useTerminalStore();
 
+  // Hydrate from localStorage after mount to avoid SSR mismatch
+  useEffect(() => {
+    const saved = localStorage.getItem('vopak_active_terminal');
+    if (saved && saved !== activeTerminal.id) setActiveTerminal(saved);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
