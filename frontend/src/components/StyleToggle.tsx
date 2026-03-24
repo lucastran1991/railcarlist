@@ -36,7 +36,7 @@ export default function StyleToggle() {
         <Palette size={16} className="text-foreground/70" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-3 w-56 rounded-xl border border-border/50 dropdown-surface shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-5 w-56 rounded-xl border border-border/50 dropdown-surface shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Color Themes */}
           <div className="px-3 py-2 border-b border-border">
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Color Theme</p>

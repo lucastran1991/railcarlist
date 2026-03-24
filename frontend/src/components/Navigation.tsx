@@ -77,7 +77,7 @@ export default function Navigation() {
       </button>
 
       {menuOpen && (
-        <div className="absolute right-0 mt-3 w-56 dropdown-surface border border-border/50 rounded-xl shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 mt-5 w-56 dropdown-surface border border-border/50 rounded-xl shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="px-4 py-3 border-b border-border">
             <p className="text-sm font-semibold text-foreground">{user?.name ?? 'Admin'}</p>
             <p className="text-xs text-muted-foreground">{user?.role ?? 'Administrator'}</p>
@@ -144,7 +144,7 @@ export default function Navigation() {
                   )}
                 </button>
                 {alertOpen && (
-                  <div className="absolute right-0 mt-3 w-[360px] max-h-[420px] rounded-xl border border-border/50 dropdown-surface shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute right-0 mt-5 w-[360px] max-h-[420px] rounded-xl border border-border/50 dropdown-surface shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-foreground">Alerts</h3>
                       <span className="text-[10px] text-muted-foreground">{unreadCount} unread</span>
