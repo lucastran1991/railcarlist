@@ -25,7 +25,7 @@ export default function TerminalSelector() {
   }, []);
 
   return (
-    <div className="fixed top-[57px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto" ref={ref}>
+    <div className="fixed top-[74px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 px-3 h-9 rounded-lg border border-border hover:bg-muted transition-colors topbar-surface shadow-sm"
@@ -37,7 +37,7 @@ export default function TerminalSelector() {
       </button>
 
       {open && (
-        <div className="absolute left-1/2 -translate-x-1/2 mt-5 w-[300px] dropdown-surface border border-border/50 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
+        <div className="absolute left-1/2 -translate-x-1/2 mt-8 w-[300px] dropdown-surface border border-border/50 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
           <div className="px-3 py-2 border-b border-border/50">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Select Terminal</p>
           </div>
