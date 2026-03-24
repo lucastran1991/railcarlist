@@ -80,6 +80,7 @@ Options:
     -R, --restart            Restart all PM2 processes
     -l, --logs               Show combined PM2 logs (from out.log)
     -P, --prod               Production mode: build frontend and run next start (not dev)
+    -I, --init               Generate sample data after start (for fresh deployments)
     -h, --help               Show this help message
 
 Environment Variables:
@@ -95,6 +96,8 @@ Examples:
     $0 --stop                 # Stop all PM2 processes
     $0 --restart              # Restart all PM2 processes
     $0 --prod                 # Start in production mode (frontend: next start)
+    $0 --init                 # Start and generate sample data (first-time setup)
+    $0 --prod --init          # Production mode + generate data
     $0 --logs                 # View combined logs from out.log
     PORT=3000 DB_PATH=dev.db $0
 
@@ -105,6 +108,7 @@ EOF
 SKIP_BUILD=false
 RUN_ONLY=false
 PROD_MODE=false
+INIT_DATA=false
 ACTION="start"
 
 while [[ $# -gt 0 ]]; do
@@ -154,6 +158,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -P|--prod)
             PROD_MODE=true
+            shift
+            ;;
+        -I|--init)
+            INIT_DATA=true
             shift
             ;;
         -h|--help)
@@ -548,6 +556,40 @@ log_info "  Delete all: pm2 delete all"
 log_info ""
 log_info "All logs are combined in: out.log"
 log_info ""
+
+# Generate sample data if --init flag is set
+if [ "$INIT_DATA" = true ]; then
+    log_step "Generating sample data (--init)..."
+    sleep 3  # Wait for backend to be ready
+
+    # Check if backend is responding
+    RETRIES=10
+    while [ $RETRIES -gt 0 ]; do
+        if curl -s "http://localhost:${PORT}/health" > /dev/null 2>&1; then
+            break
+        fi
+        log_info "Waiting for backend to start... ($RETRIES)"
+        sleep 2
+        RETRIES=$((RETRIES - 1))
+    done
+
+    if curl -s "http://localhost:${PORT}/health" > /dev/null 2>&1; then
+        log_info "Backend is ready. Generating data..."
+        RESPONSE=$(curl -s -X POST "http://localhost:${PORT}/api/system/generate" \
+            -H "Content-Type: application/json" \
+            -d '{"clearExisting": true}' 2>&1)
+
+        if echo "$RESPONSE" | grep -q '"error"'; then
+            log_warn "Data generation had issues: $(echo "$RESPONSE" | tail -1)"
+        else
+            RECORDS=$(echo "$RESPONSE" | grep -o '"records":[0-9]*' | tail -1 | grep -o '[0-9]*')
+            log_info "✓ Sample data generated successfully (${RECORDS:-unknown} records)"
+        fi
+    else
+        log_error "Backend not responding after 20s. Skipping data generation."
+        log_info "You can generate data manually: curl -X POST http://localhost:${PORT}/api/system/generate"
+    fi
+fi
 
 # Show initial status
 sleep 2
