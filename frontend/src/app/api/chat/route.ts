@@ -46,8 +46,10 @@ function getModel() {
   return google(modelName);
 }
 
-async function fetchBackend(path: string): Promise<unknown> {
-  const res = await fetch(`${API}${path}`);
+async function fetchBackend(path: string, terminalId?: string): Promise<unknown> {
+  const headers: Record<string, string> = {};
+  if (terminalId) headers['X-Terminal-Id'] = terminalId;
+  const res = await fetch(`${API}${path}`, { headers });
   if (!res.ok) throw new Error(`Backend ${res.status}: ${path}`);
   return res.json();
 }
@@ -75,6 +77,9 @@ const aggregateEnum = z.enum(['daily', 'monthly', 'quarterly', 'yearly']).defaul
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
+  // Forward terminal ID from client to backend calls
+  const terminalId = req.headers.get('X-Terminal-Id') || 'savannah';
+
   const result = streamText({
     model: getModel(),
     system: SYSTEM_PROMPT,
@@ -84,17 +89,17 @@ export async function POST(req: Request) {
       getDomainKpis: tool({
         description: 'Get KPI summary metrics for a domain.',
         parameters: z.object({ domain: domainEnum }),
-        execute: async ({ domain }: { domain: string }) => fetchBackend(`/api/${domain}/kpis`),
+        execute: async ({ domain }: { domain: string }) => fetchBackend(`/api/${domain}/kpis`, terminalId),
       }),
       getTankLevels: tool({
         description: 'Get current levels, volumes, capacities, and products for all 59 storage tanks.',
         parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/tank/levels'),
+        execute: async () => fetchBackend('/api/tank/levels', terminalId),
       }),
       getTankProductDistribution: tool({
         description: 'Get total volume stored by product type.',
         parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/tank/product-distribution'),
+        execute: async () => fetchBackend('/api/tank/product-distribution', terminalId),
       }),
       getAlerts: tool({
         description: 'Get system alerts sorted by most recent. Returns severity, title, description, source.',
@@ -103,27 +108,27 @@ export async function POST(req: Request) {
           limit: z.number().default(10),
         }),
         execute: async ({ page, limit }: { page: number; limit: number }) =>
-          fetchBackend(`/api/alerts?page=${page}&limit=${limit}`),
+          fetchBackend(`/api/alerts?page=${page}&limit=${limit}`, terminalId),
       }),
       getAlertKpis: tool({
         description: 'Get alert counts: total, critical, warning, info, resolved, unread.',
         parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/alerts/kpis'),
+        execute: async () => fetchBackend('/api/alerts/kpis', terminalId),
       }),
       getBoilerReadings: tool({
         description: 'Get current readings for all boilers: efficiency, load %, steam output.',
         parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/boiler/readings'),
+        execute: async () => fetchBackend('/api/boiler/readings', terminalId),
       }),
       getBoilerEmissions: tool({
         description: 'Get current emission levels (CO, NOx, SOx) vs regulatory limits.',
         parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/boiler/emissions'),
+        execute: async () => fetchBackend('/api/boiler/emissions', terminalId),
       }),
       getSubStationTransformers: tool({
         description: 'Get transformer loading, capacity, and temperature data.',
         parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/substation/transformers'),
+        execute: async () => fetchBackend('/api/substation/transformers', terminalId),
       }),
       getChartData: tool({
         description: 'Get historical chart data for any domain. Charts: electricity(load-profiles,weekly-consumption,power-factor,cost-breakdown,peak-demand,phase-balance), steam(balance,header-pressure,distribution,condensate,fuel-ratio,loss), boiler(efficiency-trend,steam-fuel,stack-temp,combustion), tank(inventory-trend,throughput,level-changes,temperatures), substation(voltage-profile,transformer-temp,feeder-distribution,harmonics,fault-events)',
@@ -141,7 +146,7 @@ export async function POST(req: Request) {
           const params = new URLSearchParams({ aggregate, limit: String(limit) });
           if (start) params.set('start', start);
           if (end) params.set('end', end);
-          return fetchBackend(`/api/${domain}/${chart}?${params}`);
+          return fetchBackend(`/api/${domain}/${chart}?${params}`, terminalId);
         },
       }),
     },

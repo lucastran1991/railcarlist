@@ -24,6 +24,12 @@ export default function ChatPage() {
 
   const { messages, sendMessage, status, setMessages } = useChat({
     api: '/api/chat',
+    headers: () => {
+      const tid = typeof window !== 'undefined'
+        ? localStorage.getItem('vopak_active_terminal') || 'savannah'
+        : 'savannah';
+      return { 'X-Terminal-Id': tid };
+    },
   });
   const [input, setInput] = useState('');
   const isLoading = status === 'streaming' || status === 'submitted';
