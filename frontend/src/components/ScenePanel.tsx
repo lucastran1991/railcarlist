@@ -14,8 +14,8 @@ import { useSceneStore } from '@/lib/sceneStore';
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-2">
-      <span className="text-[10px] text-white/40 shrink-0">{label}</span>
-      <span className="text-[10px] text-white font-mono truncate">{value}</span>
+      <span className="text-[10px] text-muted-foreground shrink-0">{label}</span>
+      <span className="text-[10px] text-foreground font-mono truncate">{value}</span>
     </div>
   );
 }
@@ -40,8 +40,8 @@ export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
       disabled={!cameraApi}
       onClick={onClick}
       className={cn(
-        'w-7 h-7 flex items-center justify-center rounded-md border border-white/10 text-white/60',
-        'hover:bg-white/10 hover:border-[var(--color-accent,#5CE5A0)]/50 hover:text-[var(--color-accent,#5CE5A0)]',
+        'w-7 h-7 flex items-center justify-center rounded-md border border-border/30 text-muted-foreground',
+        'hover:bg-muted/50 hover:border-[var(--color-accent,#5CE5A0)]/50 hover:text-[var(--color-accent,#5CE5A0)]',
         'disabled:opacity-20 disabled:cursor-not-allowed transition-colors'
       )}
     >
@@ -54,33 +54,29 @@ export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
 
   return (
     <div className="hidden sm:block fixed left-3 top-[72px] z-20">
-      {/* Collapsed: just the toggle button */}
       {!expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-black/70 backdrop-blur-sm border border-white/10 text-white/60 hover:text-white hover:bg-black/80 transition-colors"
+          className="w-9 h-9 flex items-center justify-center rounded-xl dropdown-surface border border-border/30 text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Expand panel"
         >
           <PanelLeftOpen size={16} />
         </button>
       )}
 
-      {/* Expanded panel */}
       {expanded && (
-        <div className="w-[200px] rounded-xl bg-black/70 backdrop-blur-sm border border-white/10 shadow-lg overflow-hidden">
-          {/* Header with collapse button */}
+        <div className="w-[200px] rounded-xl dropdown-surface border border-border/30 shadow-lg overflow-hidden">
           <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-white/40">Scene Controls</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Scene Controls</p>
             <button
               onClick={() => setExpanded(false)}
-              className="w-6 h-6 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+              className="w-6 h-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
               aria-label="Collapse panel"
             >
               <PanelLeftClose size={13} />
             </button>
           </div>
 
-          {/* Camera controls — compact 2-row layout */}
           <div className="px-3 pb-2">
             <div className="flex gap-1 justify-center flex-wrap">
               {btn('Zoom in', <ZoomIn size={14} />, () => cameraApi?.zoomIn())}
@@ -93,9 +89,8 @@ export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
             </div>
           </div>
 
-          <div className="border-t border-white/10" />
+          <div className="border-t border-border/20" />
 
-          {/* Status effects toggle */}
           <div className="px-3 py-2">
             <button
               onClick={toggleStatusEffects}
@@ -103,27 +98,25 @@ export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
                 'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
                 statusEffects
                   ? 'bg-[var(--color-accent,#5CE5A0)]/15 text-[var(--color-accent,#5CE5A0)] border border-[var(--color-accent,#5CE5A0)]/30'
-                  : 'bg-white/5 text-white/40 border border-white/10 hover:bg-white/10'
+                  : 'bg-muted/30 text-muted-foreground border border-border/20 hover:bg-muted/50'
               )}
             >
               <Activity size={13} />
               <span>Status Effects</span>
               <span className={cn(
                 'ml-auto text-[9px] font-bold uppercase',
-                statusEffects ? 'text-[var(--color-accent,#5CE5A0)]' : 'text-white/30'
+                statusEffects ? 'text-[var(--color-accent,#5CE5A0)]' : 'text-muted-foreground/50'
               )}>
                 {statusEffects ? 'ON' : 'OFF'}
               </span>
             </button>
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-white/10" />
+          <div className="border-t border-border/20" />
 
-          {/* Camera info */}
           {cameraInfo && (
             <div className="px-3 py-2">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-1">Camera</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Camera</p>
               <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
                 <Row label="Angle" value={`${cameraInfo.angle}°`} />
                 <Row label="Radius" value={`${cameraInfo.radius}`} />
@@ -135,12 +128,10 @@ export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
             </div>
           )}
 
-          {/* Divider */}
-          <div className="border-t border-white/10" />
+          <div className="border-t border-border/20" />
 
-          {/* Mouse + Raycast */}
           <div className="px-3 py-2">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-1">Pointer</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Pointer</p>
             <div className="flex flex-col gap-0.5">
               <Row label="Screen" value={`${mouse?.x ?? 0}, ${mouse?.y ?? 0}`} />
               {raycastInfo ? (
@@ -156,12 +147,10 @@ export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-white/10" />
+          <div className="border-t border-border/20" />
 
-          {/* Selection */}
           <div className="px-3 py-2 pb-3">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 mb-1">Selected</p>
+            <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Selected</p>
             <div className="flex flex-col gap-0.5">
               {selectedObj ? (
                 <>
