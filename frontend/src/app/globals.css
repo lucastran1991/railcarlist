@@ -257,26 +257,9 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
-/* ── Gradient text — follows theme via --gradient-text-from/to ── */
+/* ── Page title text — plain foreground color (no gradient) ── */
 .gradient-text {
-  background: linear-gradient(104deg, var(--gradient-text-from, #E8E8ED) 37%, var(--gradient-text-to, #C0C4DA) 58%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-:root .gradient-text {
-  background: linear-gradient(104deg, var(--gradient-text-from, #1a1e2e) 37%, var(--gradient-text-to, #3a3f55) 58%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.dark .gradient-text {
-  background: linear-gradient(104deg, var(--gradient-text-from, #E8E8ED) 37%, var(--gradient-text-to, #C0C4DA) 58%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: hsl(var(--foreground));
 }
 
 .gradient-primary {
