@@ -29,6 +29,7 @@ const tooltipStyle = {
   contentStyle: { backgroundColor: 'hsl(var(--popover))', border: '1px solid hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' },
   itemStyle: { color: 'hsl(var(--foreground))' },
   labelStyle: { color: 'hsl(var(--muted-foreground))' },
+  cursor: { fill: 'hsl(var(--muted) / 0.3)' },
 };
 
 const GRID_STROKE = 'hsl(var(--border))';
