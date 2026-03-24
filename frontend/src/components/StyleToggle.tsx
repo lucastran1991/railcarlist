@@ -1,10 +1,17 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Palette, Check } from 'lucide-react';
 import { useStyleTheme } from '@/lib/useStyleTheme';
-import { THEMES } from '@/lib/themes';
+import { THEMES, type ThemeConfig } from '@/lib/themes';
 import { cn } from '@/lib/utils';
+
+function hexLightness(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  return 0.299 * r + 0.587 * g + 0.114 * b; // perceived brightness
+}
 
 export default function StyleToggle() {
   const { themeId, setColorTheme, mounted } = useStyleTheme();
@@ -36,7 +43,7 @@ export default function StyleToggle() {
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Color Theme</p>
           </div>
           <div className="p-2 grid grid-cols-2 gap-1.5 overflow-y-auto max-h-[360px]">
-            {THEMES.map((t) => (
+            {[...THEMES].sort((a, b) => hexLightness(b.preview.accent) - hexLightness(a.preview.accent)).map((t) => (
               <button
                 key={t.id}
                 onClick={() => { setColorTheme(t.id); setOpen(false); }}
