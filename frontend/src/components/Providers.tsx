@@ -7,7 +7,7 @@ import HomeRouteScene from './HomeRouteScene';
 import { useSystemConfig } from '@/lib/useSystemConfig';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  useSystemConfig(); // loads colors from system.cfg.json → CSS vars
+  useSystemConfig();
   const pathname = usePathname();
   const isHome = pathname === '/';
   const isLogin = pathname === '/login';
@@ -16,17 +16,19 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       {!isLogin && <Navigation />}
       {isHome && !isLogin && <HomeRouteScene />}
-      <main
-        className={`relative z-[1] ${
+      <div
+        className={
           isLogin
             ? ''
             : isHome
-              ? 'bg-transparent min-h-screen pointer-events-none'
-              : 'min-h-[calc(100vh-64px)] pointer-events-auto'
-        }`}
+              ? 'fixed inset-0 z-[1] pointer-events-none'
+              : 'page-content'
+        }
       >
-        {children}
-      </main>
+        <main className={isHome ? 'pointer-events-none' : ''}>
+          {children}
+        </main>
+      </div>
     </ThemeProvider>
   );
 }

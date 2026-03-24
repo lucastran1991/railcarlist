@@ -53,7 +53,7 @@ export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
   const mouse = mousePos.current;
 
   return (
-    <div className="hidden sm:block fixed left-3 top-[72px] z-20">
+    <div className="hidden sm:block fixed left-[232px] top-[68px] z-20 transition-all duration-300 [[data-sidebar=collapsed]_&]:left-[72px]">
       {/* Collapsed: just the toggle button */}
       {!expanded && (
         <button
