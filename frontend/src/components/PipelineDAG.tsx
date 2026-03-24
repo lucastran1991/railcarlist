@@ -1,9 +1,11 @@
 // @ts-nocheck — @xyflow/react types pending for React 19
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
+  useReactFlow,
   Background,
   Controls,
   Handle,
@@ -558,12 +560,13 @@ function NodeDetailPopup({ data, onClose }: { data: DomainNodeData; onClose: () 
   );
 }
 
-export default function PipelineDAG() {
+function PipelineDAGInner() {
   const [kpis, setKpis] = useState<Record<string, any>>({});
   const [detailed, setDetailed] = useState(false);
   const [popupData, setPopupData] = useState<DomainNodeData | null>(null);
   const nodeTypes = useMemo(() => ({ domain: DomainNode }), []);
   const edgeTypes = useMemo(() => ({ flow: FlowEdge }), []);
+  const { fitView } = useReactFlow();
 
   useEffect(() => {
     Promise.all([
@@ -579,7 +582,6 @@ export default function PipelineDAG() {
 
   const onNodeClick = useMemo(() => (data: DomainNodeData) => setPopupData(data), []);
 
-  // Inject onNodeClick into all nodes
   const rawNodes = useMemo(() => {
     const nodes = detailed ? buildDetailedNodes(kpis) : buildOverviewNodes(kpis);
     return nodes.map(n => ({ ...n, data: { ...n.data, onNodeClick } }));
@@ -594,17 +596,24 @@ export default function PipelineDAG() {
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
 
+  // Sync layout + re-center when view mode or data changes
   useEffect(() => {
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [layoutedNodes, layoutedEdges, setNodes, setEdges]);
+    // fitView after React commits the new nodes
+    requestAnimationFrame(() => fitView({ padding: 0.25, duration: 300 }));
+  }, [layoutedNodes, layoutedEdges, setNodes, setEdges, fitView]);
+
+  const handleToggle = useCallback(() => {
+    setDetailed((d) => !d);
+  }, []);
 
   return (
     <div className="relative w-full h-[450px] sm:h-[550px] rounded-xl border border-border overflow-hidden">
       {/* View toggle */}
       <div className="absolute top-3 right-3 z-10">
         <button
-          onClick={() => setDetailed((d) => !d)}
+          onClick={handleToggle}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors bg-background/80 backdrop-blur-sm border border-border hover:bg-muted"
         >
           {detailed ? <ToggleRight size={14} className="text-[var(--color-accent,#5CE5A0)]" /> : <ToggleLeft size={14} className="text-muted-foreground" />}
@@ -636,8 +645,15 @@ export default function PipelineDAG() {
         />
       </ReactFlow>
 
-      {/* Node detail popup */}
       {popupData && <NodeDetailPopup data={popupData} onClose={() => setPopupData(null)} />}
     </div>
+  );
+}
+
+export default function PipelineDAG() {
+  return (
+    <ReactFlowProvider>
+      <PipelineDAGInner />
+    </ReactFlowProvider>
   );
 }
