@@ -145,14 +145,18 @@ body {
   --page-bg-glass: linear-gradient(135deg, #080a11 0%, #0d1117 25%, #111827 50%, #0a1628 75%, #080a11 100%);
 }
 
-/* ── Theme-aware card — always blurred ── */
+/* ── Theme-aware card — always blurred, shadow from theme ── */
 .theme-card {
   background: hsl(var(--card) / 0.75);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid hsl(var(--border) / 0.5);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-card, 0 1px 3px rgba(0,0,0,0.08));
   transition: all 0.3s ease;
+}
+.theme-card:hover {
+  box-shadow: var(--shadow-card-hover, 0 4px 12px rgba(0,0,0,0.12));
 }
 
 /* ── Glass nav bar ── */
@@ -253,22 +257,23 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
+/* ── Gradient text — follows theme via --gradient-text-from/to ── */
 .gradient-text {
-  background: linear-gradient(104deg, #E8E8ED 37.03%, #C0C4DA 57.64%);
+  background: linear-gradient(104deg, var(--gradient-text-from, #E8E8ED) 37%, var(--gradient-text-to, #C0C4DA) 58%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 :root .gradient-text {
-  background: linear-gradient(104deg, #1a1e2e 37.03%, #3a3f55 57.64%);
+  background: linear-gradient(104deg, var(--gradient-text-from, #1a1e2e) 37%, var(--gradient-text-to, #3a3f55) 58%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .dark .gradient-text {
-  background: linear-gradient(104deg, #E8E8ED 37.03%, #C0C4DA 57.64%);
+  background: linear-gradient(104deg, var(--gradient-text-from, #E8E8ED) 37%, var(--gradient-text-to, #C0C4DA) 58%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

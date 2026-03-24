@@ -1,8 +1,10 @@
 /**
  * Theme configuration system.
- * Each theme defines CSS variable overrides applied to :root.
+ * Each theme defines CSS variable overrides applied to :root via inline styles.
  * Dark/Light mode is handled separately by next-themes (.dark class).
- * Glass effect is a modifier that can combine with any theme.
+ *
+ * IMPORTANT: applyTheme() only sets/removes theme-specific properties.
+ * It does NOT wipe root.style.cssText (which would kill useSystemConfig colors).
  */
 
 export interface ThemeConfig {
@@ -10,15 +12,27 @@ export interface ThemeConfig {
   name: string;
   description: string;
   preview: { bg: string; accent: string; card: string; border: string };
-  // CSS variable overrides — applied to :root (light) and .dark
   light: Record<string, string>;
   dark: Record<string, string>;
-  // Shared overrides (both modes)
   shared?: Record<string, string>;
 }
 
+// All CSS variable keys that themes may override — used for cleanup on theme switch
+const THEME_VARS = [
+  '--background', '--foreground', '--card', '--card-foreground',
+  '--popover', '--popover-foreground', '--primary', '--primary-foreground',
+  '--secondary', '--secondary-foreground', '--muted', '--muted-foreground',
+  '--accent', '--accent-foreground', '--destructive', '--destructive-foreground',
+  '--border', '--input', '--ring',
+  '--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5',
+  '--radius', '--shadow-card', '--shadow-card-hover', '--border-style',
+  '--color-accent', '--color-secondary', '--color-tertiary', '--color-hover',
+  '--color-warning', '--color-danger', '--color-gradient-from', '--color-gradient-to',
+  '--gradient-text-from', '--gradient-text-to',
+];
+
 export const THEMES: ThemeConfig[] = [
-  // ── Default (current Vopak Terminal theme) ──────────────────────
+  // ── Default (Vopak Terminal) ────────────────────────────────────
   {
     id: 'default',
     name: 'Terminal',
@@ -26,6 +40,7 @@ export const THEMES: ThemeConfig[] = [
     preview: { bg: '#080A11', accent: '#5CE5A0', card: '#131620', border: '#2C2E39' },
     light: {},
     dark: {},
+    // No shared — uses globals.css defaults + system.cfg.json colors
   },
 
   // ── Cyberpunk Neon ──────────────────────────────────────────────
@@ -54,6 +69,11 @@ export const THEMES: ThemeConfig[] = [
       '--border': '280 15% 85%',
       '--input': '280 15% 85%',
       '--ring': '330 100% 50%',
+      '--chart-1': '330 100% 50%',
+      '--chart-2': '180 100% 45%',
+      '--chart-3': '270 80% 55%',
+      '--chart-4': '45 100% 50%',
+      '--chart-5': '200 100% 50%',
     },
     dark: {
       '--background': '270 40% 4%',
@@ -75,6 +95,11 @@ export const THEMES: ThemeConfig[] = [
       '--border': '270 30% 18%',
       '--input': '270 30% 18%',
       '--ring': '330 100% 55%',
+      '--chart-1': '330 100% 60%',
+      '--chart-2': '180 100% 50%',
+      '--chart-3': '270 80% 60%',
+      '--chart-4': '45 100% 55%',
+      '--chart-5': '200 100% 55%',
     },
     shared: {
       '--radius': '0.25rem',
@@ -86,9 +111,10 @@ export const THEMES: ThemeConfig[] = [
       '--color-danger': '#FF4444',
       '--color-gradient-from': '#FF2D95',
       '--color-gradient-to': '#00F0FF',
-      '--shadow-card': '0 0 20px rgba(255,45,149,0.15), 0 0 40px rgba(0,240,255,0.08)',
-      '--shadow-card-hover': '0 0 25px rgba(255,45,149,0.25), 0 0 50px rgba(0,240,255,0.12)',
-      '--border-style': 'solid',
+      '--gradient-text-from': '#FF2D95',
+      '--gradient-text-to': '#00F0FF',
+      '--shadow-card': '0 0 20px rgba(255,45,149,0.12), 0 0 40px rgba(0,240,255,0.06)',
+      '--shadow-card-hover': '0 0 25px rgba(255,45,149,0.2), 0 0 50px rgba(0,240,255,0.1)',
     },
   },
 
@@ -118,6 +144,11 @@ export const THEMES: ThemeConfig[] = [
       '--border': '214 15% 82%',
       '--input': '214 15% 82%',
       '--ring': '217 91% 60%',
+      '--chart-1': '217 91% 60%',
+      '--chart-2': '199 89% 48%',
+      '--chart-3': '239 84% 67%',
+      '--chart-4': '43 96% 56%',
+      '--chart-5': '0 72% 51%',
     },
     dark: {
       '--background': '217 33% 6%',
@@ -139,6 +170,11 @@ export const THEMES: ThemeConfig[] = [
       '--border': '217 20% 20%',
       '--input': '217 20% 20%',
       '--ring': '217 91% 60%',
+      '--chart-1': '217 91% 65%',
+      '--chart-2': '199 89% 55%',
+      '--chart-3': '239 84% 70%',
+      '--chart-4': '43 96% 60%',
+      '--chart-5': '0 72% 56%',
     },
     shared: {
       '--radius': '1rem',
@@ -150,9 +186,10 @@ export const THEMES: ThemeConfig[] = [
       '--color-danger': '#EF4444',
       '--color-gradient-from': '#3B82F6',
       '--color-gradient-to': '#06B6D4',
+      '--gradient-text-from': '#93C5FD',
+      '--gradient-text-to': '#67E8F9',
       '--shadow-card': '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
       '--shadow-card-hover': '0 4px 12px rgba(59,130,246,0.12)',
-      '--border-style': 'solid',
     },
   },
 
@@ -182,6 +219,11 @@ export const THEMES: ThemeConfig[] = [
       '--border': '24 6% 83%',
       '--input': '24 6% 83%',
       '--ring': '38 92% 50%',
+      '--chart-1': '38 92% 50%',
+      '--chart-2': '25 95% 53%',
+      '--chart-3': '15 75% 45%',
+      '--chart-4': '45 93% 47%',
+      '--chart-5': '0 72% 51%',
     },
     dark: {
       '--background': '20 14% 7%',
@@ -203,6 +245,11 @@ export const THEMES: ThemeConfig[] = [
       '--border': '20 8% 22%',
       '--input': '20 8% 22%',
       '--ring': '38 92% 50%',
+      '--chart-1': '38 92% 55%',
+      '--chart-2': '25 95% 58%',
+      '--chart-3': '15 75% 50%',
+      '--chart-4': '45 93% 52%',
+      '--chart-5': '0 72% 56%',
     },
     shared: {
       '--radius': '0.5rem',
@@ -214,16 +261,20 @@ export const THEMES: ThemeConfig[] = [
       '--color-danger': '#DC2626',
       '--color-gradient-from': '#F59E0B',
       '--color-gradient-to': '#F97316',
+      '--gradient-text-from': '#FCD34D',
+      '--gradient-text-to': '#FDBA74',
       '--shadow-card': '0 2px 4px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)',
       '--shadow-card-hover': '0 4px 16px rgba(245,158,11,0.15)',
-      '--border-style': 'solid',
     },
   },
 ];
 
+// Track which properties were set by the last theme apply
+let _appliedVars: string[] = [];
+
 /**
- * Apply a theme's CSS variables to the document root.
- * Respects current dark/light mode.
+ * Apply a theme's CSS variables to document root.
+ * Only touches theme-specific vars — does NOT wipe other inline styles.
  */
 export function applyTheme(themeId: string): void {
   const theme = THEMES.find(t => t.id === themeId);
@@ -233,28 +284,43 @@ export function applyTheme(themeId: string): void {
   const isDark = root.classList.contains('dark');
   const vars = isDark ? theme.dark : theme.light;
 
-  // Clear previous theme overrides
-  root.style.cssText = '';
+  // Remove previously applied theme vars (clean slate for new theme)
+  for (const key of _appliedVars) {
+    root.style.removeProperty(key);
+  }
+  _appliedVars = [];
 
   // Apply mode-specific variables
   for (const [key, value] of Object.entries(vars)) {
     root.style.setProperty(key, value);
+    _appliedVars.push(key);
   }
 
-  // Apply shared variables (both modes)
+  // Apply shared variables
   if (theme.shared) {
     for (const [key, value] of Object.entries(theme.shared)) {
       root.style.setProperty(key, value);
+      _appliedVars.push(key);
     }
   }
 
-  // Store theme ID
   root.setAttribute('data-theme', themeId);
 }
 
 /**
- * Re-apply theme when dark/light mode changes.
- * Call this from a MutationObserver or useEffect.
+ * Remove all theme overrides — restore CSS defaults.
+ */
+export function clearTheme(): void {
+  const root = document.documentElement;
+  for (const key of _appliedVars) {
+    root.style.removeProperty(key);
+  }
+  _appliedVars = [];
+  root.removeAttribute('data-theme');
+}
+
+/**
+ * Re-apply current theme (e.g. when dark/light mode changes).
  */
 export function reapplyTheme(): void {
   const themeId = document.documentElement.getAttribute('data-theme') || 'default';
