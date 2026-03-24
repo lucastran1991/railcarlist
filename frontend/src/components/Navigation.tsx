@@ -70,14 +70,14 @@ export default function Navigation() {
         onClick={() => setMenuOpen(!menuOpen)}
         className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors"
       >
-        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#5CE5A0] to-[#56CDE7] flex items-center justify-center text-primary-foreground text-sm font-bold">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[var(--color-gradient-from,#5CE5A0)] to-[var(--color-gradient-to,#56CDE7)] flex items-center justify-center text-primary-foreground text-sm font-bold">
           {user?.name?.charAt(0) ?? 'A'}
         </div>
         <ChevronDown size={14} className={cn('text-foreground/60 transition-transform hidden sm:block', menuOpen && 'rotate-180')} />
       </button>
 
       {menuOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-popover border border-border rounded-xl shadow-ntx py-1 z-50">
+        <div className="absolute right-0 mt-2 w-56 dropdown-surface border border-border/50 rounded-xl shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="px-4 py-3 border-b border-border">
             <p className="text-sm font-semibold text-foreground">{user?.name ?? 'Admin'}</p>
             <p className="text-xs text-muted-foreground">{user?.role ?? 'Administrator'}</p>
@@ -97,10 +97,7 @@ export default function Navigation() {
   return (
     <>
       <nav className={cn(
-        'py-3 z-30 pointer-events-auto sticky top-0',
-        isHome
-          ? 'border-b border-border/30 bg-background/80'
-          : 'border-b border-border bg-background/70 backdrop-blur-xl backdrop-saturate-[180%]'
+        'py-3 z-30 pointer-events-auto sticky top-0 topbar-surface border-b border-border/50',
       )}>
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
@@ -121,8 +118,8 @@ export default function Navigation() {
                     className={cn(
                       'flex items-center gap-1 px-2 lg:px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200',
                       isActive
-                        ? 'font-bold text-foreground bg-gradient-to-r from-[#5CE5A0]/10 to-[#56CDE7]/10 border border-[#5CE5A0]/30 shadow-[0_0_12px_rgba(92,229,160,0.15)]'
-                        : 'font-normal text-foreground/70 hover:text-[#5DDFFF] hover:bg-muted/50 border border-transparent'
+                        ? 'font-bold text-foreground bg-gradient-to-r from-[var(--color-accent,#5CE5A0)]/10 to-[var(--color-secondary,#56CDE7)]/10 border border-[var(--color-accent,#5CE5A0)]/30 shadow-[0_0_12px_rgba(92,229,160,0.15)]'
+                        : 'font-normal text-foreground/70 hover:text-[var(--color-hover,#5DDFFF)] hover:bg-muted/50 border border-transparent'
                     )}
                   >
                     <Icon size={14} />
@@ -147,7 +144,7 @@ export default function Navigation() {
                   )}
                 </button>
                 {alertOpen && (
-                  <div className="absolute right-0 mt-2 w-[360px] max-h-[420px] rounded-xl border border-border bg-popover shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute right-0 mt-2 w-[360px] max-h-[420px] rounded-xl border border-border/50 dropdown-surface shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-foreground">Alerts</h3>
                       <span className="text-[10px] text-muted-foreground">{unreadCount} unread</span>
@@ -204,7 +201,7 @@ export default function Navigation() {
 
       {/* Mobile nav drawer */}
       {mobileNavOpen && (
-        <div className="md:hidden fixed inset-x-0 top-[57px] z-30 glass border-b border-border pointer-events-auto animate-[fadeIn_0.15s_ease-out]">
+        <div className="md:hidden fixed inset-x-0 top-[57px] z-30 dropdown-surface border-b border-border/50 pointer-events-auto animate-[fadeIn_0.15s_ease-out]">
           <div className="px-4 py-3 flex flex-col gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
