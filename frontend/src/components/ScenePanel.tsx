@@ -26,7 +26,7 @@ interface ScenePanelProps {
 }
 
 export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const cameraInfo = useSceneStore(s => s.cameraInfo);
   const selectedObj = useSceneStore(s => s.selectedObj);

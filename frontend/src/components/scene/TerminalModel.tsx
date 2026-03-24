@@ -130,6 +130,11 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
   useCursor(!!hoveredName, 'pointer', 'default');
   const { scene } = useGLTF('/models/terminal.glb');
 
+  // Signal that GLB model is loaded
+  useEffect(() => {
+    useSceneStore.getState().setModelLoaded(true);
+  }, [scene]);
+
   // Fetch tank status data
   const [tankData, setTankData] = useState<Map<string, TankLevelData>>(new Map());
   useEffect(() => {

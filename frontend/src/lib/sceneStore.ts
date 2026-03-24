@@ -26,6 +26,12 @@ interface SceneState {
   // Tank label positions (computed by TerminalModel, shared with TankLabels)
   tankLabelPositions: Map<string, { tankId: string; product: string; position: [number, number, number] }>;
   setTankLabelPositions: (positions: Map<string, { tankId: string; product: string; position: [number, number, number] }>) => void;
+
+  // Scene loading state
+  modelLoaded: boolean;
+  setModelLoaded: (loaded: boolean) => void;
+  sceneReady: boolean;
+  setSceneReady: (ready: boolean) => void;
 }
 
 export const useSceneStore = create<SceneState>((set) => ({
@@ -47,4 +53,9 @@ export const useSceneStore = create<SceneState>((set) => ({
 
   tankLabelPositions: new Map(),
   setTankLabelPositions: (positions) => set({ tankLabelPositions: positions }),
+
+  modelLoaded: false,
+  setModelLoaded: (loaded) => set({ modelLoaded: loaded }),
+  sceneReady: false,
+  setSceneReady: (ready) => set({ sceneReady: ready }),
 }));
