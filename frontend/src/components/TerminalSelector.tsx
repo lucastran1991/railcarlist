@@ -11,12 +11,8 @@ export default function TerminalSelector() {
   const ref = useRef<HTMLDivElement>(null);
   const { terminals, activeTerminal, setActiveTerminal } = useTerminalStore();
 
-  // Hydrate from localStorage after mount to avoid SSR mismatch
-  useEffect(() => {
-    const saved = localStorage.getItem('vopak_active_terminal');
-    if (saved && saved !== activeTerminal.id) setActiveTerminal(saved);
-    setMounted(true);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Mark mounted to avoid SSR hydration mismatch
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {

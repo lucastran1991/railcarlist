@@ -57,11 +57,23 @@ interface TerminalState {
 
 const STORAGE_KEY = 'vopak_active_terminal';
 
+function getInitialTerminal(): { id: string; terminal: Terminal } {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const found = TERMINALS.find(t => t.id === saved);
+      if (found) return { id: saved, terminal: found };
+    }
+  }
+  return { id: TERMINALS[0].id, terminal: TERMINALS[0] };
+}
+
 export const useTerminalStore = create<TerminalState>((set) => {
+  const initial = getInitialTerminal();
   return {
     terminals: TERMINALS,
-    activeTerminalId: 'savannah',
-    activeTerminal: TERMINALS[0],
+    activeTerminalId: initial.id,
+    activeTerminal: initial.terminal,
     setActiveTerminal: (id: string) => {
       const terminal = TERMINALS.find(t => t.id === id);
       if (terminal && id !== useTerminalStore.getState().activeTerminalId) {
