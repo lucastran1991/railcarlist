@@ -1,6 +1,4 @@
 import { create } from 'zustand';
-import { useSceneStore } from '@/lib/sceneStore';
-import { invalidateTankCache } from '@/lib/tankData';
 
 export interface Terminal {
   id: string;
@@ -66,14 +64,12 @@ export const useTerminalStore = create<TerminalState>((set) => {
     activeTerminal: TERMINALS[0],
     setActiveTerminal: (id: string) => {
       const terminal = TERMINALS.find(t => t.id === id);
-      if (terminal) {
+      if (terminal && id !== useTerminalStore.getState().activeTerminalId) {
         if (typeof window !== 'undefined') {
           localStorage.setItem(STORAGE_KEY, id);
+          // Full page reload — resets all components, hooks, caches, 3D scene
+          window.location.reload();
         }
-        // Reset 3D scene state + data caches before switching
-        useSceneStore.getState().resetScene();
-        invalidateTankCache();
-        set({ activeTerminalId: id, activeTerminal: terminal });
       }
     },
   };
