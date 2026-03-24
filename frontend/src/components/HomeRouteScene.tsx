@@ -5,6 +5,7 @@ import HomeThreeBackground from '@/components/HomeThreeBackground';
 import ScenePanel from '@/components/ScenePanel';
 import TankDetailPanel from '@/components/TankDetailPanel';
 import HomeBottomCharts from '@/components/HomeBottomCharts';
+import TerminalSelector from '@/components/TerminalSelector';
 import type { TerminalCameraApi } from '@/lib/three/types';
 
 export default function HomeRouteScene() {
@@ -24,6 +25,7 @@ export default function HomeRouteScene() {
       <div className="fixed inset-0 z-0 pointer-events-auto overflow-hidden" aria-hidden>
         <HomeThreeBackground onCameraApiReady={onCameraApiReady} />
       </div>
+      <TerminalSelector />
       <ScenePanel cameraApi={cameraApi} mousePos={mousePos} />
       <TankDetailPanel />
       <HomeBottomCharts />

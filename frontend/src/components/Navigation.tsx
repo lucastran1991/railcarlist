@@ -4,12 +4,11 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { ChevronDown, LogOut, Zap, Activity, Droplets, Gauge, Flame, Menu, X, Bell, AlertTriangle, Info, CheckCircle, Clock, Sparkles, GitBranch, MapPin } from 'lucide-react';
+import { ChevronDown, LogOut, Zap, Activity, Droplets, Gauge, Flame, Menu, X, Bell, AlertTriangle, Info, CheckCircle, Clock, Sparkles, GitBranch } from 'lucide-react';
 import { getUser, logout } from '@/lib/auth';
 import { API_BASE_URL } from '@/lib/config';
 import ThemeToggle from './ThemeToggle';
 import StyleToggle from './StyleToggle';
-import { useTerminalStore } from '@/lib/terminalStore';
 
 interface AlertItem {
   id: number;
@@ -38,14 +37,11 @@ export default function Navigation() {
   const isLogin = pathname === '/login';
   const [menuOpen, setMenuOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
-  const [terminalOpen, setTerminalOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const { terminals, activeTerminal, setActiveTerminal } = useTerminalStore();
 
   const alertIcon = (type: AlertItem['type']) => {
     switch (type) {
@@ -74,7 +70,6 @@ export default function Navigation() {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
       if (alertRef.current && !alertRef.current.contains(e.target as Node)) setAlertOpen(false);
-      if (terminalRef.current && !terminalRef.current.contains(e.target as Node)) setTerminalOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -93,71 +88,17 @@ export default function Navigation() {
   ];
 
   // Close other dropdowns when opening one
-  const closeAll = () => { setAlertOpen(false); setMenuOpen(false); setTerminalOpen(false); };
-  const openAlert = () => { const v = !alertOpen; closeAll(); setAlertOpen(v); };
-  const openMenu = () => { const v = !menuOpen; closeAll(); setMenuOpen(v); };
-  const openTerminal = () => { const v = !terminalOpen; closeAll(); setTerminalOpen(v); };
+  const openAlert = () => { setAlertOpen(!alertOpen); setMenuOpen(false); };
+  const openMenu = () => { setMenuOpen(!menuOpen); setAlertOpen(false); };
 
   return (
     <>
       <nav className="py-1.5 z-30 pointer-events-auto fixed top-0 left-0 right-0 topbar-surface border-b border-border/50">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Link href="/" className="hover:opacity-90">
-                <span className="text-lg font-semibold gradient-text">Vopak</span>
-              </Link>
-
-              {/* Terminal selector */}
-              <div className="relative" ref={terminalRef}>
-                <button
-                  onClick={openTerminal}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors"
-                >
-                  <span className="text-sm">{activeTerminal.flag}</span>
-                  <span className="text-[13px] font-semibold text-foreground hidden sm:inline">{activeTerminal.name}</span>
-                  <ChevronDown size={12} className={cn('text-foreground/50 transition-transform', terminalOpen && 'rotate-180')} />
-                </button>
-
-                {terminalOpen && (
-                  <div className="absolute left-0 mt-5 w-[280px] dropdown-surface border border-border/50 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
-                    <div className="px-3 py-2 border-b border-border/50">
-                      <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Select Terminal</p>
-                    </div>
-                    <div className="py-1 max-h-[300px] overflow-y-auto">
-                      {terminals.map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => { setActiveTerminal(t.id); setTerminalOpen(false); }}
-                          className={cn(
-                            'w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/40 transition-colors text-left',
-                            t.id === activeTerminal.id && 'bg-muted/30'
-                          )}
-                        >
-                          <span className="text-lg">{t.flag}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[13px] font-semibold text-foreground">{t.name}</span>
-                              {t.id === activeTerminal.id && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent,#5CE5A0)]" />
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <MapPin size={10} className="text-muted-foreground/60" />
-                              <span className="text-[11px] text-muted-foreground">{t.location}</span>
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <div className="text-[11px] font-medium text-foreground/70">{t.tankCount} tanks</div>
-                            <div className="text-[10px] text-muted-foreground">{t.capacity}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <Link href="/" className="hover:opacity-90">
+              <span className="text-lg font-semibold gradient-text">Vopak Terminal</span>
+            </Link>
 
             {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-0.5">
@@ -289,27 +230,6 @@ export default function Navigation() {
       {mobileNavOpen && (
         <div className="md:hidden fixed inset-x-0 top-[48px] z-30 dropdown-surface border-b border-border/50 pointer-events-auto animate-[fadeIn_0.15s_ease-out]">
           <div className="px-4 py-3 flex flex-col gap-1">
-            {/* Mobile terminal selector */}
-            <div className="pb-2 mb-2 border-b border-border/30">
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 px-2">Terminal</p>
-              <div className="grid grid-cols-2 gap-1">
-                {terminals.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => { setActiveTerminal(t.id); setMobileNavOpen(false); }}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all border',
-                      t.id === activeTerminal.id
-                        ? 'nav-item-active font-bold text-foreground'
-                        : 'nav-item-inactive text-foreground/70 border-transparent'
-                    )}
-                  >
-                    <span>{t.flag}</span>
-                    <span className="text-xs truncate">{t.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname.startsWith(item.href);
