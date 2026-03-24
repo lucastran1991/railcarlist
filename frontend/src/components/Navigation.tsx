@@ -116,10 +116,10 @@ export default function Navigation() {
                     href={item.href}
                     title={item.label}
                     className={cn(
-                      'nav-item flex items-center gap-1 px-2 lg:px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200 border',
+                      'nav-item flex items-center gap-1 px-2 lg:px-2.5 py-1.5 rounded-lg text-[13px] transition-all duration-200 border',
                       isActive
                         ? 'nav-item-active font-bold text-foreground'
-                        : 'nav-item-inactive font-normal text-foreground/70 border-transparent'
+                        : 'nav-item-inactive font-semibold text-foreground/70 border-transparent'
                     )}
                   >
                     <Icon size={14} />
