@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import TerminalModel from './TerminalModel';
 import SceneLighting from './SceneLighting';
 import TankLabels from './TankLabels';
+import NativeOutline from './NativeOutline';
 import CameraController, { type CameraControllerHandle } from './CameraController';
 import type { SceneConfig, ClickedObject, TerminalCameraApi } from '@/lib/three/types';
 import { loadSceneConfig, DEFAULT_CONFIG } from '@/lib/three/types';
@@ -49,6 +50,8 @@ function SceneContent({ config, onCameraApiReady }: { config: SceneConfig } & Te
 
         <TankLabels />
       </Suspense>
+
+      <NativeOutline />
     </>
   );
 }

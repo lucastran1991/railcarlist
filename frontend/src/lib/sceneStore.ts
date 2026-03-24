@@ -6,8 +6,10 @@ interface SceneState {
   // Selection
   selectedObj: ClickedObject | null;
   hoveredMeshUuid: string | null;
+  hoveredObjName: string | null;
   select: (obj: ClickedObject | null) => void;
   hover: (uuid: string | null) => void;
+  setHoveredObjName: (name: string | null) => void;
 
   // Camera
   cameraInfo: CameraInfo | null;
@@ -29,8 +31,10 @@ interface SceneState {
 export const useSceneStore = create<SceneState>((set) => ({
   selectedObj: null,
   hoveredMeshUuid: null,
+  hoveredObjName: null,
   select: (obj) => set({ selectedObj: obj }),
   hover: (uuid) => set({ hoveredMeshUuid: uuid }),
+  setHoveredObjName: (name) => set({ hoveredObjName: name }),
 
   cameraInfo: null,
   setCameraInfo: (info) => set({ cameraInfo: info }),

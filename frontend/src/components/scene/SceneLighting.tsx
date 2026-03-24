@@ -2,7 +2,6 @@
 
 import { useRef } from 'react';
 import * as THREE from 'three';
-import { Environment } from '@react-three/drei';
 
 export default function SceneLighting() {
   const dirLightRef = useRef<THREE.DirectionalLight>(null);
@@ -40,14 +39,6 @@ export default function SceneLighting() {
       {/* Rim/back light — subtle edge definition */}
       <directionalLight position={[20, 20, -30]} intensity={0.5} color={0xaaccff} />
 
-      {/* Self-hosted HDRI — background sky with clouds + PBR reflections */}
-      <Environment
-        files="/hdri/sunflowers_puresky_1k.exr"
-        background
-        backgroundBlurriness={0}
-        backgroundRotation={[0.15, Math.PI, 0]}
-        environmentIntensity={0.8}
-      />
     </>
   );
 }

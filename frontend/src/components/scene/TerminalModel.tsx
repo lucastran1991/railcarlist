@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import * as THREE from 'three';
-import { useGLTF, Outlines } from '@react-three/drei';
+import { useGLTF, useCursor } from '@react-three/drei';
 import { ThreeEvent, useFrame } from '@react-three/fiber';
 import type { ClickedObject } from '@/lib/three/types';
 import { osmToTankId, fetchTankLevels, type TankLevelData, type TankStatus, TANK_STATUS_CONFIG } from '@/lib/tankData';
@@ -126,6 +126,8 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
   const statusEffects = useSceneStore(s => s.statusEffects);
   const selectedObjName = useSceneStore(s => s.selectedObj?.name ?? null);
   const setTankLabelPositions = useSceneStore(s => s.setTankLabelPositions);
+  const [hoveredName, setHoveredName] = useState<string | null>(null);
+  useCursor(!!hoveredName, 'pointer', 'default');
   const { scene } = useGLTF('/models/terminal.glb');
 
   // Fetch tank status data
@@ -353,24 +355,36 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
           />
         ))}
 
-        {meshes.map((entry, i) => (
-          <mesh
-            key={`mesh-${i}`}
-            name={entry.name}
-            geometry={entry.geometry}
-            material={entry.material}
-            position={entry.position}
-            rotation={[entry.rotation[0], entry.rotation[1], entry.rotation[2], entry.rotation[3] as THREE.EulerOrder]}
-            scale={entry.scale}
-            castShadow={entry.castShadow}
-            receiveShadow={entry.receiveShadow}
-            onClick={(e) => handleMeshClick(e, entry)}
-          >
-            {entry.name === selectedObjName && (
-              <Outlines thickness={0.04} color="#5CE5A0" screenspace />
-            )}
-          </mesh>
-        ))}
+        {meshes.map((entry, i) => {
+          const isSelected = entry.name === selectedObjName;
+          const isHovered = entry.clickable && entry.name === hoveredName && !isSelected;
+          return (
+            <mesh
+              key={`mesh-${i}`}
+              name={entry.name}
+              geometry={entry.geometry}
+              material={entry.material}
+              position={entry.position}
+              rotation={[entry.rotation[0], entry.rotation[1], entry.rotation[2], entry.rotation[3] as THREE.EulerOrder]}
+              scale={entry.scale}
+              castShadow={entry.castShadow}
+              receiveShadow={entry.receiveShadow}
+              onClick={(e) => handleMeshClick(e, entry)}
+              onPointerOver={(e) => {
+                if (entry.clickable) {
+                  e.stopPropagation();
+                  setHoveredName(entry.name);
+                  useSceneStore.getState().setHoveredObjName(entry.name);
+                }
+              }}
+              onPointerOut={() => {
+                setHoveredName(null);
+                useSceneStore.getState().setHoveredObjName(null);
+              }}
+            />
+
+          );
+        })}
 
         {/* Rotating gears on maintenance tanks */}
         {maintenanceTanks.map((tank, i) => (
