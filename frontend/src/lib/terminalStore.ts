@@ -52,7 +52,7 @@ interface TerminalState {
   terminals: Terminal[];
   activeTerminalId: string;
   activeTerminal: Terminal;
-  setActiveTerminal: (id: string) => void;
+  setActiveTerminal: (id: string, reload?: boolean) => void;
 }
 
 const STORAGE_KEY = 'vopak_active_terminal';
@@ -74,12 +74,14 @@ export const useTerminalStore = create<TerminalState>((set) => {
     terminals: TERMINALS,
     activeTerminalId: initial.id,
     activeTerminal: initial.terminal,
-    setActiveTerminal: (id: string) => {
+    setActiveTerminal: (id: string, reload = true) => {
       const terminal = TERMINALS.find(t => t.id === id);
-      if (terminal && id !== useTerminalStore.getState().activeTerminalId) {
+      if (terminal) {
         if (typeof window !== 'undefined') {
           localStorage.setItem(STORAGE_KEY, id);
-          // Full page reload — resets all components, hooks, caches, 3D scene
+        }
+        set({ activeTerminalId: id, activeTerminal: terminal });
+        if (reload && typeof window !== 'undefined') {
           window.location.reload();
         }
       }

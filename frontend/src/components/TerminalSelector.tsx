@@ -11,8 +11,16 @@ export default function TerminalSelector() {
   const ref = useRef<HTMLDivElement>(null);
   const { terminals, activeTerminal, setActiveTerminal } = useTerminalStore();
 
-  // Mark mounted to avoid SSR hydration mismatch
-  useEffect(() => { setMounted(true); }, []);
+  // Hydrate from localStorage, show spinner briefly while state syncs
+  useEffect(() => {
+    const saved = localStorage.getItem('vopak_active_terminal');
+    if (saved && saved !== activeTerminal.id) {
+      setActiveTerminal(saved, false); // hydrate without reload
+    }
+    // Brief delay to let state propagate before showing UI
+    const timer = setTimeout(() => setMounted(true), 500);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -22,8 +30,15 @@ export default function TerminalSelector() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Avoid hydration mismatch — render default until mounted
-  const display = mounted ? activeTerminal : terminals[0];
+  // Show spinner while hydrating
+  if (!mounted) {
+    return (
+      <div className="flex items-center gap-1.5 px-2 h-7">
+        <div className="w-3.5 h-3.5 border-[1.5px] border-muted-foreground/20 border-t-foreground/60 rounded-full animate-spin" />
+        <span className="text-[12px] text-muted-foreground">Loading...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -31,8 +46,8 @@ export default function TerminalSelector() {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 px-2 h-7 rounded-md border border-border/50 hover:bg-muted/50 transition-colors text-left"
       >
-        <span className="text-sm">{display.flag}</span>
-        <span className="text-[12px] font-semibold text-foreground truncate max-w-[120px] sm:max-w-[160px]">{display.name}</span>
+        <span className="text-sm">{activeTerminal.flag}</span>
+        <span className="text-[12px] font-semibold text-foreground truncate max-w-[120px] sm:max-w-[160px]">{activeTerminal.name}</span>
         <ChevronDown size={11} className={cn('text-foreground/40 transition-transform shrink-0', open && 'rotate-180')} />
       </button>
 
