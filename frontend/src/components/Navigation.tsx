@@ -9,6 +9,7 @@ import { getUser, logout } from '@/lib/auth';
 import { API_BASE_URL, apiFetch } from '@/lib/config';
 import ThemeToggle from './ThemeToggle';
 import StyleToggle from './StyleToggle';
+import TerminalSelector from './TerminalSelector';
 
 interface AlertItem {
   id: number;
@@ -96,9 +97,12 @@ export default function Navigation() {
       <nav className="py-1.5 z-30 pointer-events-auto fixed top-0 left-0 right-0 topbar-surface border-b border-border/50">
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <Link href="/" className="hover:opacity-90">
-              <span className="text-lg font-semibold gradient-text">Vopak Terminal</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/" className="hover:opacity-90">
+                <span className="text-lg font-semibold gradient-text">Vopak</span>
+              </Link>
+              <TerminalSelector />
+            </div>
 
             {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-0.5">

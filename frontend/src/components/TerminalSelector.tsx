@@ -7,6 +7,7 @@ import { useTerminalStore } from '@/lib/terminalStore';
 
 export default function TerminalSelector() {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { terminals, activeTerminal, setActiveTerminal } = useTerminalStore();
 
@@ -14,6 +15,7 @@ export default function TerminalSelector() {
   useEffect(() => {
     const saved = localStorage.getItem('vopak_active_terminal');
     if (saved && saved !== activeTerminal.id) setActiveTerminal(saved);
+    setMounted(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -24,20 +26,22 @@ export default function TerminalSelector() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Avoid hydration mismatch — render default until mounted
+  const display = mounted ? activeTerminal : terminals[0];
+
   return (
-    <div className="fixed top-[62px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto" ref={ref}>
+    <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-3 h-9 rounded-lg border border-border hover:bg-muted transition-colors topbar-surface shadow-sm"
+        className="flex items-center gap-1.5 px-2 h-7 rounded-md border border-border/50 hover:bg-muted/50 transition-colors text-left"
       >
-        <span className="text-base">{activeTerminal.flag}</span>
-        <span className="text-[13px] font-semibold text-foreground">{activeTerminal.name}</span>
-        <span className="text-[11px] text-muted-foreground hidden sm:inline">Terminal</span>
-        <ChevronDown size={12} className={cn('text-foreground/50 transition-transform', open && 'rotate-180')} />
+        <span className="text-sm">{display.flag}</span>
+        <span className="text-[12px] font-semibold text-foreground truncate max-w-[120px] sm:max-w-[160px]">{display.name}</span>
+        <ChevronDown size={11} className={cn('text-foreground/40 transition-transform shrink-0', open && 'rotate-180')} />
       </button>
 
       {open && (
-        <div className="absolute left-1/2 -translate-x-1/2 mt-5 w-[300px] dropdown-surface border border-border/50 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
+        <div className="absolute left-0 mt-3 w-[280px] dropdown-surface border border-border/50 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200 overflow-hidden">
           <div className="px-3 py-2 border-b border-border/50">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Select Terminal</p>
           </div>
