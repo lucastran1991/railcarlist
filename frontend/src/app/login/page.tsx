@@ -74,7 +74,7 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <div className="glass-card rounded-2xl p-6 sm:p-8 space-y-6">
+        <div className="theme-card rounded-2xl p-6 sm:p-8 space-y-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Username */}
             <div>
@@ -186,13 +186,13 @@ export default function LoginPage() {
 
           {/* Social logins */}
           <div className="grid grid-cols-3 gap-3">
-            <button className="flex items-center justify-center h-11 rounded-xl border border-border bg-muted hover:bg-muted/80 transition group">
+            <button className="flex items-center justify-center h-11 rounded-xl border border-border bg-muted hover:bg-[var(--color-accent,#5CE5A0)]/10 hover:border-[var(--color-accent,#5CE5A0)]/30 transition group">
               <GoogleIcon />
             </button>
-            <button className="flex items-center justify-center h-11 rounded-xl border border-border bg-muted hover:bg-muted/80 transition group">
+            <button className="flex items-center justify-center h-11 rounded-xl border border-border bg-muted hover:bg-[var(--color-accent,#5CE5A0)]/10 hover:border-[var(--color-accent,#5CE5A0)]/30 transition group">
               <MicrosoftIcon />
             </button>
-            <button className="flex items-center justify-center h-11 rounded-xl border border-border bg-muted hover:bg-muted/80 transition group">
+            <button className="flex items-center justify-center h-11 rounded-xl border border-border bg-muted hover:bg-[var(--color-accent,#5CE5A0)]/10 hover:border-[var(--color-accent,#5CE5A0)]/30 transition group">
               <LinkedInIcon />
             </button>
           </div>
