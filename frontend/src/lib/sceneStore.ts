@@ -19,9 +19,15 @@ interface SceneState {
   raycastInfo: RaycastDebugInfo | null;
   setRaycastInfo: (info: RaycastDebugInfo | null) => void;
 
-  // Effects toggle
+  // Effects toggles
   statusEffects: boolean;
   toggleStatusEffects: () => void;
+  replaceMeshes: boolean;
+  toggleReplaceMeshes: () => void;
+  enableReflection: boolean;
+  toggleReflection: () => void;
+  enableLighting: boolean;
+  toggleLighting: () => void;
 
   // Tank label positions (computed by TerminalModel, shared with TankLabels)
   tankLabelPositions: Map<string, { tankId: string; product: string; position: [number, number, number] }>;
@@ -53,6 +59,12 @@ export const useSceneStore = create<SceneState>((set) => ({
 
   statusEffects: false,
   toggleStatusEffects: () => set((s) => ({ statusEffects: !s.statusEffects })),
+  replaceMeshes: true,
+  toggleReplaceMeshes: () => set((s) => ({ replaceMeshes: !s.replaceMeshes })),
+  enableReflection: true,
+  toggleReflection: () => set((s) => ({ enableReflection: !s.enableReflection })),
+  enableLighting: true,
+  toggleLighting: () => set((s) => ({ enableLighting: !s.enableLighting })),
 
   tankLabelPositions: new Map(),
   setTankLabelPositions: (positions) => set({ tankLabelPositions: positions }),

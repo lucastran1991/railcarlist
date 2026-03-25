@@ -64,7 +64,7 @@ export default function TerminalCanvas({ onCameraApiReady }: TerminalCanvasProps
 
   return (
     <Canvas
-      shadows
+      shadows={false}
       frameloop={statusEffects ? "always" : "demand"}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
       camera={{ fov: 50, near: 0.1, far: 500 }}

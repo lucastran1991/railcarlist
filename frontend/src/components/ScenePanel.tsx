@@ -5,6 +5,7 @@ import {
   ZoomIn, ZoomOut, RotateCcw, RotateCw,
   ChevronUp, ChevronDown, RefreshCw,
   PanelLeftClose, PanelLeftOpen, Activity,
+  Box, Sparkles, Sun,
 } from 'lucide-react';
 import type { TerminalCameraApi } from '@/lib/three/types';
 import { osmToTankId } from '@/lib/tankData';
@@ -33,6 +34,12 @@ export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
   const raycastInfo = useSceneStore(s => s.raycastInfo);
   const statusEffects = useSceneStore(s => s.statusEffects);
   const toggleStatusEffects = useSceneStore(s => s.toggleStatusEffects);
+  const replaceMeshes = useSceneStore(s => s.replaceMeshes);
+  const toggleReplaceMeshes = useSceneStore(s => s.toggleReplaceMeshes);
+  const enableReflection = useSceneStore(s => s.enableReflection);
+  const toggleReflection = useSceneStore(s => s.toggleReflection);
+  const enableLighting = useSceneStore(s => s.enableLighting);
+  const toggleLighting = useSceneStore(s => s.toggleLighting);
 
   const btn = (label: string, icon: React.ReactNode, onClick: () => void) => (
     <button
@@ -91,25 +98,33 @@ export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
 
           <div className="border-t border-border/20" />
 
-          <div className="px-3 py-2">
-            <button
-              onClick={toggleStatusEffects}
-              className={cn(
-                'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
-                statusEffects
-                  ? 'bg-[var(--color-accent,#5CE5A0)]/15 text-[var(--color-accent,#5CE5A0)] border border-[var(--color-accent,#5CE5A0)]/30'
-                  : 'bg-muted/30 text-muted-foreground border border-border/20 hover:bg-muted/50'
-              )}
-            >
-              <Activity size={13} />
-              <span>Status Effects</span>
-              <span className={cn(
-                'ml-auto text-[9px] font-bold uppercase',
-                statusEffects ? 'text-[var(--color-accent,#5CE5A0)]' : 'text-muted-foreground/50'
-              )}>
-                {statusEffects ? 'ON' : 'OFF'}
-              </span>
-            </button>
+          <div className="px-3 py-2 flex flex-col gap-1.5">
+            {[
+              { label: 'Status Effects', icon: <Activity size={13} />, active: statusEffects, toggle: toggleStatusEffects },
+              { label: 'Replace Meshes', icon: <Box size={13} />, active: replaceMeshes, toggle: toggleReplaceMeshes },
+              { label: 'Reflection', icon: <Sparkles size={13} />, active: enableReflection, toggle: toggleReflection },
+              { label: 'Lighting', icon: <Sun size={13} />, active: enableLighting, toggle: toggleLighting },
+            ].map((t) => (
+              <button
+                key={t.label}
+                onClick={t.toggle}
+                className={cn(
+                  'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                  t.active
+                    ? 'bg-[var(--color-accent,#5CE5A0)]/15 text-[var(--color-accent,#5CE5A0)] border border-[var(--color-accent,#5CE5A0)]/30'
+                    : 'bg-muted/30 text-muted-foreground border border-border/20 hover:bg-muted/50'
+                )}
+              >
+                {t.icon}
+                <span>{t.label}</span>
+                <span className={cn(
+                  'ml-auto text-[9px] font-bold uppercase',
+                  t.active ? 'text-[var(--color-accent,#5CE5A0)]' : 'text-muted-foreground/50'
+                )}>
+                  {t.active ? 'ON' : 'OFF'}
+                </span>
+              </button>
+            ))}
           </div>
 
           <div className="border-t border-border/20" />

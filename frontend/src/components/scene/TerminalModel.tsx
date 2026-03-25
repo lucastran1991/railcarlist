@@ -10,10 +10,23 @@ import TankParticles from './TankParticles';
 import { useSceneStore } from '@/lib/sceneStore';
 import { useTerminalStore } from '@/lib/terminalStore';
 
+const TANK_PATHS = {
+  big: '/models/tank-big.glb',
+  medium: '/models/tank-medium.glb',
+  small: '/models/tank-small.glb',
+};
+// Native sizes of each detail model (from bounding box analysis)
+const TANK_NATIVE_SIZE = {
+  big: { w: 32.96, h: 19.35 },
+  medium: { w: 24.72, h: 21.26 },
+  small: { w: 10.30, h: 15.10 },
+};
+type TankSize = 'big' | 'medium' | 'small';
+
 // PBR materials — lazy singletons for SSR safety
 let _tankMat: THREE.MeshStandardMaterial | null = null;
 const getTankMat = () => _tankMat ??= new THREE.MeshStandardMaterial({
-  color: 0xdddddd, roughness: 0.3, metalness: 0.7, envMapIntensity: 1.0,
+  color: 0xdddddd, roughness: 0.8, metalness: 0.1, envMapIntensity: 0,
 });
 let _buildingMat: THREE.MeshStandardMaterial | null = null;
 const getBuildingMat = () => _buildingMat ??= new THREE.MeshStandardMaterial({
@@ -123,8 +136,24 @@ interface TerminalModelProps {
   onRaycastDebug?: (info: RaycastDebugInfo | null) => void;
 }
 
+// Info needed to place a detail tank model at the original cylinder's position
+interface ReplacementTank {
+  name: string;
+  position: [number, number, number];
+  scale: [number, number, number];
+  rotation: [number, number, number, string];
+  material: THREE.MeshStandardMaterial;
+  tankId: string | null;
+  status: TankStatus | null;
+  clickable: boolean;
+  verts: number;
+  size: TankSize;
+}
+
 export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug }: TerminalModelProps) {
   const statusEffects = useSceneStore(s => s.statusEffects);
+  const replaceMeshes = useSceneStore(s => s.replaceMeshes);
+  const enableReflection = useSceneStore(s => s.enableReflection);
   const selectedObjName = useSceneStore(s => s.selectedObj?.name ?? null);
   const setTankLabelPositions = useSceneStore(s => s.setTankLabelPositions);
   const [hoveredName, setHoveredName] = useState<string | null>(null);
@@ -133,6 +162,44 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
   // Load GLB dynamically based on active terminal
   const modelPath = useTerminalStore(s => s.activeTerminal.modelPath);
   const { scene } = useGLTF(modelPath);
+
+  // Load 3 detail tank models (big, medium, small) — keep original materials/textures
+  const bigGltf = useGLTF(TANK_PATHS.big);
+  const medGltf = useGLTF(TANK_PATHS.medium);
+  const smallGltf = useGLTF(TANK_PATHS.small);
+
+  const tankScenes = useMemo(() => {
+    function prepScene(gltf: { scene: THREE.Group }): THREE.Group {
+      const clone = gltf.scene.clone(true);
+      clone.traverse((obj) => {
+        if (obj instanceof THREE.Mesh) {
+          // Compute normals if missing
+          if (!obj.geometry.attributes.normal) {
+            obj.geometry.computeVertexNormals();
+          }
+          const mat = obj.material as THREE.MeshStandardMaterial;
+          if (mat.isMeshStandardMaterial) {
+            // Brighten to white cement look
+            mat.color.set(0xf5f5f0);
+            mat.roughness = 0.85;
+            mat.metalness = 0.05;
+            mat.envMapIntensity = 0.2;
+            // Enable vertex colors if geometry has them
+            if (obj.geometry.attributes.color) {
+              mat.vertexColors = true;
+            }
+            mat.needsUpdate = true;
+          }
+        }
+      });
+      return clone;
+    }
+    return {
+      big: prepScene(bigGltf),
+      medium: prepScene(medGltf),
+      small: prepScene(smallGltf),
+    };
+  }, [bigGltf, medGltf, smallGltf]);
 
   // Signal that GLB model is loaded
   useEffect(() => {
@@ -154,8 +221,9 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
   const gearRefsArray = useRef<THREE.Mesh[]>([]);
 
   // Extract all meshes with their world transforms, apply status-based materials
-  const { meshes, groundMeshes, maintenanceTanks, particleTanks, labelPositions } = useMemo(() => {
+  const { meshes, groundMeshes, replacementTanks, maintenanceTanks, particleTanks, labelPositions } = useMemo(() => {
     const effectsOn = statusEffects;
+    const doReplace = replaceMeshes;
     const clone = scene.clone(true);
 
     const cube = clone.getObjectByName('Cube');
@@ -175,6 +243,7 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
 
     const meshes: ProcessedMesh[] = [];
     const groundMeshes: ProcessedMesh[] = [];
+    const replacementTanks: ReplacementTank[] = [];
     const animated: AnimatedTank[] = [];
     const maintenanceTanks: { position: [number, number, number]; topY: number }[] = [];
     const particleTanks: { position: [number, number, number]; status: TankStatus; tankId: string }[] = [];
@@ -210,12 +279,15 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
         const emCfg = STATUS_EMISSIVE[status];
         mat.emissive = new THREE.Color(emCfg.color);
         mat.emissiveIntensity = emCfg.baseIntensity;
+        if (enableReflection) { mat.metalness = 0.7; mat.roughness = 0.3; mat.envMapIntensity = 1.0; }
         material = mat;
         if (emCfg.pulseSpeed > 0) {
           animated.push({ material: mat, config: emCfg });
         }
       } else {
-        material = isTank ? getTankMat().clone() : getBuildingMat().clone();
+        const mat = (isTank ? getTankMat().clone() : getBuildingMat().clone()) as THREE.MeshStandardMaterial;
+        if (enableReflection && isTank) { mat.metalness = 0.7; mat.roughness = 0.3; mat.envMapIntensity = 1.0; }
+        material = mat;
       }
 
       // Collect label positions for all tanks (always, not just when effects ON)
@@ -268,15 +340,54 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
         status,
       };
 
-      if (isGround) groundMeshes.push(entry);
-      else meshes.push(entry);
+      if (isGround) {
+        groundMeshes.push(entry);
+      } else if (doReplace && isTank && tankId) {
+        // Route mapped tanks to replacement list — detail model rendered instead
+        // Strategy: compute world-space bounding box of original cylinder,
+        // then scale detail model to fill the same box.
+        // worldMatrix already includes clone.scale (80/maxSpan) + offsetMatrix centering
+        const tempMesh = new THREE.Mesh(obj.geometry);
+        tempMesh.applyMatrix4(worldMatrix);
+        const worldBox = new THREE.Box3().setFromObject(tempMesh);
+        const worldSize = worldBox.getSize(new THREE.Vector3());
+        const worldCenter = worldBox.getCenter(new THREE.Vector3());
+        // Classify tank size based on original cylinder width
+        const origGeoBox2 = new THREE.Box3().setFromBufferAttribute(
+          obj.geometry.attributes.position as THREE.BufferAttribute
+        );
+        const origWidth = Math.max(origGeoBox2.getSize(new THREE.Vector3()).x, origGeoBox2.getSize(new THREE.Vector3()).z);
+        const tankSize: TankSize = origWidth >= 40 ? 'big' : origWidth >= 20 ? 'medium' : 'small';
+        const ns = TANK_NATIVE_SIZE[tankSize];
+        const detailW = ns.w, detailH = ns.h, detailD = ns.w;
+        const finalScaleX = worldSize.x / detailW;
+        const finalScaleY = worldSize.y / detailH;
+        const finalScaleZ = worldSize.z / detailD;
+        const avgRadS = (finalScaleX + finalScaleZ) / 2;
+
+        replacementTanks.push({
+          name: entry.name,
+          // Use world-space center as position (not decomposed pos which may be off)
+          position: [worldCenter.x, worldBox.min.y, worldCenter.z],
+          scale: [avgRadS, finalScaleY, avgRadS],
+          rotation: entry.rotation,
+          material: entry.material,
+          tankId,
+          status,
+          clickable: entry.clickable,
+          verts: entry.verts,
+          size: tankSize,
+        });
+      } else {
+        meshes.push(entry);
+      }
     });
 
     // Store animated refs for useFrame
     animatedTanksRef.current = animated;
 
-    return { meshes, groundMeshes, maintenanceTanks, particleTanks, labelPositions } as const;
-  }, [scene, tankData, statusEffects]);
+    return { meshes, groundMeshes, replacementTanks, maintenanceTanks, particleTanks, labelPositions } as const;
+  }, [scene, tankData, statusEffects, replaceMeshes, enableReflection]);
 
   // --- Per-frame animation: pulse emissive + rotate gears (only when effects ON) ---
   useFrame((state) => {
@@ -395,6 +506,48 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
           );
         })}
 
+        {/* Detail tank models replacing original cylinders (big/medium/small) */}
+        {replacementTanks.map((tank, i) => {
+          const baseScene = tankScenes[tank.size];
+          if (!baseScene) return null;
+          const clone = baseScene.clone(true);
+          clone.name = tank.name;
+          return (
+            <group
+              key={`tank-${i}`}
+              position={tank.position}
+              scale={tank.scale}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!tank.clickable) { onMissed?.(); return; }
+                const obj = e.object as THREE.Mesh;
+                const box = new THREE.Box3().setFromObject(obj);
+                const center = box.getCenter(new THREE.Vector3());
+                onObjectClick({
+                  name: tank.name,
+                  type: 'tank',
+                  verts: tank.verts,
+                  position: { x: parseFloat(center.x.toFixed(1)), y: parseFloat(center.y.toFixed(1)), z: parseFloat(center.z.toFixed(1)) },
+                  screenX: 0, screenY: 0,
+                });
+              }}
+              onPointerOver={(e) => {
+                if (tank.clickable) {
+                  e.stopPropagation();
+                  setHoveredName(tank.name);
+                  useSceneStore.getState().setHoveredObjName(tank.name);
+                }
+              }}
+              onPointerOut={() => {
+                setHoveredName(null);
+                useSceneStore.getState().setHoveredObjName(null);
+              }}
+            >
+              <primitive object={clone} />
+            </group>
+          );
+        })}
+
         {/* Rotating gears on maintenance tanks */}
         {maintenanceTanks.map((tank, i) => (
           <mesh
@@ -413,7 +566,10 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
   );
 }
 
-// Preload all terminal GLBs for fast switching
+// Preload all terminal GLBs + tank models for fast switching
 useGLTF.preload('/models/savannah.glb');
 useGLTF.preload('/models/los-angeles.glb');
 useGLTF.preload('/models/tarragona.glb');
+useGLTF.preload(TANK_PATHS.big);
+useGLTF.preload(TANK_PATHS.medium);
+useGLTF.preload(TANK_PATHS.small);
