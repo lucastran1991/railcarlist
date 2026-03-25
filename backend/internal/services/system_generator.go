@@ -678,78 +678,59 @@ func (s *SystemGeneratorService) generateStaticData(rng *rand.Rand) {
 	s.db.InsertBoilerEmission(models.BoilerEmission{Pollutant: "NOx", Current: 120, Limit: 150, Unit: "mg/Nm3"})
 	s.db.InsertBoilerEmission(models.BoilerEmission{Pollutant: "SOx", Current: 35, Limit: 100, Unit: "mg/Nm3"})
 
-	// Tank levels — all 59 tanks with randomized levels
+	// Tank levels — dynamically generate based on terminal tank count
+	// Savannah=59, LA=64, Tarragona=115
 	type tankDef struct {
-		id   string
-		prod string
+		id    string
+		prod  string
 		color string
-		cap  float64
+		cap   float64
 	}
-	allTanks := []tankDef{
-		// Crude Oil — capacity 100000
-		{"TK-301", "Crude", "#56CDE7", 100000},
-		{"TK-302", "Crude", "#56CDE7", 100000},
-		{"TK-501", "Crude", "#56CDE7", 100000},
-		{"TK-502", "Crude", "#56CDE7", 100000},
-		{"TK-503", "Crude", "#56CDE7", 100000},
-		{"TK-504", "Crude", "#56CDE7", 100000},
-		// Diesel — existing TK-2xx keep 80000, new TK-5xx series 60000
-		{"TK-201", "Diesel", "#4D65FF", 80000},
-		{"TK-202", "Diesel", "#4D65FF", 80000},
-		{"TK-203", "Diesel", "#4D65FF", 80000},
-		{"TK-505", "Diesel", "#4D65FF", 60000},
-		{"TK-506", "Diesel", "#4D65FF", 60000},
-		{"TK-507", "Diesel", "#4D65FF", 60000},
-		{"TK-508", "Diesel", "#4D65FF", 60000},
-		{"TK-509", "Diesel", "#4D65FF", 60000},
-		{"TK-510", "Diesel", "#4D65FF", 60000},
-		{"TK-511", "Diesel", "#4D65FF", 60000},
-		{"TK-512", "Diesel", "#4D65FF", 60000},
-		{"TK-513", "Diesel", "#4D65FF", 60000},
-		{"TK-514", "Diesel", "#4D65FF", 60000},
-		{"TK-515", "Diesel", "#4D65FF", 60000},
-		{"TK-516", "Diesel", "#4D65FF", 60000},
-		{"TK-517", "Diesel", "#4D65FF", 60000},
-		{"TK-518", "Diesel", "#4D65FF", 60000},
-		{"TK-519", "Diesel", "#4D65FF", 60000},
-		{"TK-520", "Diesel", "#4D65FF", 60000},
-		{"TK-521", "Diesel", "#4D65FF", 60000},
-		{"TK-522", "Diesel", "#4D65FF", 60000},
-		{"TK-523", "Diesel", "#4D65FF", 60000},
-		// Gasoline — existing TK-1xx keep 50000, new TK-524+ series 40000
-		{"TK-101", "Gasoline", "#F6AD55", 50000},
-		{"TK-102", "Gasoline", "#F6AD55", 50000},
-		{"TK-103", "Gasoline", "#F6AD55", 50000},
-		{"TK-524", "Gasoline", "#F6AD55", 40000},
-		{"TK-525", "Gasoline", "#F6AD55", 40000},
-		{"TK-526", "Gasoline", "#F6AD55", 40000},
-		{"TK-527", "Gasoline", "#F6AD55", 40000},
-		{"TK-528", "Gasoline", "#F6AD55", 40000},
-		{"TK-529", "Gasoline", "#F6AD55", 40000},
-		{"TK-530", "Gasoline", "#F6AD55", 40000},
-		{"TK-531", "Gasoline", "#F6AD55", 40000},
-		{"TK-532", "Gasoline", "#F6AD55", 40000},
-		{"TK-533", "Gasoline", "#F6AD55", 40000},
-		{"TK-534", "Gasoline", "#F6AD55", 40000},
-		{"TK-535", "Gasoline", "#F6AD55", 40000},
-		// Ethanol — capacity 30000
-		{"TK-401", "Ethanol", "#5CE5A0", 30000},
-		{"TK-402", "Ethanol", "#5CE5A0", 30000},
-		// LPG — capacity 20000
-		{"TK-536", "LPG", "#5CE5A0", 20000},
-		{"TK-537", "LPG", "#5CE5A0", 20000},
-		{"TK-538", "LPG", "#5CE5A0", 20000},
-		{"TK-539", "LPG", "#5CE5A0", 20000},
-		{"TK-540", "LPG", "#5CE5A0", 20000},
-		{"TK-541", "LPG", "#5CE5A0", 20000},
-		{"TK-542", "LPG", "#5CE5A0", 20000},
-		{"TK-543", "LPG", "#5CE5A0", 20000},
-		{"TK-544", "LPG", "#5CE5A0", 20000},
-		{"TK-545", "LPG", "#5CE5A0", 20000},
-		{"TK-546", "LPG", "#5CE5A0", 20000},
-		{"TK-547", "LPG", "#5CE5A0", 20000},
-		{"TK-548", "LPG", "#5CE5A0", 20000},
-		{"TK-549", "LPG", "#5CE5A0", 20000},
+
+	// Product distribution: ~25% Crude, ~30% Diesel, ~25% Gasoline, ~10% Ethanol, ~10% LPG
+	type prodSpec struct {
+		name  string
+		color string
+		cap   float64
+		pct   float64
+	}
+	products := []prodSpec{
+		{"Crude", "#56CDE7", 100000, 0.25},
+		{"Diesel", "#4D65FF", 70000, 0.30},
+		{"Gasoline", "#F6AD55", 45000, 0.25},
+		{"Ethanol", "#5CE5A0", 30000, 0.10},
+		{"LPG", "#5CE5A0", 20000, 0.10},
+	}
+
+	// Count total tanks by finding max TK-ID that exists in mapping
+	// Generate TK-101..TK-110, TK-201..TK-210, etc. matching frontend mapping
+	allTanks := []tankDef{}
+	group := 1
+	idx := 1
+	tankNum := 0
+	maxTanks := 200 // generous upper bound; stops when no more tanks needed
+	for tankNum < maxTanks {
+		tkID := fmt.Sprintf("TK-%d", group*100+idx)
+		// Pick product based on distribution
+		cumPct := 0.0
+		roll := float64(tankNum) / float64(maxTanks)
+		chosen := products[0]
+		for _, p := range products {
+			cumPct += p.pct
+			if roll < cumPct {
+				chosen = p
+				break
+			}
+		}
+		// Add some capacity variation with rng
+		capVar := chosen.cap * (0.8 + rng.Float64()*0.4) // ±20%
+		allTanks = append(allTanks, tankDef{tkID, chosen.name, chosen.color, math.Round(capVar)})
+		idx++
+		if idx > 10 {
+			group++
+			idx = 1
+		}
+		tankNum++
 	}
 	productVolumes := map[string]float64{}
 	for _, tk := range allTanks {
