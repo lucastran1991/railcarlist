@@ -91,13 +91,13 @@ export default function WaveBackground() {
         // Wave fill with gradient
         const waveGrad = ctx.createLinearGradient(0, baseY - wave.amp, W, baseY + wave.amp);
         if (isDark) {
-          waveGrad.addColorStop(0, `rgba(92, 229, 160, ${wave.opacity * 0.6})`);
-          waveGrad.addColorStop(0.5, `rgba(86, 205, 231, ${wave.opacity * 0.5})`);
-          waveGrad.addColorStop(1, `rgba(77, 101, 255, ${wave.opacity * 0.4})`);
+          waveGrad.addColorStop(0, `rgba(255, 255, 255, ${wave.opacity * 0.5})`);
+          waveGrad.addColorStop(0.5, `rgba(230, 240, 255, ${wave.opacity * 0.4})`);
+          waveGrad.addColorStop(1, `rgba(200, 220, 255, ${wave.opacity * 0.3})`);
         } else {
-          waveGrad.addColorStop(0, `rgba(200, 80, 192, ${wave.opacity})`);
-          waveGrad.addColorStop(0.5, `rgba(79, 172, 254, ${wave.opacity})`);
-          waveGrad.addColorStop(1, `rgba(137, 247, 254, ${wave.opacity})`);
+          waveGrad.addColorStop(0, `rgba(30, 10, 40, ${wave.opacity * 1.5})`);
+          waveGrad.addColorStop(0.5, `rgba(20, 30, 60, ${wave.opacity * 1.3})`);
+          waveGrad.addColorStop(1, `rgba(10, 20, 40, ${wave.opacity * 1.1})`);
         }
         ctx.fillStyle = waveGrad;
         ctx.fill();
