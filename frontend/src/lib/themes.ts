@@ -167,7 +167,17 @@ export const THEMES: ThemeConfig[] = [
     '0.25rem',
   ),
 
-  // ── 11. Mechanical — Industrial SCADA steel blue ──
+  // ── 11. Mono — Pure black & white ──
+  t('mono', 'Mono', 'Pure black & white',
+    { bg: '#000000', accent: '#999999', card: '#111111', border: '#333333' },
+    { bg: '0 0% 96%', fg: '0 0% 5%', card: '0 0% 100%', muted: '0 0% 93%', border: '0 0% 83%' },
+    { bg: '0 0% 3%', fg: '0 0% 93%', card: '0 0% 7%', muted: '0 0% 11%', border: '0 0% 18%' },
+    { primary: '#888888', secondary: '#AAAAAA', tertiary: '#CCCCCC', hover: '#BBBBBB', warning: '#999999', danger: '#555555', gradFrom: '#666666', gradTo: '#AAAAAA' },
+    ['0 0% 55%', '0 0% 40%', '0 0% 70%', '0 0% 25%', '0 0% 80%'],
+    '0.375rem',
+  ),
+
+  // ── 12. Mechanical — Industrial SCADA steel blue ──
   t('mechanical', 'Mechanical', 'Industrial steel SCADA',
     { bg: '#2C5F72', accent: '#5B8FA8', card: '#FFFFFF', border: '#C5CAD0' },
     { bg: '210 10% 86%', fg: '210 15% 15%', card: '0 0% 100%', muted: '210 8% 93%', border: '210 6% 80%' },
