@@ -166,6 +166,16 @@ export const THEMES: ThemeConfig[] = [
     ['82 85% 44%', '217 91% 60%', '349 89% 60%', '38 92% 50%', '270 76% 65%'],
     '0.25rem',
   ),
+
+  // ── 11. Mechanical — Industrial SCADA steel blue ──
+  t('mechanical', 'Mechanical', 'Industrial steel SCADA',
+    { bg: '#2C5F72', accent: '#5B8FA8', card: '#FFFFFF', border: '#C5CAD0' },
+    { bg: '210 10% 86%', fg: '210 15% 15%', card: '0 0% 100%', muted: '210 8% 93%', border: '210 6% 80%' },
+    { bg: '200 40% 12%', fg: '200 10% 92%', card: '200 25% 17%', muted: '200 18% 22%', border: '200 14% 28%' },
+    { primary: '#5B8FA8', secondary: '#7BA4B8', tertiary: '#9BBCCC', hover: '#7BA4B8', warning: '#E8A838', danger: '#D94F4F', gradFrom: '#5B8FA8', gradTo: '#2C5F72' },
+    ['197 30% 50%', '38 78% 56%', '160 40% 45%', '350 60% 55%', '270 40% 55%'],
+    '0.375rem',
+  ),
 ];
 
 // Track which properties were set by the last theme apply
