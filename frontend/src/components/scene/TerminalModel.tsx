@@ -15,11 +15,11 @@ const TANK_PATHS = {
   medium: '/models/tank-medium.glb',
   small: '/models/tank-small.glb',
 };
-// Native sizes of each detail model (from bounding box analysis)
+// Native sizes of each detail model v2 (from bounding box analysis)
 const TANK_NATIVE_SIZE = {
-  big: { w: 32.96, h: 19.35 },
-  medium: { w: 24.72, h: 21.26 },
-  small: { w: 10.30, h: 15.10 },
+  big: { w: 33.0, h: 19.3 },
+  medium: { w: 24.7, h: 21.3 },
+  small: { w: 10.3, h: 15.1 },
 };
 type TankSize = 'big' | 'medium' | 'small';
 
@@ -173,23 +173,19 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
       const clone = gltf.scene.clone(true);
       clone.traverse((obj) => {
         if (obj instanceof THREE.Mesh) {
-          // Compute normals if missing
+          // Compute normals if missing (v2 models have position only)
           if (!obj.geometry.attributes.normal) {
             obj.geometry.computeVertexNormals();
           }
-          const mat = obj.material as THREE.MeshStandardMaterial;
-          if (mat.isMeshStandardMaterial) {
-            // Brighten to white cement look
-            mat.color.set(0xf5f5f0);
-            mat.roughness = 0.85;
-            mat.metalness = 0.05;
-            mat.envMapIntensity = 0.2;
-            // Enable vertex colors if geometry has them
-            if (obj.geometry.attributes.color) {
-              mat.vertexColors = true;
-            }
-            mat.needsUpdate = true;
-          }
+          // Corrugated iron + cement look — flat shading preserves geodesic edges
+          const mat = new THREE.MeshStandardMaterial({
+            color: 0xd8d5d0,       // warm gray (weathered painted cement)
+            roughness: 0.55,       // semi-matte — corrugated iron has some sheen
+            metalness: 0.2,        // slight metallic for corrugated panels
+            envMapIntensity: 0.4,  // subtle environment reflection
+            flatShading: true,     // crisp polygon edges like real geodesic panels
+          });
+          obj.material = mat;
         }
       });
       return clone;
