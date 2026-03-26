@@ -1,6 +1,7 @@
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { createGroq } from '@ai-sdk/groq';
 import { streamText } from 'ai';
 import { readFileSync } from 'fs';
 import { join } from 'path';
@@ -41,6 +42,13 @@ function getModel() {
     const baseURL = cfg.base_url || 'http://localhost:11434/v1';
     const ollama = createOpenAICompatible({ name: 'ollama', baseURL, apiKey: 'ollama' });
     return ollama(modelName || 'qwen3:4b');
+  }
+  if (provider === 'groq') {
+    if (!process.env.GROQ_API_KEY) {
+      process.env.GROQ_API_KEY = cfg.api_key || '';
+    }
+    const groq = createGroq();
+    return groq(modelName || 'llama-3.1-8b-instant');
   }
   return google(modelName);
 }
