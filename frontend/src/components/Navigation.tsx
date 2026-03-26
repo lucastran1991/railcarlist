@@ -39,7 +39,7 @@ export default function Navigation() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string; avatar_url?: string } | null>(null);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
