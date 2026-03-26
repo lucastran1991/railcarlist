@@ -102,7 +102,15 @@ async function fetchJSON(path: string, terminalId: string): Promise<unknown> {
   }
 }
 
+// In-memory cache: pre-fetched data per terminal, TTL 30s
+const _dataCache = new Map<string, { data: string; exp: number }>();
+const DATA_CACHE_TTL = 30_000; // 30 seconds
+
 async function buildDataContext(terminalId: string): Promise<string> {
+  // Check cache first — same terminal data reused across concurrent users
+  const cached = _dataCache.get(terminalId);
+  if (cached && Date.now() < cached.exp) return cached.data;
+
   // Fetch all key data in parallel using server-side auth
   const f = (path: string) => fetchJSON(path, terminalId);
   const [
@@ -157,7 +165,9 @@ async function buildDataContext(terminalId: string): Promise<string> {
     sections.push(`## Tank Levels (${tankLevels.length} tanks)\nAggregate: avg level ${avgLevel}%, total volume ${Math.round(totalVolume).toLocaleString()} bbl, total capacity ${Math.round(totalCapacity).toLocaleString()} bbl, utilization ${(totalVolume/totalCapacity*100).toFixed(1)}%\nProducts: ${JSON.stringify(productCounts)}\nStatus: ${JSON.stringify(statusCounts)}\nTop 5 highest:\n${top5.join('\n')}\nBottom 5 lowest:\n${bottom5.join('\n')}`);
   }
 
-  return sections.join('\n\n');
+  const result = sections.join('\n\n');
+  _dataCache.set(terminalId, { data: result, exp: Date.now() + DATA_CACHE_TTL });
+  return result;
 }
 
 const BASE_PROMPT = `You are an AI assistant for Vopak Terminal — an industrial petroleum/chemical storage terminal.
