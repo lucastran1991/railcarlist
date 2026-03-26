@@ -42,6 +42,9 @@ func main() {
 
 	log.Printf("Databases initialized for terminals: %v", database.Terminals)
 
+	// System DB (global — users, config)
+	sysDB := dbMgr.System()
+
 	// Default DB for legacy non-domain endpoints
 	db := dbMgr.Default()
 
@@ -64,10 +67,10 @@ func main() {
 	tagsHandler := handlers.NewTagsHandler(tagsService)
 	railcarHandler := handlers.NewRailcarHandler(railcarService)
 
-	// Auth
+	// Auth (uses system DB — independent of terminals)
 	tokenCfg := auth.DefaultTokenConfig()
-	authHandler := auth.NewHandler(db, tokenCfg)
-	auth.SeedUsers(db)
+	authHandler := auth.NewHandler(sysDB, tokenCfg)
+	auth.SeedUsers(sysDB)
 
 	// Multi-tenant handler
 	mt := handlers.NewMultiTenantHandler(dbMgr)

@@ -12,15 +12,16 @@ import (
 // Terminals is the list of supported terminal IDs
 var Terminals = []string{"savannah", "los-angeles", "tarragona"}
 
-// DBManager holds a DB connection per terminal
+// DBManager holds a DB connection per terminal + a global system DB
 type DBManager struct {
 	mu        sync.RWMutex
 	databases map[string]*DB
+	systemDB  *DB    // global DB for users, config, etc.
 	basePath  string // directory where DB files live
 	dbCfg     config.DatabaseConfig
 }
 
-// NewDBManager creates DB connections for all terminals
+// NewDBManager creates DB connections for all terminals + system DB
 func NewDBManager(cfg config.DatabaseConfig) (*DBManager, error) {
 	mgr := &DBManager{
 		databases: make(map[string]*DB),
@@ -28,6 +29,16 @@ func NewDBManager(cfg config.DatabaseConfig) (*DBManager, error) {
 		dbCfg:     cfg,
 	}
 
+	// System DB (global — users, config, schedules)
+	sysCfg := cfg
+	sysCfg.Path = mgr.dbPathFor("system")
+	sysDB, err := NewDB(sysCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open system DB: %w", err)
+	}
+	mgr.systemDB = sysDB
+
+	// Terminal DBs (per-tenant domain data)
 	for _, tid := range Terminals {
 		dbPath := mgr.dbPathFor(tid)
 		termCfg := cfg
@@ -42,6 +53,11 @@ func NewDBManager(cfg config.DatabaseConfig) (*DBManager, error) {
 	}
 
 	return mgr, nil
+}
+
+// System returns the global system DB (users, config, schedules)
+func (m *DBManager) System() *DB {
+	return m.systemDB
 }
 
 // dbPathFor returns the DB file path for a given terminal ID
@@ -85,6 +101,9 @@ func (m *DBManager) All() map[string]*DB {
 func (m *DBManager) CloseAll() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.systemDB != nil {
+		m.systemDB.Close()
+	}
 	for _, db := range m.databases {
 		db.Close()
 	}
