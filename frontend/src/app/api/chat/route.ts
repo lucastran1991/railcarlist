@@ -27,12 +27,12 @@ function getModel() {
   const provider = cfg.provider || 'google';
   const modelName = cfg.model || 'gemini-2.0-flash';
 
-  if (cfg.api_key && cfg.api_key !== 'DEFAULT' && cfg.api_key !== '') {
-    if (provider === 'google' && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      process.env.GOOGLE_GENERATIVE_AI_API_KEY = cfg.api_key;
-    } else if ((provider === 'anthropic' || provider === 'claude') && !process.env.ANTHROPIC_API_KEY) {
-      process.env.ANTHROPIC_API_KEY = cfg.api_key;
-    }
+  // API key priority: system.cfg.json → env var
+  const apiKey = (cfg.api_key && cfg.api_key !== 'DEFAULT' && cfg.api_key !== '') ? cfg.api_key : null;
+  if (provider === 'google') {
+    if (apiKey) process.env.GOOGLE_GENERATIVE_AI_API_KEY = apiKey;
+  } else if (provider === 'anthropic' || provider === 'claude') {
+    if (apiKey) process.env.ANTHROPIC_API_KEY = apiKey;
   }
 
   if (provider === 'anthropic' || provider === 'claude') {
@@ -44,9 +44,7 @@ function getModel() {
     return ollama(modelName || 'qwen3:4b');
   }
   if (provider === 'groq') {
-    if (!process.env.GROQ_API_KEY) {
-      process.env.GROQ_API_KEY = cfg.api_key || '';
-    }
+    if (apiKey) process.env.GROQ_API_KEY = apiKey;
     const groq = createGroq();
     return groq(modelName || 'llama-3.1-8b-instant');
   }
