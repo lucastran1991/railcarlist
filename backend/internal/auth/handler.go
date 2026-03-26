@@ -186,6 +186,7 @@ func SeedUsers(db *database.DB) {
 		{"admin", "System Admin", "admin@vopak.local", "Password@876", "admin", ""},
 		{"an.nguyen", "An Nguyen Thanh", "an.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/an.nguyen.png"},
 		{"binh.nhan", "Binh Nhan", "binh.nhan@atomiton.com", "Atomiton@123", "viewer", "/avatars/binh.nhan.png"},
+		{"hai.nguyen", "Hai Nguyen", "hai.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/hai.nguyen.png"},
 		{"henry.truong", "Henry Truong", "henry.truong@atomiton.com", "Atomiton@123", "viewer", "/avatars/henry.truong.png"},
 		{"karl.trinh", "Karl Trinh", "karl.trinh@atomiton.com", "Atomiton@123", "viewer", "/avatars/karl.trinh.png"},
 		{"kenvin.nguyen", "Kenvin Nguyen", "kenvin.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/kenvin.nguyen.png"},
