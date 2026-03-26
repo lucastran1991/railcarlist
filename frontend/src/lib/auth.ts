@@ -30,6 +30,18 @@ export async function login(username: string, password: string): Promise<boolean
       localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
       localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
       localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+
+      // Load user preferences and apply to localStorage for theme/mode init
+      try {
+        const prefsRes = await fetch(`${API_BASE_URL}/api/auth/preferences`, {
+          headers: { 'Authorization': `Bearer ${data.access_token}` },
+        });
+        if (prefsRes.ok) {
+          const prefs = await prefsRes.json();
+          if (prefs.colorMode) localStorage.setItem('theme', prefs.colorMode);
+          if (prefs.theme) localStorage.setItem('vopak_color_theme', prefs.theme);
+        }
+      } catch { /* preferences are optional */ }
     }
     return true;
   } catch {
@@ -74,6 +86,37 @@ export function getUser(): AuthUser | null {
   } catch {
     return null;
   }
+}
+
+export interface UserPreferences {
+  colorMode?: 'dark' | 'light';
+  theme?: string;
+}
+
+export async function getPreferences(): Promise<UserPreferences> {
+  if (!isBrowser) return {};
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!token) return {};
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/auth/preferences`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return {};
+    return await res.json();
+  } catch {
+    return {};
+  }
+}
+
+export async function savePreferences(prefs: UserPreferences): Promise<void> {
+  if (!isBrowser) return;
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!token) return;
+  fetch(`${API_BASE_URL}/api/auth/preferences`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(prefs),
+  }).catch(() => {}); // fire and forget
 }
 
 export async function refreshTokens(): Promise<boolean> {

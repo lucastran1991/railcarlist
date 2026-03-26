@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import { applyTheme, clearTheme, reapplyTheme } from './themes';
+import { savePreferences } from './auth';
 
 const THEME_KEY = 'vopak_color_theme';
 
@@ -24,6 +25,9 @@ export const useThemeStore = create<ThemeStore>((set) => ({
     } else {
       applyTheme(id);
     }
+    // Persist to server
+    const colorMode = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    savePreferences({ colorMode, theme: id });
   },
   _init: () => {
     const stored = localStorage.getItem(THEME_KEY) || 'default';

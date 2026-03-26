@@ -2388,6 +2388,7 @@ func (db *DB) migrate() error {
 		password_hash TEXT NOT NULL,
 		role TEXT NOT NULL DEFAULT 'viewer',
 		avatar_url TEXT NOT NULL DEFAULT '',
+		preferences TEXT NOT NULL DEFAULT '{}',
 		active INTEGER NOT NULL DEFAULT 1,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`, autoInc),
@@ -2431,6 +2432,7 @@ func (db *DB) migrate() error {
 		"ALTER TABLE substation_voltage_profile ADD COLUMN recorded_at BIGINT DEFAULT 0",
 		"ALTER TABLE substation_transformer_temp ADD COLUMN recorded_at BIGINT DEFAULT 0",
 		"ALTER TABLE substation_feeder_distribution ADD COLUMN recorded_at BIGINT DEFAULT 0",
+		"ALTER TABLE users ADD COLUMN preferences TEXT NOT NULL DEFAULT '{}'",
 	}
 	for _, stmt := range alterStmts {
 		db.conn.Exec(stmt) // ignore error — column may already exist
@@ -2560,6 +2562,23 @@ func (db *DB) CreateUser(username, fullName, email, passwordHash, role, avatarUR
 	_, err := db.conn.Exec(
 		fmt.Sprintf("INSERT INTO users (username, full_name, email, password_hash, role, avatar_url) VALUES (%s)", db.placeholders(6)),
 		username, fullName, email, passwordHash, role, avatarURL,
+	)
+	return err
+}
+
+func (db *DB) GetUserPreferences(userID int64) (string, error) {
+	var prefs string
+	err := db.conn.QueryRow(
+		fmt.Sprintf("SELECT preferences FROM users WHERE id = %s", db.ph(1)),
+		userID,
+	).Scan(&prefs)
+	return prefs, err
+}
+
+func (db *DB) SetUserPreferences(userID int64, prefs string) error {
+	_, err := db.conn.Exec(
+		fmt.Sprintf("UPDATE users SET preferences = %s WHERE id = %s", db.ph(1), db.ph(2)),
+		prefs, userID,
 	)
 	return err
 }

@@ -3,10 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Sun, Moon } from 'lucide-react';
+import { savePreferences } from '@/lib/auth';
+import { useThemeStore } from '@/lib/useStyleTheme';
 
 export default function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const themeId = useThemeStore(s => s.themeId);
 
   useEffect(() => setMounted(true), []);
 
@@ -14,9 +17,15 @@ export default function ThemeToggle() {
 
   const isDark = theme === 'dark';
 
+  const handleToggle = () => {
+    const newMode = isDark ? 'light' : 'dark';
+    setTheme(newMode);
+    savePreferences({ colorMode: newMode, theme: themeId });
+  };
+
   return (
     <button
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      onClick={handleToggle}
       className="w-9 h-9 flex items-center justify-center rounded-lg border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] transition-colors"
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >

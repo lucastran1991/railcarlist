@@ -166,6 +166,50 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) GetPreferences(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	claims := GetUser(r)
+	if claims == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	prefs, err := h.db.GetUserPreferences(claims.UserID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "failed to get preferences"})
+		return
+	}
+	// Return raw JSON string directly
+	w.Write([]byte(prefs))
+}
+
+func (h *Handler) SetPreferences(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	claims := GetUser(r)
+	if claims == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	// Read raw JSON body as preferences
+	var prefs json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&prefs); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON"})
+		return
+	}
+
+	if err := h.db.SetUserPreferences(claims.UserID, string(prefs)); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "failed to save preferences"})
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]string{"message": "preferences saved"})
+}
+
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	// JWT is stateless — server-side logout is a no-op for now.
