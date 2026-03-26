@@ -2,12 +2,9 @@ const SESSION_KEY = 'vopak_auth_session';
 const ACCESS_TOKEN_KEY = 'vopak_access_token';
 const REFRESH_TOKEN_KEY = 'vopak_refresh_token';
 
-const isBrowser = typeof window !== 'undefined';
+import { API_BASE_URL } from '@/lib/config';
 
-function getApiBase(): string {
-  if (!isBrowser) return '';
-  return window.location.origin;
-}
+const isBrowser = typeof window !== 'undefined';
 
 export interface AuthUser {
   id: number;
@@ -18,7 +15,7 @@ export interface AuthUser {
 
 export async function login(username: string, password: string): Promise<boolean> {
   try {
-    const res = await fetch(`${getApiBase()}/api/auth/login`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -77,7 +74,7 @@ export async function refreshTokens(): Promise<boolean> {
   if (!refreshToken) return false;
 
   try {
-    const res = await fetch(`${getApiBase()}/api/auth/refresh`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
