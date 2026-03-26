@@ -201,6 +201,9 @@ func SeedUsers(db *database.DB) {
 		{"tara.ly", "Tara Ly", "tara.ly@atomiton.com", "Atomiton@123", "viewer", "/avatars/tara.ly.png"},
 		{"tracy.nguyen", "Tracy Nguyen", "tracy.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/tracy.nguyen.png"},
 		{"vuong.ngo", "Vuong Ngo", "vuong.ngo@atomiton.com", "Atomiton@123", "viewer", "/avatars/vuong.ngo.png"},
+		{"alok.batra", "Alok Batra", "alok.batra@atomiton.com", "Atomiton@123", "admin", "/avatars/alok.batra.png"},
+		{"kartik.shah", "Kartik Shah", "kartik.shah@atomiton.com", "Atomiton@123", "admin", "/avatars/kartik.shah.png"},
+		{"khoa.tran", "Khoa Tran", "khoa.tran@atomiton.com", "Atomiton@123", "viewer", "/avatars/khoa.tran.png"},
 	}
 
 	created := 0
