@@ -27,8 +27,8 @@ export default function SceneLighting() {
 
   return (
     <>
-      {/* Exponential fog — natural atmospheric haze */}
-      <fogExp2 attach="fog" args={[0xc8d8e8, 0.003]} />
+      {/* Exponential fog — fade distant objects into background color */}
+      <fogExp2 attach="fog" args={[0x3a3a3a, 0.012]} />
 
       {enableLighting ? (
         <>

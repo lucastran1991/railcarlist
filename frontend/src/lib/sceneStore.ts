@@ -59,7 +59,7 @@ export const useSceneStore = create<SceneState>((set) => ({
 
   statusEffects: false,
   toggleStatusEffects: () => set((s) => ({ statusEffects: !s.statusEffects })),
-  replaceMeshes: false,
+  replaceMeshes: true,
   toggleReplaceMeshes: () => set((s) => ({ replaceMeshes: !s.replaceMeshes })),
   enableReflection: true,
   toggleReflection: () => set((s) => ({ enableReflection: !s.enableReflection })),

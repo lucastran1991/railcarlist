@@ -38,6 +38,9 @@ function SceneContent({ config, onCameraApiReady }: { config: SceneConfig } & Te
       <SceneLighting />
       <CameraController ref={cameraRef} config={config} />
 
+      {/* Checkered grid under scene */}
+      <gridHelper args={[200, 80, '#555555', '#4a4a4a']} position={[0, -0.05, 0]} />
+
       <Suspense fallback={null}>
           <TerminalModel
             onObjectClick={handleObjectClick}
@@ -65,9 +68,9 @@ export default function TerminalCanvas({ onCameraApiReady }: TerminalCanvasProps
       frameloop={statusEffects ? "always" : "demand"}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
       camera={{ fov: 50, near: 0.1, far: 500 }}
-      style={{ width: '100%', height: '100%', background: '#1a1a1a' }}
+      style={{ width: '100%', height: '100%', background: '#3a3a3a' }}
     >
-      <color attach="background" args={['#1a1a1a']} />
+      <color attach="background" args={['#3a3a3a']} />
       <SceneContent config={config} onCameraApiReady={onCameraApiReady} />
     </Canvas>
   );
