@@ -183,7 +183,7 @@ func SeedUsers(db *database.DB) {
 	}
 
 	users := []seedUser{
-		{"admin", "System Admin", "admin@vopak.local", "Password@876", "admin", ""},
+		{"admin", "System Admin", "admin@vopak.local", "Password@876", "admin", "/avatars/admin.png"},
 		{"an.nguyen", "An Nguyen Thanh", "an.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/an.nguyen.png"},
 		{"binh.nhan", "Binh Nhan", "binh.nhan@atomiton.com", "Atomiton@123", "viewer", "/avatars/binh.nhan.png"},
 		{"hai.nguyen", "Hai Nguyen", "hai.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/hai.nguyen.png"},
