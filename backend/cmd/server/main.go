@@ -83,6 +83,7 @@ func main() {
 	pub.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
 	pub.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
 	pub.HandleFunc("/config", configHandler.Handle).Methods("GET")
+	pub.HandleFunc("/system/generate", mt.GenerateAll).Methods("POST") // devops — no auth
 
 	// --- Protected endpoints (JWT required) ---
 	api := router.PathPrefix("/api").Subrouter()
@@ -171,8 +172,7 @@ func main() {
 	// Pipeline DAG
 	api.HandleFunc("/pipeline/dag", mt.PipelineDAG).Methods("GET")
 
-	// System data generation (all terminals)
-	api.HandleFunc("/system/generate", mt.GenerateAll).Methods("POST")
+	// System data generation — registered on public router above (devops use)
 
 	// Health check
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
