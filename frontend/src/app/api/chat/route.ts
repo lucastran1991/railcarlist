@@ -156,12 +156,14 @@ Domains:
 - Alerts: system alerts with severity levels
 
 Rules:
+- KEEP ANSWERS SHORT — 1-3 sentences max. No unnecessary explanation.
 - Use the data below to answer — it is current and real-time
-- Be concise. Use numbers with units.
-- Format comparisons in tables when appropriate
-- When asked about tanks, show tank ID, product, level %, and volume
+- Use numbers with units. No filler words.
+- Tables only when comparing 3+ items
+- When asked about tanks: tank ID, product, level %, volume — one line
 - Respond in the same language the user uses
-- If data for a specific question is not in the context below, say so clearly`;
+- If data not available, say so in one sentence
+- Do NOT repeat the question or add disclaimers`;
 
 // Sanitize messages — strip reasoning parts that Ollama can't handle
 // AI SDK v6 sends assistant messages as parts[] with reasoning/step-start/text
