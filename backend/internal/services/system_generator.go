@@ -615,8 +615,17 @@ func (s *SystemGeneratorService) updateAllKPIs(now time.Time, rng *rand.Rand) {
 		NoxEmissions:     math.Round(v(120, 0.15)),
 	})
 
-	tankTotal := 59
-	tankOp := tankTotal - 2 - rng.Intn(4) // 53-57 operating
+	// Per-terminal tank counts (matching frontend OSM→Tank mappings)
+	terminalTankCounts := map[string]int{
+		"savannah":    57, // 59 - 2 unmapped (TK-301 building, TK-536 building)
+		"los-angeles": 61, // 64 - 3 unmapped (TK-704 factory, TK-101 factory, TK-102 coffee store)
+		"tarragona":   115,
+	}
+	tankTotal := 59 // default
+	if tc, ok := terminalTankCounts[s.db.Name()]; ok {
+		tankTotal = tc
+	}
+	tankOp := tankTotal - 2 - rng.Intn(4)
 	s.db.UpsertTankKPIs(models.TankKPIs{
 		TotalInventory:    math.Round(v(1450000, 0.15)),
 		AvailableCapacity: math.Round(clamp(v(35, 0.20), 15, 55)),

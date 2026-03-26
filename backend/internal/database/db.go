@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -18,7 +19,10 @@ import (
 type DB struct {
 	conn   *sql.DB
 	dbType string // "sqlite" or "postgres"
+	name   string // terminal ID or "system"
 }
+
+func (d *DB) Name() string { return d.name }
 
 // ph returns ? for sqlite, $n for postgres
 func (d *DB) ph(n int) string {
@@ -121,7 +125,12 @@ func NewDB(cfg config.DatabaseConfig) (*DB, error) {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	db := &DB{conn: conn, dbType: dbType}
+	// Derive name from DB path (e.g. "savannah.db" → "savannah")
+	dbName := strings.TrimSuffix(filepath.Base(cfg.Path), filepath.Ext(cfg.Path))
+	if dbName == "" {
+		dbName = "default"
+	}
+	db := &DB{conn: conn, dbType: dbType, name: dbName}
 
 	if err := db.migrate(); err != nil {
 		conn.Close()
