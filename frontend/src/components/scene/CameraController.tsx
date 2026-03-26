@@ -16,11 +16,38 @@ export interface CameraControllerHandle {
   api: TerminalCameraApi;
 }
 
+// Pre-allocated vectors to avoid GC pressure in useFrame
+const _arcPos = new THREE.Vector3();
+const _arcTarget = new THREE.Vector3();
+const _camTarget = new THREE.Vector3();
+
+const ARC_DURATION = 0.9; // seconds
+const MAX_LIFT = 15;      // max arc height
+
 const CameraController = forwardRef<CameraControllerHandle, CameraControllerProps>(
   ({ config }, ref) => {
     const controlsRef = useRef<CameraControlsImpl>(null);
     const sc = config.scene;
     const selectedObj = useSceneStore(s => s.selectedObj);
+
+    // Arc animation state (refs to avoid re-renders)
+    const arcRef = useRef<{
+      active: boolean;
+      curve: THREE.QuadraticBezierCurve3 | null;
+      targetLookAt: THREE.Vector3;
+      startLookAt: THREE.Vector3;
+      progress: number;
+      duration: number;
+      safetyTimeout: ReturnType<typeof setTimeout> | null;
+    }>({
+      active: false,
+      curve: null,
+      targetLookAt: new THREE.Vector3(),
+      startLookAt: new THREE.Vector3(),
+      progress: 0,
+      duration: ARC_DURATION,
+      safetyTimeout: null,
+    });
 
     // Limits
     const minDist = sc.camera.zoom?.min ?? sc.camera.limits.radius_min;
@@ -57,35 +84,111 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
       c.saveState(); // save as reset position
     }, [defaultPos, defaultTarget]);
 
-    // Animate to selected object or reset
+    // Start arc animation to selected object, or reset on deselect
     useEffect(() => {
       const c = controlsRef.current;
       if (!c) return;
+      const arc = arcRef.current;
+
+      // Cancel any in-progress arc
+      if (arc.safetyTimeout) clearTimeout(arc.safetyTimeout);
+      arc.active = false;
+      arc.progress = 0;
 
       if (selectedObj?.position) {
         const p = selectedObj.position;
-        // Fly to a position offset from the object
-        const camPos = new THREE.Vector3(p.x + 10, Math.max(p.y + 8, 12), p.z + 10);
-        c.setLookAt(camPos.x, camPos.y, camPos.z, p.x, p.y, p.z, true);
+        const targetCamPos = new THREE.Vector3(p.x + 10, Math.max(p.y + 8, 12), p.z + 10);
+        const targetLookAt = new THREE.Vector3(p.x, p.y, p.z);
+
+        // Current camera state
+        const startPos = c.camera.position.clone();
+        const startLookAt = new THREE.Vector3();
+        c.getTarget(startLookAt);
+
+        // Subtle arc — slight lift then swoop down to target
+        const midPoint = startPos.clone().lerp(targetCamPos, 0.4);
+        midPoint.y = startPos.y * 0.95 + 2; // gentle lift + smooth descent
+
+        // Build quadratic bezier curve
+        arc.curve = new THREE.QuadraticBezierCurve3(startPos, midPoint, targetCamPos);
+        arc.targetLookAt.copy(targetLookAt);
+        arc.startLookAt.copy(startLookAt);
+        arc.progress = 0;
+        arc.duration = ARC_DURATION;
+        arc.active = true;
+
+        // Disable user interaction during arc
+        c.enabled = false;
+
+        // Safety timeout — re-enable controls even if animation gets stuck
+        arc.safetyTimeout = setTimeout(() => {
+          if (controlsRef.current) controlsRef.current.enabled = true;
+          arc.active = false;
+        }, (ARC_DURATION + 0.3) * 1000);
+
       } else {
-        // Reset to default
+        // Deselect — straight line reset (no arc needed)
+        c.enabled = true;
         c.reset(true);
       }
     }, [selectedObj]);
 
-    // Report camera info to store (throttled)
+    // Arc animation loop + camera info reporting
     const lastReported = useRef({ angle: -999, radius: -999, height: -999 });
 
-    useFrame(() => {
+    useFrame((_, rawDelta) => {
       const c = controlsRef.current;
       if (!c) return;
 
-      const pos = c.camera.position;
-      const target = new THREE.Vector3();
-      c.getTarget(target);
+      const delta = Math.min(rawDelta, 0.033); // clamp for tab-switch safety
+      const arc = arcRef.current;
 
-      const dx = pos.x - target.x;
-      const dz = pos.z - target.z;
+      // Animate arc if active
+      if (arc.active && arc.curve) {
+        arc.progress += delta / arc.duration;
+
+        if (arc.progress >= 1) {
+          // Animation complete — snap to final position
+          arc.progress = 1;
+          arc.active = false;
+
+          const finalPos = arc.curve.getPointAt(1);
+          c.setLookAt(
+            finalPos.x, finalPos.y, finalPos.z,
+            arc.targetLookAt.x, arc.targetLookAt.y, arc.targetLookAt.z,
+            false
+          );
+          c.enabled = true;
+
+          if (arc.safetyTimeout) {
+            clearTimeout(arc.safetyTimeout);
+            arc.safetyTimeout = null;
+          }
+        } else {
+          // Ease-in-out cubic for smooth feel
+          const t = arc.progress;
+          const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+          // Interpolate position along curve
+          arc.curve.getPointAt(eased, _arcPos);
+
+          // Interpolate lookAt from start to target
+          _arcTarget.lerpVectors(arc.startLookAt, arc.targetLookAt, eased);
+
+          c.setLookAt(
+            _arcPos.x, _arcPos.y, _arcPos.z,
+            _arcTarget.x, _arcTarget.y, _arcTarget.z,
+            false // no CameraControls internal animation — we drive it
+          );
+        }
+      }
+
+      // Report camera info to store (throttled)
+      const pos = c.camera.position;
+      c.getTarget(_camTarget);
+
+      const dx = pos.x - _camTarget.x;
+      const dz = pos.z - _camTarget.z;
       const radius = parseFloat(Math.sqrt(dx * dx + dz * dz).toFixed(1));
       const angle = parseFloat((Math.atan2(dx, dz) * (180 / Math.PI)).toFixed(1));
       const height = parseFloat(pos.y.toFixed(1));
