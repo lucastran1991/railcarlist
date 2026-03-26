@@ -1,26 +1,20 @@
-// @ts-nocheck — AI SDK v6 tool() type inference issue with zod schemas
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { streamText, stepCountIs } from 'ai';
-import { z } from 'zod';
-import { tool } from 'ai';
+import { streamText } from 'ai';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const API = process.env.BACKEND_URL || 'http://localhost:8888';
 
-// Load assistant config from system.cfg.json
 function loadAssistantConfig() {
   try {
     const cfgPath = join(process.cwd(), '..', 'system.cfg.json');
-    const cfg = JSON.parse(readFileSync(cfgPath, 'utf-8'));
-    return cfg.assistant ?? {};
+    return JSON.parse(readFileSync(cfgPath, 'utf-8')).assistant ?? {};
   } catch {
     try {
       const cfgPath = join(process.cwd(), 'public', 'system.cfg.json');
-      const cfg = JSON.parse(readFileSync(cfgPath, 'utf-8'));
-      return cfg.assistant ?? {};
+      return JSON.parse(readFileSync(cfgPath, 'utf-8')).assistant ?? {};
     } catch {
       return {};
     }
@@ -32,8 +26,7 @@ function getModel() {
   const provider = cfg.provider || 'google';
   const modelName = cfg.model || 'gemini-2.0-flash';
 
-  // Set API key from config if not already in env
-  if (cfg.api_key && cfg.api_key !== 'DEFAULT') {
+  if (cfg.api_key && cfg.api_key !== 'DEFAULT' && cfg.api_key !== '') {
     if (provider === 'google' && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
       process.env.GOOGLE_GENERATIVE_AI_API_KEY = cfg.api_key;
     } else if ((provider === 'anthropic' || provider === 'claude') && !process.env.ANTHROPIC_API_KEY) {
@@ -47,115 +40,101 @@ function getModel() {
   if (provider === 'ollama') {
     const baseURL = cfg.base_url || 'http://localhost:11434/v1';
     const ollama = createOpenAICompatible({ name: 'ollama', baseURL, apiKey: 'ollama' });
-    return ollama(modelName || 'qwen2.5-coder:7b');
+    return ollama(modelName || 'qwen3:4b');
   }
   return google(modelName);
 }
 
-async function fetchBackend(path: string, terminalId?: string): Promise<unknown> {
-  const headers: Record<string, string> = {};
-  if (terminalId) headers['X-Terminal-Id'] = terminalId;
-  const res = await fetch(`${API}${path}`, { headers });
-  if (!res.ok) throw new Error(`Backend ${res.status}: ${path}`);
-  return res.json();
+async function fetchJSON(path: string, terminalId: string): Promise<unknown> {
+  try {
+    const headers: Record<string, string> = { 'X-Terminal-Id': terminalId };
+    const res = await fetch(`${API}${path}`, { headers });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
-const SYSTEM_PROMPT = `You are an AI assistant for Vopak Terminal — an industrial petroleum/chemical storage terminal.
-You have access to real-time operational data across 5 domains:
-- **Electricity**: load profiles, consumption, power factor, peak demand, phase balance, cost
-- **Steam**: supply/demand balance, header pressure (HP/MP/LP), condensate recovery, fuel ratio
-- **Boiler**: fleet status (4 boilers), efficiency, combustion, emissions, stack temperature
-- **Tank**: 59 storage tanks (Crude Oil, Diesel, Gasoline, Ethanol, LPG), levels, throughput, inventory
-- **Sub Station**: voltage profiles, transformer loading/temp, harmonics, feeder distribution, faults
-- **Alerts**: system alerts with severity (critical/warning/info/resolved)
+async function buildDataContext(terminalId: string): Promise<string> {
+  // Fetch all key data in parallel
+  const [
+    electricityKpis,
+    steamKpis,
+    boilerKpis,
+    tankKpis,
+    substationKpis,
+    tankLevels,
+    alertKpis,
+    alerts,
+    boilerReadings,
+  ] = await Promise.all([
+    fetchJSON('/api/electricity/kpis', terminalId),
+    fetchJSON('/api/steam/kpis', terminalId),
+    fetchJSON('/api/boiler/kpis', terminalId),
+    fetchJSON('/api/tank/kpis', terminalId),
+    fetchJSON('/api/substation/kpis', terminalId),
+    fetchJSON('/api/tank/levels', terminalId),
+    fetchJSON('/api/alerts/kpis', terminalId),
+    fetchJSON('/api/alerts?page=1&limit=5', terminalId),
+    fetchJSON('/api/boiler/readings', terminalId),
+  ]);
+
+  const sections: string[] = [];
+
+  if (electricityKpis) sections.push(`## Electricity KPIs\n${JSON.stringify(electricityKpis)}`);
+  if (steamKpis) sections.push(`## Steam KPIs\n${JSON.stringify(steamKpis)}`);
+  if (boilerKpis) sections.push(`## Boiler KPIs\n${JSON.stringify(boilerKpis)}`);
+  if (tankKpis) sections.push(`## Tank KPIs\n${JSON.stringify(tankKpis)}`);
+  if (substationKpis) sections.push(`## SubStation KPIs\n${JSON.stringify(substationKpis)}`);
+  if (boilerReadings) sections.push(`## Boiler Readings\n${JSON.stringify(boilerReadings)}`);
+  if (alertKpis) sections.push(`## Alert Summary\n${JSON.stringify(alertKpis)}`);
+  if (alerts) sections.push(`## Recent Alerts (latest 5)\n${JSON.stringify(alerts)}`);
+
+  // Tank levels — summarize top/bottom to keep prompt compact
+  if (tankLevels && Array.isArray(tankLevels)) {
+    const sorted = [...tankLevels].sort((a: any, b: any) => b.level - a.level);
+    const top5 = sorted.slice(0, 5).map((t: any) => `${t.tank}: ${t.level}% ${t.product} (${t.volume}/${t.capacity} bbl, status: ${t.status})`);
+    const bottom5 = sorted.slice(-5).map((t: any) => `${t.tank}: ${t.level}% ${t.product} (${t.volume}/${t.capacity} bbl, status: ${t.status})`);
+    const statusCounts: Record<string, number> = {};
+    tankLevels.forEach((t: any) => { statusCounts[t.status] = (statusCounts[t.status] || 0) + 1; });
+    sections.push(`## Tank Levels (${tankLevels.length} tanks)\nTop 5 highest:\n${top5.join('\n')}\nBottom 5 lowest:\n${bottom5.join('\n')}\nStatus distribution: ${JSON.stringify(statusCounts)}`);
+  }
+
+  return sections.join('\n\n');
+}
+
+const BASE_PROMPT = `You are an AI assistant for Vopak Terminal — an industrial petroleum/chemical storage terminal.
+You have access to real-time operational data provided below. Use this data to answer questions accurately.
+
+Domains:
+- Electricity: load, consumption, power factor, peak demand, cost
+- Steam: supply/demand, header pressure, condensate recovery
+- Boiler: fleet status (4 boilers), efficiency, emissions
+- Tank: storage tanks with levels, products, throughput
+- SubStation: voltage, transformers, harmonics, faults
+- Alerts: system alerts with severity levels
 
 Rules:
-- Always call tools to get current data before answering — never guess or use stale info
-- Be concise. Use numbers with units. Format comparisons in tables when appropriate.
+- Use the data below to answer — it is current and real-time
+- Be concise. Use numbers with units.
+- Format comparisons in tables when appropriate
 - When asked about tanks, show tank ID, product, level %, and volume
-- When asked about trends, mention the time period of the data
 - Respond in the same language the user uses
-- If data is unavailable, say so clearly`;
-
-const domainEnum = z.enum(['electricity', 'steam', 'boiler', 'tank', 'substation']);
-const aggregateEnum = z.enum(['daily', 'monthly', 'quarterly', 'yearly']).default('daily');
+- If data for a specific question is not in the context below, say so clearly`;
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
-
-  // Forward terminal ID from client to backend calls
   const terminalId = req.headers.get('X-Terminal-Id') || 'savannah';
+
+  // Pre-fetch all data and inject into system prompt
+  const dataContext = await buildDataContext(terminalId);
+  const systemPrompt = `${BASE_PROMPT}\n\n# Current Terminal Data (${terminalId})\n\n${dataContext}`;
 
   const result = streamText({
     model: getModel(),
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     messages,
-    stopWhen: stepCountIs(5),
-    tools: {
-      getDomainKpis: tool({
-        description: 'Get KPI summary metrics for a domain.',
-        parameters: z.object({ domain: domainEnum }),
-        execute: async ({ domain }: { domain: string }) => fetchBackend(`/api/${domain}/kpis`, terminalId),
-      }),
-      getTankLevels: tool({
-        description: 'Get current levels, volumes, capacities, and products for all 59 storage tanks.',
-        parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/tank/levels', terminalId),
-      }),
-      getTankProductDistribution: tool({
-        description: 'Get total volume stored by product type.',
-        parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/tank/product-distribution', terminalId),
-      }),
-      getAlerts: tool({
-        description: 'Get system alerts sorted by most recent. Returns severity, title, description, source.',
-        parameters: z.object({
-          page: z.number().default(1),
-          limit: z.number().default(10),
-        }),
-        execute: async ({ page, limit }: { page: number; limit: number }) =>
-          fetchBackend(`/api/alerts?page=${page}&limit=${limit}`, terminalId),
-      }),
-      getAlertKpis: tool({
-        description: 'Get alert counts: total, critical, warning, info, resolved, unread.',
-        parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/alerts/kpis', terminalId),
-      }),
-      getBoilerReadings: tool({
-        description: 'Get current readings for all boilers: efficiency, load %, steam output.',
-        parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/boiler/readings', terminalId),
-      }),
-      getBoilerEmissions: tool({
-        description: 'Get current emission levels (CO, NOx, SOx) vs regulatory limits.',
-        parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/boiler/emissions', terminalId),
-      }),
-      getSubStationTransformers: tool({
-        description: 'Get transformer loading, capacity, and temperature data.',
-        parameters: z.object({ _unused: z.string().optional() }),
-        execute: async () => fetchBackend('/api/substation/transformers', terminalId),
-      }),
-      getChartData: tool({
-        description: 'Get historical chart data for any domain. Charts: electricity(load-profiles,weekly-consumption,power-factor,cost-breakdown,peak-demand,phase-balance), steam(balance,header-pressure,distribution,condensate,fuel-ratio,loss), boiler(efficiency-trend,steam-fuel,stack-temp,combustion), tank(inventory-trend,throughput,level-changes,temperatures), substation(voltage-profile,transformer-temp,feeder-distribution,harmonics,fault-events)',
-        parameters: z.object({
-          domain: domainEnum,
-          chart: z.string().describe('Chart slug'),
-          start: z.string().optional(),
-          end: z.string().optional(),
-          aggregate: aggregateEnum,
-          limit: z.number().default(30),
-        }),
-        execute: async ({ domain, chart, start, end, aggregate, limit }: {
-          domain: string; chart: string; start?: string; end?: string; aggregate: string; limit: number;
-        }) => {
-          const params = new URLSearchParams({ aggregate, limit: String(limit) });
-          if (start) params.set('start', start);
-          if (end) params.set('end', end);
-          return fetchBackend(`/api/${domain}/${chart}?${params}`, terminalId);
-        },
-      }),
-    },
   });
 
   return result.toUIMessageStreamResponse();
