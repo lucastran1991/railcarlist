@@ -4,7 +4,7 @@
 import { useRef, useEffect, Fragment, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { useAuth } from '@/lib/useAuth';
-import { Send, Bot, User, Loader2, Sparkles, Trash2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, Trash2, Info, X } from 'lucide-react';
 
 const SUGGESTIONS = [
   'Which tank has the highest level?',
@@ -21,6 +21,7 @@ export default function ChatPage() {
   const ready = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   const { messages, sendMessage, status, setMessages } = useChat({
     api: '/api/chat',
@@ -72,16 +73,39 @@ export default function ChatPage() {
             <p className="text-xs text-muted-foreground">Ask anything about terminal operations</p>
           </div>
         </div>
-        {messages.length > 0 && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setMessages([])}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            onClick={() => setShowInfo(!showInfo)}
+            className="flex items-center justify-center w-8 h-8 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Usage info"
           >
-            <Trash2 size={12} />
-            Clear
+            <Info size={14} />
           </button>
-        )}
+          {messages.length > 0 && (
+            <button
+              onClick={() => setMessages([])}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <Trash2 size={12} />
+              Clear
+            </button>
+          )}
+        </div>
       </div>
+
+      {showInfo && (
+        <div className="mx-0 mt-3 p-4 rounded-xl border border-border bg-muted/30 text-sm text-muted-foreground relative">
+          <button onClick={() => setShowInfo(false)} className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"><X size={14} /></button>
+          <p className="font-semibold text-foreground mb-2">Assistant Info</p>
+          <div className="space-y-1.5 text-xs">
+            <p><span className="font-medium text-foreground">Data:</span> Pre-fetched KPIs, tank levels, alerts, boiler readings for active terminal</p>
+            <p><span className="font-medium text-foreground">Coverage:</span> Can answer ~90% of operational questions. Chart/trend data not included.</p>
+            <p><span className="font-medium text-foreground">Rate limit:</span> 30 requests/min, 6K tokens/min (free tier)</p>
+            <p><span className="font-medium text-foreground">Response:</span> ~1-3s (cloud) or ~10-20s (local Ollama)</p>
+            <p className="text-[11px] text-muted-foreground/60 pt-1">Provider configurable in system.cfg.json (groq / google / claude / ollama)</p>
+          </div>
+        </div>
+      )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto py-6 space-y-4 min-h-0">
         {messages.length === 0 ? (
