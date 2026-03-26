@@ -48,10 +48,8 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    // Simulate network delay
-    await new Promise(r => setTimeout(r, 600));
-
-    if (login(username, password)) {
+    const success = await login(username, password);
+    if (success) {
       window.location.href = '/';
     } else {
       setError('Invalid username or password');

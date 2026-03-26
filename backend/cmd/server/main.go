@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"railcarlist/internal/auth"
 	"railcarlist/internal/config"
 	"railcarlist/internal/database"
 	"railcarlist/internal/handlers"
@@ -63,6 +64,11 @@ func main() {
 	tagsHandler := handlers.NewTagsHandler(tagsService)
 	railcarHandler := handlers.NewRailcarHandler(railcarService)
 
+	// Auth
+	tokenCfg := auth.DefaultTokenConfig()
+	authHandler := auth.NewHandler(db, tokenCfg)
+	auth.SeedAdmin(db)
+
 	// Multi-tenant handler
 	mt := handlers.NewMultiTenantHandler(dbMgr)
 
@@ -71,6 +77,13 @@ func main() {
 	router.HandleFunc("/api/railcars/all", railcarHandler.HandleDeleteAll).Methods("DELETE")
 
 	api := router.PathPrefix("/api").Subrouter()
+
+	// --- Public auth endpoints (no middleware) ---
+	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
+
+	// --- Protected: /auth/me ---
+	api.Handle("/auth/me", auth.Middleware(tokenCfg.Secret)(http.HandlerFunc(authHandler.Me))).Methods("GET")
 
 	// --- Non-domain endpoints (default DB) ---
 	api.HandleFunc("/config", configHandler.Handle).Methods("GET")

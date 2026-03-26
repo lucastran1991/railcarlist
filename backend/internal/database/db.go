@@ -2370,6 +2370,16 @@ func (db *DB) migrate() error {
 		created_at BIGINT NOT NULL DEFAULT 0,
 		resolved_at BIGINT NOT NULL DEFAULT 0
 	)`, autoInc),
+
+		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS users (
+		id %s,
+		username TEXT UNIQUE NOT NULL,
+		email TEXT UNIQUE NOT NULL,
+		password_hash TEXT NOT NULL,
+		role TEXT NOT NULL DEFAULT 'viewer',
+		active INTEGER NOT NULL DEFAULT 1,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`, autoInc),
 	}
 
 	for _, stmt := range ddlStatements {
@@ -2493,5 +2503,52 @@ func (db *DB) GetAlertKPIs() (*models.AlertKPIs, error) {
 
 func (db *DB) DeleteAllAlerts() error {
 	_, err := db.conn.Exec("DELETE FROM alerts")
+	return err
+}
+
+// --- User CRUD ---
+
+func (db *DB) GetUserByUsername(username string) (*models.User, error) {
+	var u models.User
+	var active int
+	err := db.conn.QueryRow(
+		fmt.Sprintf("SELECT id, username, email, password_hash, role, active FROM users WHERE username = %s", db.ph(1)),
+		username,
+	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &active)
+	if err != nil {
+		return nil, err
+	}
+	u.Active = active == 1
+	return &u, nil
+}
+
+func (db *DB) GetUserByID(id int64) (*models.User, error) {
+	var u models.User
+	var active int
+	err := db.conn.QueryRow(
+		fmt.Sprintf("SELECT id, username, email, password_hash, role, active FROM users WHERE id = %s", db.ph(1)),
+		id,
+	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &active)
+	if err != nil {
+		return nil, err
+	}
+	u.Active = active == 1
+	return &u, nil
+}
+
+func (db *DB) UserExists(username string) (bool, error) {
+	var count int
+	err := db.conn.QueryRow(
+		fmt.Sprintf("SELECT COUNT(*) FROM users WHERE username = %s", db.ph(1)),
+		username,
+	).Scan(&count)
+	return count > 0, err
+}
+
+func (db *DB) CreateUser(username, email, passwordHash, role string) error {
+	_, err := db.conn.Exec(
+		fmt.Sprintf("INSERT INTO users (username, email, password_hash, role) VALUES (%s)", db.placeholders(4)),
+		username, email, passwordHash, role,
+	)
 	return err
 }
