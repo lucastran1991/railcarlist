@@ -74,6 +74,9 @@ console.log
 *.db
 *.db-journal
 
+# API keys (never commit)
+api.keys.json
+
 # Resources / screenshots
 resources/
 

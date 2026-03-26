@@ -22,17 +22,32 @@ function loadAssistantConfig() {
   }
 }
 
+// Load API keys: api.keys.json → system.cfg.json api_key → env var
+function loadApiKey(provider: string): string | null {
+  // 1. api.keys.json
+  try {
+    const keysPath = join(process.cwd(), '..', 'api.keys.json');
+    const keys = JSON.parse(readFileSync(keysPath, 'utf-8'));
+    const providerKey = provider === 'claude' ? 'anthropic' : provider;
+    if (keys[providerKey]) return keys[providerKey];
+  } catch { /* no keys file */ }
+  // 2. system.cfg.json api_key field
+  const cfg = loadAssistantConfig();
+  if (cfg.api_key && cfg.api_key !== 'DEFAULT' && cfg.api_key !== '') return cfg.api_key;
+  // 3. env var (handled by SDK automatically)
+  return null;
+}
+
 function getModel() {
   const cfg = loadAssistantConfig();
   const provider = cfg.provider || 'google';
   const modelName = cfg.model || 'gemini-2.0-flash';
 
-  // API key priority: system.cfg.json → env var
-  const apiKey = (cfg.api_key && cfg.api_key !== 'DEFAULT' && cfg.api_key !== '') ? cfg.api_key : null;
-  if (provider === 'google') {
-    if (apiKey) process.env.GOOGLE_GENERATIVE_AI_API_KEY = apiKey;
-  } else if (provider === 'anthropic' || provider === 'claude') {
-    if (apiKey) process.env.ANTHROPIC_API_KEY = apiKey;
+  const apiKey = loadApiKey(provider);
+  if (provider === 'google' && apiKey) {
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = apiKey;
+  } else if ((provider === 'anthropic' || provider === 'claude') && apiKey) {
+    process.env.ANTHROPIC_API_KEY = apiKey;
   }
 
   if (provider === 'anthropic' || provider === 'claude') {
@@ -45,6 +60,7 @@ function getModel() {
   }
   if (provider === 'groq') {
     if (apiKey) process.env.GROQ_API_KEY = apiKey;
+    else if (!process.env.GROQ_API_KEY) process.env.GROQ_API_KEY = '';
     const groq = createGroq();
     return groq(modelName || 'llama-3.1-8b-instant');
   }
