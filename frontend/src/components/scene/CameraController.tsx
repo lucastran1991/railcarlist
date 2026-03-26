@@ -64,8 +64,13 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
 
       if (selectedObj?.position) {
         const p = selectedObj.position;
-        // Fly to a position offset from the object
-        const camPos = new THREE.Vector3(p.x + 10, Math.max(p.y + 8, 12), p.z + 10);
+        // Fly to a position offset from the object, respecting zoom limits
+        const zoomDist = Math.max(minDist + 2, 7); // slightly above minDist
+        const camPos = new THREE.Vector3(
+          p.x + zoomDist * 0.7,
+          Math.max(p.y + zoomDist * 0.6, minDist),
+          p.z + zoomDist * 0.7
+        );
         c.setLookAt(camPos.x, camPos.y, camPos.z, p.x, p.y, p.z, true);
       } else {
         // Reset to default

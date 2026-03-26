@@ -43,8 +43,8 @@ export const DEFAULT_CONFIG: SceneConfig = {
   scene: {
     camera: {
       default: { angle: 0, radius: 20, height: 35, x: 0, y: 35, z: 25 },
-      limits: { radius_min: 15, radius_max: 60, height_min: 12, height_max: 60, angle_max: 360 },
-      zoom: { min: 15, max: 60, speed: 0.4 },
+      limits: { radius_min: 5, radius_max: 60, height_min: 5, height_max: 60, angle_max: 360 },
+      zoom: { min: 5, max: 60, speed: 0.4 },
     },
     target: { x: 0, y: 0, z: 5 },
     auto_orbit: false,
