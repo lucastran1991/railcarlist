@@ -127,9 +127,19 @@ const CameraController = forwardRef<CameraControllerHandle, CameraControllerProp
         }, (ARC_DURATION + 0.3) * 1000);
 
       } else {
-        // Deselect — straight line reset (no arc needed)
+        // Deselect — sync CameraControls internal state with actual camera position
+        // (arc drives camera via setLookAt(false), bypassing internal state)
+        const currentTarget = new THREE.Vector3();
+        c.getTarget(currentTarget);
+        c.setLookAt(
+          c.camera.position.x, c.camera.position.y, c.camera.position.z,
+          currentTarget.x, currentTarget.y, currentTarget.z,
+          false // sync internal state instantly
+        );
         c.enabled = true;
+        c.smoothTime = 0.15;
         c.reset(true);
+        setTimeout(() => { if (controlsRef.current) controlsRef.current.smoothTime = 0.25; }, 500);
       }
     }, [selectedObj]);
 
