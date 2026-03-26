@@ -28,8 +28,9 @@ export async function login(username: string, password: string): Promise<boolean
       localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
       localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        name: data.user.username,
+        name: data.user.full_name || data.user.username,
         role: data.user.role === 'admin' ? 'Administrator' : data.user.role,
+        avatar_url: data.user.avatar_url || '',
       }));
     }
     return true;
@@ -57,7 +58,7 @@ export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
-export function getUser(): { name: string; role: string } | null {
+export function getUser(): { name: string; role: string; avatar_url?: string } | null {
   if (!isBrowser) return null;
   const data = sessionStorage.getItem(SESSION_KEY);
   if (!data) return null;

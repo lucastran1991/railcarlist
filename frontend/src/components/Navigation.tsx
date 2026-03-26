@@ -195,9 +195,13 @@ export default function Navigation() {
                   onClick={openMenu}
                   className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[var(--color-gradient-from,#5CE5A0)] to-[var(--color-gradient-to,#56CDE7)] flex items-center justify-center text-primary-foreground text-sm font-bold">
-                    {user?.name?.charAt(0) ?? 'A'}
-                  </div>
+                  {user?.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[var(--color-gradient-from,#5CE5A0)] to-[var(--color-gradient-to,#56CDE7)] flex items-center justify-center text-primary-foreground text-sm font-bold">
+                      {user?.name?.charAt(0) ?? 'A'}
+                    </div>
+                  )}
                   <ChevronDown size={14} className={cn('text-foreground/60 transition-transform hidden sm:block', menuOpen && 'rotate-180')} />
                 </button>
 

@@ -74,19 +74,21 @@ func main() {
 
 	// Router
 	router := mux.NewRouter()
-	router.HandleFunc("/api/railcars/all", railcarHandler.HandleDeleteAll).Methods("DELETE")
 
+	// --- Public endpoints (no auth required) ---
+	pub := router.PathPrefix("/api").Subrouter()
+	pub.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	pub.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
+	pub.HandleFunc("/config", configHandler.Handle).Methods("GET")
+
+	// --- Protected endpoints (JWT required) ---
 	api := router.PathPrefix("/api").Subrouter()
+	api.Use(auth.Middleware(tokenCfg.Secret))
 
-	// --- Public auth endpoints (no middleware) ---
-	api.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
-	api.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods("POST")
+	// Auth
+	api.HandleFunc("/auth/me", authHandler.Me).Methods("GET")
 
-	// --- Protected: /auth/me ---
-	api.Handle("/auth/me", auth.Middleware(tokenCfg.Secret)(http.HandlerFunc(authHandler.Me))).Methods("GET")
-
-	// --- Non-domain endpoints (default DB) ---
-	api.HandleFunc("/config", configHandler.Handle).Methods("GET")
+	// Legacy endpoints (default DB)
 	api.HandleFunc("/load", loadHandler.Handle).Methods("POST")
 	api.HandleFunc("/generate-dummy", generatorHandler.Handle).Methods("POST")
 	api.HandleFunc("/upload-csv", uploadHandler.Handle).Methods("POST")
@@ -94,6 +96,7 @@ func main() {
 	api.HandleFunc("/tags", tagsHandler.HandleGet).Methods("GET")
 	api.HandleFunc("/tags", tagsHandler.HandleDelete).Methods("DELETE")
 	api.HandleFunc("/tags", tagsHandler.HandlePost).Methods("POST")
+	api.HandleFunc("/railcars/all", railcarHandler.HandleDeleteAll).Methods("DELETE")
 	api.HandleFunc("/railcars/import/savana", railcarHandler.HandleImportSavana).Methods("POST")
 	api.HandleFunc("/railcars/import", railcarHandler.HandleImport).Methods("POST")
 	api.HandleFunc("/railcars/{id}", railcarHandler.HandleGet).Methods("GET")
@@ -103,7 +106,7 @@ func main() {
 	api.HandleFunc("/railcars", railcarHandler.HandleCreate).Methods("POST")
 	api.PathPrefix("/timeseriesdata/").HandlerFunc(queryHandler.Handle).Methods("GET")
 
-	// --- Multi-tenant: ALL domain endpoints resolve DB via X-Terminal-Id ---
+	// --- Multi-tenant: ALL domain endpoints (protected + terminal-scoped) ---
 
 	// Electricity
 	api.HandleFunc("/electricity/kpis", mt.Electricity((*handlers.ElectricityHandler).HandleGetKPIs)).Methods("GET")
