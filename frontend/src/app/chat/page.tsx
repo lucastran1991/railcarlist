@@ -28,7 +28,13 @@ export default function ChatPage() {
       const tid = typeof window !== 'undefined'
         ? localStorage.getItem('vopak_active_terminal') || 'savannah'
         : 'savannah';
-      return { 'X-Terminal-Id': tid };
+      const token = typeof window !== 'undefined'
+        ? localStorage.getItem('vopak_access_token') || ''
+        : '';
+      return {
+        'X-Terminal-Id': tid,
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      };
     },
   });
   const [input, setInput] = useState('');

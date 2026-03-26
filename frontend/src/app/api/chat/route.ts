@@ -45,9 +45,10 @@ function getModel() {
   return google(modelName);
 }
 
-async function fetchJSON(path: string, terminalId: string): Promise<unknown> {
+async function fetchJSON(path: string, terminalId: string, authToken?: string): Promise<unknown> {
   try {
     const headers: Record<string, string> = { 'X-Terminal-Id': terminalId };
+    if (authToken) headers['Authorization'] = authToken;
     const res = await fetch(`${API}${path}`, { headers });
     if (!res.ok) return null;
     return await res.json();
@@ -56,8 +57,9 @@ async function fetchJSON(path: string, terminalId: string): Promise<unknown> {
   }
 }
 
-async function buildDataContext(terminalId: string): Promise<string> {
-  // Fetch all key data in parallel
+async function buildDataContext(terminalId: string, authToken?: string): Promise<string> {
+  // Fetch all key data in parallel, forwarding user's auth token
+  const f = (path: string) => fetchJSON(path, terminalId, authToken);
   const [
     electricityKpis,
     steamKpis,
@@ -69,15 +71,15 @@ async function buildDataContext(terminalId: string): Promise<string> {
     alerts,
     boilerReadings,
   ] = await Promise.all([
-    fetchJSON('/api/electricity/kpis', terminalId),
-    fetchJSON('/api/steam/kpis', terminalId),
-    fetchJSON('/api/boiler/kpis', terminalId),
-    fetchJSON('/api/tank/kpis', terminalId),
-    fetchJSON('/api/substation/kpis', terminalId),
-    fetchJSON('/api/tank/levels', terminalId),
-    fetchJSON('/api/alerts/kpis', terminalId),
-    fetchJSON('/api/alerts?page=1&limit=5', terminalId),
-    fetchJSON('/api/boiler/readings', terminalId),
+    f('/api/electricity/kpis'),
+    f('/api/steam/kpis'),
+    f('/api/boiler/kpis'),
+    f('/api/tank/kpis'),
+    f('/api/substation/kpis'),
+    f('/api/tank/levels'),
+    f('/api/alerts/kpis'),
+    f('/api/alerts?page=1&limit=5'),
+    f('/api/boiler/readings'),
   ]);
 
   const sections: string[] = [];
@@ -126,9 +128,10 @@ Rules:
 export async function POST(req: Request) {
   const { messages } = await req.json();
   const terminalId = req.headers.get('X-Terminal-Id') || 'savannah';
+  const authToken = req.headers.get('Authorization') || undefined;
 
   // Pre-fetch all data and inject into system prompt
-  const dataContext = await buildDataContext(terminalId);
+  const dataContext = await buildDataContext(terminalId, authToken);
   const systemPrompt = `${BASE_PROMPT}\n\n# Current Terminal Data (${terminalId})\n\n${dataContext}`;
 
   const result = streamText({
