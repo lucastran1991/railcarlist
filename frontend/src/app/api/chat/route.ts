@@ -1,6 +1,7 @@
 // @ts-nocheck — AI SDK v6 tool() type inference issue with zod schemas
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { streamText, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { tool } from 'ai';
@@ -42,6 +43,11 @@ function getModel() {
 
   if (provider === 'anthropic' || provider === 'claude') {
     return anthropic(modelName || 'claude-sonnet-4-20250514');
+  }
+  if (provider === 'ollama') {
+    const baseURL = cfg.base_url || 'http://localhost:11434/v1';
+    const ollama = createOpenAICompatible({ name: 'ollama', baseURL, apiKey: 'ollama' });
+    return ollama(modelName || 'qwen2.5-coder:7b');
   }
   return google(modelName);
 }

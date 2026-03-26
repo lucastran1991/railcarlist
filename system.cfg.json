@@ -46,9 +46,10 @@
     }
   },
   "assistant": {
-    "provider": "google",
-    "model": "gemini-2.0-flash",
-    "api_key": "DEFAULT",
+    "provider": "ollama",
+    "model": "qwen2.5-coder:7b",
+    "base_url": "http://localhost:11434/v1",
+    "api_key": "",
     "max_steps": 5,
     "max_tokens": 1024
   }
