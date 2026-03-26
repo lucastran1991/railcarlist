@@ -67,7 +67,7 @@ func main() {
 	// Auth
 	tokenCfg := auth.DefaultTokenConfig()
 	authHandler := auth.NewHandler(db, tokenCfg)
-	auth.SeedAdmin(db)
+	auth.SeedUsers(db)
 
 	// Multi-tenant handler
 	mt := handlers.NewMultiTenantHandler(dbMgr)

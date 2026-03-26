@@ -2374,9 +2374,11 @@ func (db *DB) migrate() error {
 		fmt.Sprintf(`CREATE TABLE IF NOT EXISTS users (
 		id %s,
 		username TEXT UNIQUE NOT NULL,
+		full_name TEXT NOT NULL DEFAULT '',
 		email TEXT UNIQUE NOT NULL,
 		password_hash TEXT NOT NULL,
 		role TEXT NOT NULL DEFAULT 'viewer',
+		avatar_url TEXT NOT NULL DEFAULT '',
 		active INTEGER NOT NULL DEFAULT 1,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`, autoInc),
@@ -2512,9 +2514,9 @@ func (db *DB) GetUserByUsername(username string) (*models.User, error) {
 	var u models.User
 	var active int
 	err := db.conn.QueryRow(
-		fmt.Sprintf("SELECT id, username, email, password_hash, role, active FROM users WHERE username = %s", db.ph(1)),
+		fmt.Sprintf("SELECT id, username, full_name, email, password_hash, role, avatar_url, active FROM users WHERE username = %s", db.ph(1)),
 		username,
-	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &active)
+	).Scan(&u.ID, &u.Username, &u.FullName, &u.Email, &u.PasswordHash, &u.Role, &u.AvatarURL, &active)
 	if err != nil {
 		return nil, err
 	}
@@ -2526,9 +2528,9 @@ func (db *DB) GetUserByID(id int64) (*models.User, error) {
 	var u models.User
 	var active int
 	err := db.conn.QueryRow(
-		fmt.Sprintf("SELECT id, username, email, password_hash, role, active FROM users WHERE id = %s", db.ph(1)),
+		fmt.Sprintf("SELECT id, username, full_name, email, password_hash, role, avatar_url, active FROM users WHERE id = %s", db.ph(1)),
 		id,
-	).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &active)
+	).Scan(&u.ID, &u.Username, &u.FullName, &u.Email, &u.PasswordHash, &u.Role, &u.AvatarURL, &active)
 	if err != nil {
 		return nil, err
 	}
@@ -2545,10 +2547,10 @@ func (db *DB) UserExists(username string) (bool, error) {
 	return count > 0, err
 }
 
-func (db *DB) CreateUser(username, email, passwordHash, role string) error {
+func (db *DB) CreateUser(username, fullName, email, passwordHash, role, avatarURL string) error {
 	_, err := db.conn.Exec(
-		fmt.Sprintf("INSERT INTO users (username, email, password_hash, role) VALUES (%s)", db.placeholders(4)),
-		username, email, passwordHash, role,
+		fmt.Sprintf("INSERT INTO users (username, full_name, email, password_hash, role, avatar_url) VALUES (%s)", db.placeholders(6)),
+		username, fullName, email, passwordHash, role, avatarURL,
 	)
 	return err
 }

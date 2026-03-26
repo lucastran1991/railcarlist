@@ -33,10 +33,12 @@ type loginResponse struct {
 }
 
 type userInfo struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Role     string `json:"role"`
+	ID        int64  `json:"id"`
+	Username  string `json:"username"`
+	FullName  string `json:"full_name"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+	AvatarURL string `json:"avatar_url"`
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -88,10 +90,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		User: userInfo{
-			ID:       user.ID,
-			Username: user.Username,
-			Email:    user.Email,
-			Role:     user.Role,
+			ID:        user.ID,
+			Username:  user.Username,
+			FullName:  user.FullName,
+			Email:     user.Email,
+			Role:      user.Role,
+			AvatarURL: user.AvatarURL,
 		},
 	})
 }
@@ -153,30 +157,63 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(userInfo{
-		ID:       user.ID,
-		Username: user.Username,
-		Email:    user.Email,
-		Role:     user.Role,
+		ID:        user.ID,
+		Username:  user.Username,
+		FullName:  user.FullName,
+		Email:     user.Email,
+		Role:      user.Role,
+		AvatarURL: user.AvatarURL,
 	})
 }
 
-// SeedAdmin creates a default admin user if none exists
-func SeedAdmin(db *database.DB) {
+// SeedUsers creates default users if none exist
+func SeedUsers(db *database.DB) {
 	exists, _ := db.UserExists("admin")
 	if exists {
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte("Password@876"), 12)
-	if err != nil {
-		log.Printf("[AUTH] Failed to hash admin password: %v", err)
-		return
+	type seedUser struct {
+		username string
+		fullName string
+		email    string
+		password string
+		role     string
 	}
 
-	err = db.CreateUser("admin", "admin@vopak.local", string(hash), "admin")
-	if err != nil {
-		log.Printf("[AUTH] Failed to seed admin user: %v", err)
-		return
+	users := []seedUser{
+		{"admin", "System Admin", "admin@vopak.local", "Password@876", "admin"},
+		{"an.nguyen", "An Nguyen Thanh", "an.nguyen@atomiton.com", "Atomiton@123", "viewer"},
+		{"binh.nhan", "Binh Nhan", "binh.nhan@atomiton.com", "Atomiton@123", "viewer"},
+		{"henry.truong", "Henry Truong", "henry.truong@atomiton.com", "Atomiton@123", "viewer"},
+		{"karl.trinh", "Karl Trinh", "karl.trinh@atomiton.com", "Atomiton@123", "viewer"},
+		{"kenvin.nguyen", "Kenvin Nguyen", "kenvin.nguyen@atomiton.com", "Atomiton@123", "viewer"},
+		{"khoa.tran", "Khoa Tran", "khoa.tran@atomiton.com", "Atomiton@123", "viewer"},
+		{"long.tran", "Long Tran", "long.tran@atomiton.com", "Atomiton@123", "admin"},
+		{"luan.tran", "Luan Tran", "luan.tran@atomiton.com", "Atomiton@123", "viewer"},
+		{"nancy.tran", "Nancy Tran", "nancy.tran@atomiton.com", "Atomiton@123", "viewer"},
+		{"quy.tran", "Quy Tran", "quy.tran@atomiton.com", "Atomiton@123", "viewer"},
+		{"quyen.dang", "Quyen Dang", "quyen.dang@atomiton.com", "Atomiton@123", "viewer"},
+		{"scott.nguyen", "Scott Nguyen", "scott.nguyen@atomiton.com", "Atomiton@123", "viewer"},
+		{"sue.nguyen", "Sue Nguyen", "sue.nguyen@atomiton.com", "Atomiton@123", "viewer"},
+		{"tara.ly", "Tara Ly", "tara.ly@atomiton.com", "Atomiton@123", "viewer"},
+		{"tracy.nguyen", "Tracy Nguyen", "tracy.nguyen@atomiton.com", "Atomiton@123", "viewer"},
+		{"vuong.ngo", "Vuong Ngo", "vuong.ngo@atomiton.com", "Atomiton@123", "viewer"},
 	}
-	fmt.Println("[AUTH] ✓ Seeded default admin user (admin / Password@876)")
+
+	created := 0
+	for _, u := range users {
+		hash, err := bcrypt.GenerateFromPassword([]byte(u.password), 12)
+		if err != nil {
+			log.Printf("[AUTH] Failed to hash password for %s: %v", u.username, err)
+			continue
+		}
+		err = db.CreateUser(u.username, u.fullName, u.email, string(hash), u.role, "")
+		if err != nil {
+			log.Printf("[AUTH] Failed to create user %s: %v", u.username, err)
+			continue
+		}
+		created++
+	}
+	fmt.Printf("[AUTH] ✓ Seeded %d users (admin + 16 team members)\n", created)
 }
