@@ -70,6 +70,10 @@ Thumbs.db
 .next/
 console.log
 
+# Database files (generated at runtime)
+*.db
+*.db-journal
+
 # Resources / screenshots
 resources/
 
