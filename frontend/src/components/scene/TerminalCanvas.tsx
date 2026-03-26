@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Bvh } from '@react-three/drei';
 import * as THREE from 'three';
 import TerminalModel from './TerminalModel';
 import SceneLighting from './SceneLighting';
@@ -40,13 +39,11 @@ function SceneContent({ config, onCameraApiReady }: { config: SceneConfig } & Te
       <CameraController ref={cameraRef} config={config} />
 
       <Suspense fallback={null}>
-        <Bvh firstHitOnly>
           <TerminalModel
             onObjectClick={handleObjectClick}
             onMissed={handleMissed}
             onRaycastDebug={(info) => useSceneStore.getState().setRaycastInfo(info)}
           />
-        </Bvh>
 
         <TankLabels />
       </Suspense>

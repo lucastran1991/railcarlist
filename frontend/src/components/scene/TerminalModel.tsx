@@ -385,6 +385,24 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
     return { meshes, groundMeshes, replacementTanks, maintenanceTanks, particleTanks, labelPositions } as const;
   }, [scene, tankData, statusEffects, replaceMeshes, enableReflection]);
 
+  // Stable clones for replacement tanks — created once per useMemo cycle, not per render
+  const replacementTankClones = useMemo(() => {
+    return replacementTanks.map((tank) => {
+      const baseScene = tankScenes[tank.size];
+      if (!baseScene) return null;
+      const clone = baseScene.clone(true);
+      // Name all child meshes with tank name so raycasting resolves correctly
+      clone.name = tank.name;
+      clone.traverse((child) => {
+        child.name = tank.name;
+        if (child instanceof THREE.Mesh) {
+          child.userData.tankName = tank.name;
+        }
+      });
+      return { ...tank, clone };
+    }).filter(Boolean) as (ReplacementTank & { clone: THREE.Group })[];
+  }, [replacementTanks, tankScenes]);
+
   // --- Per-frame animation: pulse emissive + rotate gears (only when effects ON) ---
   useFrame((state) => {
     if (!statusEffects) return;
@@ -503,17 +521,15 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
         })}
 
         {/* Detail tank models replacing original cylinders (big/medium/small) */}
-        {replacementTanks.map((tank, i) => {
-          const baseScene = tankScenes[tank.size];
-          if (!baseScene) return null;
-          const clone = baseScene.clone(true);
-          clone.name = tank.name;
-          return (
-            <group
-              key={`tank-${i}`}
-              position={tank.position}
-              scale={tank.scale}
-              onClick={(e) => {
+        {replacementTankClones.map((tank, i) => (
+          <group
+            key={`tank-${tank.name}-${i}`}
+            position={tank.position}
+            scale={tank.scale}
+          >
+            <primitive
+              object={tank.clone}
+              onClick={(e: ThreeEvent<MouseEvent>) => {
                 e.stopPropagation();
                 if (!tank.clickable) { onMissed?.(); return; }
                 const obj = e.object as THREE.Mesh;
@@ -527,7 +543,7 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
                   screenX: 0, screenY: 0,
                 });
               }}
-              onPointerOver={(e) => {
+              onPointerOver={(e: ThreeEvent<PointerEvent>) => {
                 if (tank.clickable) {
                   e.stopPropagation();
                   setHoveredName(tank.name);
@@ -538,11 +554,9 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
                 setHoveredName(null);
                 useSceneStore.getState().setHoveredObjName(null);
               }}
-            >
-              <primitive object={clone} />
-            </group>
-          );
-        })}
+            />
+          </group>
+        ))}
 
         {/* Rotating gears on maintenance tanks */}
         {maintenanceTanks.map((tank, i) => (
