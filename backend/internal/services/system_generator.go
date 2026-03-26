@@ -711,18 +711,58 @@ func (s *SystemGeneratorService) generateStaticData(rng *rand.Rand) {
 		{"LPG", "#5CE5A0", 20000, 0.10},
 	}
 
-	// Count total tanks by finding max TK-ID that exists in mapping
-	// Generate TK-101..TK-110, TK-201..TK-210, etc. matching frontend mapping
+	// Per-terminal tank ID lists matching frontend OSM→Tank mappings exactly
+	terminalTankIDs := map[string][]string{
+		"savannah": {
+			"TK-302", "TK-201", "TK-202", "TK-203", "TK-101", "TK-102", "TK-103",
+			"TK-401", "TK-402", "TK-503", "TK-501", "TK-504", "TK-502",
+			"TK-511", "TK-519", "TK-505", "TK-520", "TK-521", "TK-522", "TK-523", "TK-512",
+			"TK-526", "TK-527", "TK-528", "TK-529", "TK-530", "TK-531", "TK-532", "TK-533", "TK-534",
+			"TK-506", "TK-507", "TK-508", "TK-509", "TK-524", "TK-525",
+			"TK-537", "TK-538", "TK-539", "TK-540", "TK-541", "TK-542", "TK-543", "TK-544", "TK-545",
+			"TK-546", "TK-547", "TK-548", "TK-513", "TK-514", "TK-515", "TK-516", "TK-517", "TK-510",
+			"TK-518", "TK-535", "TK-549",
+		},
+		"los-angeles": {
+			"TK-103", "TK-104", "TK-105", "TK-106", "TK-107", "TK-108", "TK-109", "TK-110",
+			"TK-201", "TK-202", "TK-203", "TK-204", "TK-205", "TK-206", "TK-207", "TK-208", "TK-209", "TK-210",
+			"TK-301", "TK-302", "TK-303", "TK-304", "TK-305", "TK-306", "TK-307", "TK-308", "TK-309", "TK-310",
+			"TK-401", "TK-402", "TK-403", "TK-404", "TK-405", "TK-406", "TK-407", "TK-408", "TK-409", "TK-410",
+			"TK-501", "TK-502", "TK-503", "TK-504", "TK-505", "TK-506", "TK-507", "TK-508", "TK-509", "TK-510",
+			"TK-601", "TK-602", "TK-603", "TK-604", "TK-605", "TK-606", "TK-607", "TK-608", "TK-609", "TK-610",
+			"TK-701", "TK-702", "TK-703",
+		},
+		"tarragona": {
+			"TK-101", "TK-102", "TK-103", "TK-104", "TK-105", "TK-106", "TK-107", "TK-108", "TK-109", "TK-110",
+			"TK-201", "TK-202", "TK-203", "TK-204", "TK-205", "TK-206", "TK-207", "TK-208", "TK-209", "TK-210",
+			"TK-301", "TK-302", "TK-303", "TK-304", "TK-305", "TK-306", "TK-307", "TK-308", "TK-309", "TK-310",
+			"TK-401", "TK-402", "TK-403", "TK-404", "TK-405", "TK-406", "TK-407", "TK-408", "TK-409", "TK-410",
+			"TK-501", "TK-502", "TK-503", "TK-504", "TK-505", "TK-506", "TK-507", "TK-508", "TK-509", "TK-510",
+			"TK-601", "TK-602", "TK-603", "TK-604", "TK-605", "TK-606", "TK-607", "TK-608", "TK-609", "TK-610",
+			"TK-701", "TK-702", "TK-703", "TK-704", "TK-705", "TK-706", "TK-707", "TK-708", "TK-709", "TK-710",
+			"TK-801", "TK-802", "TK-803", "TK-804", "TK-805", "TK-806", "TK-807", "TK-808", "TK-809", "TK-810",
+			"TK-901", "TK-902", "TK-903", "TK-904", "TK-905", "TK-906", "TK-907", "TK-908", "TK-909", "TK-910",
+			"TK-1001", "TK-1002", "TK-1003", "TK-1004", "TK-1005", "TK-1006", "TK-1007", "TK-1008", "TK-1009", "TK-1010",
+			"TK-1101", "TK-1102", "TK-1103", "TK-1104", "TK-1105", "TK-1106", "TK-1107", "TK-1108", "TK-1109", "TK-1110",
+			"TK-1201", "TK-1202", "TK-1203", "TK-1204", "TK-1205",
+		},
+	}
+
+	// Use per-terminal list if available, fallback to generic
+	tankIDs := terminalTankIDs[s.db.Name()]
+	if tankIDs == nil {
+		// Fallback: generate generic TK-101..TK-510
+		for g := 1; g <= 5; g++ {
+			for i := 1; i <= 10; i++ {
+				tankIDs = append(tankIDs, fmt.Sprintf("TK-%d", g*100+i))
+			}
+		}
+	}
+
 	allTanks := []tankDef{}
-	group := 1
-	idx := 1
-	tankNum := 0
-	maxTanks := 200 // generous upper bound; stops when no more tanks needed
-	for tankNum < maxTanks {
-		tkID := fmt.Sprintf("TK-%d", group*100+idx)
-		// Pick product based on distribution
+	for i, tkID := range tankIDs {
 		cumPct := 0.0
-		roll := float64(tankNum) / float64(maxTanks)
+		roll := float64(i) / float64(len(tankIDs))
 		chosen := products[0]
 		for _, p := range products {
 			cumPct += p.pct
@@ -731,15 +771,8 @@ func (s *SystemGeneratorService) generateStaticData(rng *rand.Rand) {
 				break
 			}
 		}
-		// Add some capacity variation with rng
-		capVar := chosen.cap * (0.8 + rng.Float64()*0.4) // ±20%
+		capVar := chosen.cap * (0.8 + rng.Float64()*0.4)
 		allTanks = append(allTanks, tankDef{tkID, chosen.name, chosen.color, math.Round(capVar)})
-		idx++
-		if idx > 10 {
-			group++
-			idx = 1
-		}
-		tankNum++
 	}
 	productVolumes := map[string]float64{}
 	for _, tk := range allTanks {
