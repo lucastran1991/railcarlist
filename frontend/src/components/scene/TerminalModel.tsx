@@ -97,8 +97,8 @@ function isClickableNode(name: string, verts: number): boolean {
   return verts > 4;
 }
 
-function getObjectType(verts: number): 'tank' | 'building' {
-  return verts >= 70 ? 'tank' : 'building';
+function getObjectType(tankId: string | null): 'tank' | 'building' {
+  return tankId ? 'tank' : 'building';
 }
 
 interface ProcessedMesh {
@@ -261,8 +261,8 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
       worldMatrix.decompose(pos, quat, scl);
       const euler = new THREE.Euler().setFromQuaternion(quat);
 
-      const isTank = verts >= 70;
       const tankId = osmToTankId(name);
+      const isTank = !!tankId; // only mapped objects are tanks
       const tankInfo = tankId ? tankData.get(tankId) : null;
       const status: TankStatus | null = tankInfo?.status ?? null;
 
@@ -432,7 +432,7 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
       onRaycastDebug({
         nearestName: n,
         nearestTankId: osmToTankId(n) || 'N/A',
-        nearestType: getObjectType(v),
+        nearestType: getObjectType(osmToTankId(n)),
         nearestDist: parseFloat(nearest.distance.toFixed(2)),
         totalIntersections: clickable.length,
       });
@@ -451,7 +451,7 @@ export default function TerminalModel({ onObjectClick, onMissed, onRaycastDebug 
 
     onObjectClick({
       name: entry.name,
-      type: getObjectType(entry.verts),
+      type: getObjectType(entry.tankId),
       verts: entry.verts,
       position: { x: parseFloat(center.x.toFixed(1)), y: parseFloat(center.y.toFixed(1)), z: parseFloat(center.z.toFixed(1)) },
       screenX: 0,
