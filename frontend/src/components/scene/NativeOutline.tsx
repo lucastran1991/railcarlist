@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { useThree, useFrame, invalidate } from '@react-three/fiber';
+import { useThree, useFrame } from '@react-three/fiber';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
@@ -75,7 +75,7 @@ export default function NativeOutline() {
   useEffect(() => { composer.setSize(size.width, size.height); }, [size, composer]);
   useEffect(() => () => { composer.dispose(); }, [composer]);
 
-  // Update selected — invalidate to trigger render in demand mode
+  // Update selected
   useEffect(() => {
     if (selectedObjName) {
       const mesh = scene.getObjectByName(selectedObjName);
@@ -83,7 +83,6 @@ export default function NativeOutline() {
     } else {
       outlinePassSelected.selectedObjects = [];
     }
-    invalidate();
   }, [selectedObjName, scene, outlinePassSelected]);
 
   // Hover
@@ -98,21 +97,15 @@ export default function NativeOutline() {
         } else {
           outlinePassHovered.selectedObjects = [];
         }
-        invalidate();
       }
     });
     return unsub;
   }, [scene, selectedObjName, outlinePassHovered]);
 
-  // Render via composer ONLY when there's an active outline (selection or hover)
-  // When nothing is outlined, skip composer = no double render = ~2x GPU savings
+  // Normal render loop — only active after warm-up
   useFrame(() => {
     if (!warmedUp) return;
-    const hasOutline = outlinePassSelected.selectedObjects.length > 0
-      || outlinePassHovered.selectedObjects.length > 0;
-    if (hasOutline) {
-      composer.render();
-    }
+    composer.render();
   }, 1);
 
   return null;

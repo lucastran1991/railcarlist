@@ -58,13 +58,14 @@ function SceneContent({ config, onCameraApiReady }: { config: SceneConfig } & Te
 
 export default function TerminalCanvas({ onCameraApiReady }: TerminalCanvasProps) {
   const [config, setConfig] = useState<SceneConfig>(DEFAULT_CONFIG);
+  const statusEffects = useSceneStore(s => s.statusEffects);
 
   useEffect(() => { loadSceneConfig().then(setConfig); }, []);
 
   return (
     <Canvas
       shadows={false}
-      frameloop="always"
+      frameloop={statusEffects ? "always" : "demand"}
       gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.0 }}
       camera={{ fov: 50, near: 0.1, far: 500 }}
       style={{ width: '100%', height: '100%', background: '#3a3a3a' }}
