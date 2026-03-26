@@ -122,8 +122,17 @@ async function buildDataContext(terminalId: string): Promise<string> {
     const top5 = sorted.slice(0, 5).map((t: any) => `${t.tank}: ${t.level}% ${t.product} (${t.volume}/${t.capacity} bbl, status: ${t.status})`);
     const bottom5 = sorted.slice(-5).map((t: any) => `${t.tank}: ${t.level}% ${t.product} (${t.volume}/${t.capacity} bbl, status: ${t.status})`);
     const statusCounts: Record<string, number> = {};
-    tankLevels.forEach((t: any) => { statusCounts[t.status] = (statusCounts[t.status] || 0) + 1; });
-    sections.push(`## Tank Levels (${tankLevels.length} tanks)\nTop 5 highest:\n${top5.join('\n')}\nBottom 5 lowest:\n${bottom5.join('\n')}\nStatus distribution: ${JSON.stringify(statusCounts)}`);
+    const productCounts: Record<string, number> = {};
+    let totalVolume = 0, totalCapacity = 0, totalLevel = 0;
+    tankLevels.forEach((t: any) => {
+      statusCounts[t.status] = (statusCounts[t.status] || 0) + 1;
+      productCounts[t.product] = (productCounts[t.product] || 0) + 1;
+      totalVolume += t.volume || 0;
+      totalCapacity += t.capacity || 0;
+      totalLevel += t.level || 0;
+    });
+    const avgLevel = (totalLevel / tankLevels.length).toFixed(1);
+    sections.push(`## Tank Levels (${tankLevels.length} tanks)\nAggregate: avg level ${avgLevel}%, total volume ${Math.round(totalVolume).toLocaleString()} bbl, total capacity ${Math.round(totalCapacity).toLocaleString()} bbl, utilization ${(totalVolume/totalCapacity*100).toFixed(1)}%\nProducts: ${JSON.stringify(productCounts)}\nStatus: ${JSON.stringify(statusCounts)}\nTop 5 highest:\n${top5.join('\n')}\nBottom 5 lowest:\n${bottom5.join('\n')}`);
   }
 
   return sections.join('\n\n');
@@ -148,6 +157,23 @@ Rules:
 - Respond in the same language the user uses
 - If data for a specific question is not in the context below, say so clearly`;
 
+// Sanitize messages — strip reasoning parts that Ollama can't handle
+// AI SDK v6 sends assistant messages as parts[] with reasoning/step-start/text
+// Ollama expects simple { role, content } format
+function sanitizeMessages(msgs: any[]): any[] {
+  return msgs.map((msg) => {
+    if (msg.role === 'assistant' && msg.parts) {
+      // Extract only text parts, ignore reasoning/step-start
+      const textParts = msg.parts
+        .filter((p: any) => p.type === 'text')
+        .map((p: any) => p.text)
+        .join('');
+      return { role: 'assistant', content: textParts || '(no response)' };
+    }
+    return msg;
+  });
+}
+
 export async function POST(req: Request) {
   const { messages } = await req.json();
   const terminalId = req.headers.get('X-Terminal-Id') || 'savannah';
@@ -159,7 +185,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: getModel(),
     system: systemPrompt,
-    messages,
+    messages: sanitizeMessages(messages),
   });
 
   return result.toUIMessageStreamResponse();
