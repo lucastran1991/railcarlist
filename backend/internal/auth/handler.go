@@ -174,31 +174,32 @@ func SeedUsers(db *database.DB) {
 	}
 
 	type seedUser struct {
-		username string
-		fullName string
-		email    string
-		password string
-		role     string
+		username  string
+		fullName  string
+		email     string
+		password  string
+		role      string
+		avatarURL string
 	}
 
 	users := []seedUser{
-		{"admin", "System Admin", "admin@vopak.local", "Password@876", "admin"},
-		{"an.nguyen", "An Nguyen Thanh", "an.nguyen@atomiton.com", "Atomiton@123", "viewer"},
-		{"binh.nhan", "Binh Nhan", "binh.nhan@atomiton.com", "Atomiton@123", "viewer"},
-		{"henry.truong", "Henry Truong", "henry.truong@atomiton.com", "Atomiton@123", "viewer"},
-		{"karl.trinh", "Karl Trinh", "karl.trinh@atomiton.com", "Atomiton@123", "viewer"},
-		{"kenvin.nguyen", "Kenvin Nguyen", "kenvin.nguyen@atomiton.com", "Atomiton@123", "viewer"},
-		{"khoa.tran", "Khoa Tran", "khoa.tran@atomiton.com", "Atomiton@123", "viewer"},
-		{"long.tran", "Long Tran", "long.tran@atomiton.com", "Atomiton@123", "admin"},
-		{"luan.tran", "Luan Tran", "luan.tran@atomiton.com", "Atomiton@123", "viewer"},
-		{"nancy.tran", "Nancy Tran", "nancy.tran@atomiton.com", "Atomiton@123", "viewer"},
-		{"quy.tran", "Quy Tran", "quy.tran@atomiton.com", "Atomiton@123", "viewer"},
-		{"quyen.dang", "Quyen Dang", "quyen.dang@atomiton.com", "Atomiton@123", "viewer"},
-		{"scott.nguyen", "Scott Nguyen", "scott.nguyen@atomiton.com", "Atomiton@123", "viewer"},
-		{"sue.nguyen", "Sue Nguyen", "sue.nguyen@atomiton.com", "Atomiton@123", "viewer"},
-		{"tara.ly", "Tara Ly", "tara.ly@atomiton.com", "Atomiton@123", "viewer"},
-		{"tracy.nguyen", "Tracy Nguyen", "tracy.nguyen@atomiton.com", "Atomiton@123", "viewer"},
-		{"vuong.ngo", "Vuong Ngo", "vuong.ngo@atomiton.com", "Atomiton@123", "viewer"},
+		{"admin", "System Admin", "admin@vopak.local", "Password@876", "admin", ""},
+		{"an.nguyen", "An Nguyen Thanh", "an.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/an.nguyen.png"},
+		{"binh.nhan", "Binh Nhan", "binh.nhan@atomiton.com", "Atomiton@123", "viewer", "/avatars/binh.nhan.png"},
+		{"henry.truong", "Henry Truong", "henry.truong@atomiton.com", "Atomiton@123", "viewer", "/avatars/henry.truong.png"},
+		{"karl.trinh", "Karl Trinh", "karl.trinh@atomiton.com", "Atomiton@123", "viewer", "/avatars/karl.trinh.png"},
+		{"kenvin.nguyen", "Kenvin Nguyen", "kenvin.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/kenvin.nguyen.png"},
+		{"khoa.tran", "Khoa Tran", "khoa.tran@atomiton.com", "Atomiton@123", "viewer", "/avatars/khoa.tran.png"},
+		{"long.tran", "Long Tran", "long.tran@atomiton.com", "Atomiton@123", "admin", "/avatars/long.tran.png"},
+		{"luan.tran", "Luan Tran", "luan.tran@atomiton.com", "Atomiton@123", "viewer", "/avatars/luan.tran.png"},
+		{"nancy.tran", "Nancy Tran", "nancy.tran@atomiton.com", "Atomiton@123", "viewer", "/avatars/nancy.tran.png"},
+		{"quy.tran", "Quy Tran", "quy.tran@atomiton.com", "Atomiton@123", "viewer", "/avatars/quy.tran.png"},
+		{"quyen.dang", "Quyen Dang", "quyen.dang@atomiton.com", "Atomiton@123", "viewer", "/avatars/quyen.dang.png"},
+		{"scott.nguyen", "Scott Nguyen", "scott.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/scott.nguyen.png"},
+		{"sue.nguyen", "Sue Nguyen", "sue.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/sue.nguyen.png"},
+		{"tara.ly", "Tara Ly", "tara.ly@atomiton.com", "Atomiton@123", "viewer", "/avatars/tara.ly.png"},
+		{"tracy.nguyen", "Tracy Nguyen", "tracy.nguyen@atomiton.com", "Atomiton@123", "viewer", "/avatars/tracy.nguyen.png"},
+		{"vuong.ngo", "Vuong Ngo", "vuong.ngo@atomiton.com", "Atomiton@123", "viewer", "/avatars/vuong.ngo.png"},
 	}
 
 	created := 0
@@ -208,7 +209,7 @@ func SeedUsers(db *database.DB) {
 			log.Printf("[AUTH] Failed to hash password for %s: %v", u.username, err)
 			continue
 		}
-		err = db.CreateUser(u.username, u.fullName, u.email, string(hash), u.role, "")
+		err = db.CreateUser(u.username, u.fullName, u.email, string(hash), u.role, u.avatarURL)
 		if err != nil {
 			log.Printf("[AUTH] Failed to create user %s: %v", u.username, err)
 			continue
