@@ -90,6 +90,7 @@ func main() {
 
 	// Auth
 	api.HandleFunc("/auth/me", authHandler.Me).Methods("GET")
+	api.HandleFunc("/auth/logout", authHandler.Logout).Methods("POST")
 
 	// Legacy endpoints (default DB)
 	api.HandleFunc("/load", loadHandler.Handle).Methods("POST")

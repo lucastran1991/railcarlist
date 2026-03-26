@@ -166,6 +166,13 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	// JWT is stateless — server-side logout is a no-op for now.
+	// In production, add token to blacklist table with TTL.
+	json.NewEncoder(w).Encode(map[string]string{"message": "logged out"})
+}
+
 // SeedUsers creates default users if none exist
 func SeedUsers(db *database.DB) {
 	exists, _ := db.UserExists("admin")

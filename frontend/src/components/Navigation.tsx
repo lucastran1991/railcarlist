@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { ChevronDown, LogOut, Zap, Activity, Droplets, Gauge, Flame, Menu, X, Bell, AlertTriangle, Info, CheckCircle, Clock, Sparkles, GitBranch } from 'lucide-react';
-import { getUser, logout } from '@/lib/auth';
+import { getUser, logout, type AuthUser } from '@/lib/auth';
 import { API_BASE_URL, apiFetch } from '@/lib/config';
 import ThemeToggle from './ThemeToggle';
 import StyleToggle from './StyleToggle';
@@ -39,7 +39,7 @@ export default function Navigation() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [user, setUser] = useState<{ name: string; role: string; avatar_url?: string } | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
@@ -196,10 +196,10 @@ export default function Navigation() {
                   className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted transition-colors"
                 >
                   {user?.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
+                    <img src={user.avatar_url} alt={user.full_name} className="w-8 h-8 rounded-full object-cover" />
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[var(--color-gradient-from,#5CE5A0)] to-[var(--color-gradient-to,#56CDE7)] flex items-center justify-center text-primary-foreground text-sm font-bold">
-                      {user?.name?.charAt(0) ?? 'A'}
+                      {user?.full_name?.charAt(0) ?? 'A'}
                     </div>
                   )}
                   <ChevronDown size={14} className={cn('text-foreground/60 transition-transform hidden sm:block', menuOpen && 'rotate-180')} />
@@ -208,7 +208,7 @@ export default function Navigation() {
                 {menuOpen && (
                   <div className="absolute right-0 mt-5 w-56 dropdown-surface border border-border/50 rounded-xl shadow-xl py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-border/50">
-                      <p className="text-sm font-semibold text-foreground">{user?.name ?? 'Admin'}</p>
+                      <p className="text-sm font-semibold text-foreground">{user?.full_name ?? 'Admin'}</p>
                       <p className="text-xs text-muted-foreground">{user?.role ?? 'Administrator'}</p>
                     </div>
                     <button

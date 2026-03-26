@@ -1,16 +1,18 @@
-const SESSION_KEY = 'vopak_auth_session';
+import { API_BASE_URL } from '@/lib/config';
+
 const ACCESS_TOKEN_KEY = 'vopak_access_token';
 const REFRESH_TOKEN_KEY = 'vopak_refresh_token';
-
-import { API_BASE_URL } from '@/lib/config';
+const USER_KEY = 'vopak_user';
 
 const isBrowser = typeof window !== 'undefined';
 
 export interface AuthUser {
   id: number;
   username: string;
+  full_name: string;
   email: string;
   role: string;
+  avatar_url: string;
 }
 
 export async function login(username: string, password: string): Promise<boolean> {
@@ -27,11 +29,7 @@ export async function login(username: string, password: string): Promise<boolean
     if (isBrowser) {
       localStorage.setItem(ACCESS_TOKEN_KEY, data.access_token);
       localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token);
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        name: data.user.full_name || data.user.username,
-        role: data.user.role === 'admin' ? 'Administrator' : data.user.role,
-        avatar_url: data.user.avatar_url || '',
-      }));
+      localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     }
     return true;
   } catch {
@@ -39,13 +37,22 @@ export async function login(username: string, password: string): Promise<boolean
   }
 }
 
-export function logout(): void {
-  if (isBrowser) {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    sessionStorage.removeItem(SESSION_KEY);
-    window.location.href = '/login';
+export async function logout(): Promise<void> {
+  if (!isBrowser) return;
+
+  // Server-side logout (best effort — don't block on failure)
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (token) {
+    fetch(`${API_BASE_URL}/api/auth/logout`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+    }).catch(() => {}); // fire and forget
   }
+
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  window.location.href = '/login';
 }
 
 export function isAuthenticated(): boolean {
@@ -58,9 +65,9 @@ export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
-export function getUser(): { name: string; role: string; avatar_url?: string } | null {
+export function getUser(): AuthUser | null {
   if (!isBrowser) return null;
-  const data = sessionStorage.getItem(SESSION_KEY);
+  const data = localStorage.getItem(USER_KEY);
   if (!data) return null;
   try {
     return JSON.parse(data);
