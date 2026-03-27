@@ -1,6 +1,19 @@
 'use client';
 
+import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
+
 type BannerVariant = 'electricity' | 'steam' | 'boiler' | 'substation' | 'tank' | 'pipeline';
+
+// Light mode overrides — brighter backgrounds, darker text
+const LIGHT_OVERRIDES: Record<BannerVariant, { bg: string; titleColor: string; subColor: string; glowColor: string; glow2Color: string }> = {
+  electricity: { bg: '#e8eeff', titleColor: '#0a1a3a', subColor: 'rgba(30,80,180,.6)', glowColor: 'rgba(30,100,255,.1)', glow2Color: 'rgba(20,60,180,.08)' },
+  steam:       { bg: '#e6f7f5', titleColor: '#042820', subColor: 'rgba(0,120,100,.5)', glowColor: 'rgba(0,200,165,.1)', glow2Color: 'rgba(0,160,200,.08)' },
+  boiler:      { bg: '#fef0e8', titleColor: '#2a0800', subColor: 'rgba(180,60,20,.5)', glowColor: 'rgba(255,80,0,.1)', glow2Color: 'rgba(255,120,20,.08)' },
+  substation:  { bg: '#f0ecff', titleColor: '#1a0a40', subColor: 'rgba(100,50,200,.5)', glowColor: 'rgba(100,40,240,.1)', glow2Color: 'rgba(80,20,200,.08)' },
+  tank:        { bg: '#e8f7ee', titleColor: '#042010', subColor: 'rgba(0,120,60,.5)', glowColor: 'rgba(0,160,80,.1)', glow2Color: 'rgba(0,120,70,.08)' },
+  pipeline:    { bg: '#f8f3e0', titleColor: '#1a1400', subColor: 'rgba(140,110,0,.5)', glowColor: 'rgba(180,140,0,.1)', glow2Color: 'rgba(140,110,0,.08)' },
+};
 
 const BANNER_CONFIG: Record<BannerVariant, {
   bg: string;
@@ -27,7 +40,7 @@ const BANNER_CONFIG: Record<BannerVariant, {
     accentColor: '#3d8eff',
     subColor: 'rgba(130,170,255,.7)',
     ruleGradient: 'linear-gradient(90deg, #1a5fff, #4af0ff, #1a5fff)',
-    tag: '// SYS.MODULE \u2014 001',
+    tag: '// SYS.MODULE \u2014 01',
     title: ['Elec', 'tricity'],
     sub: 'Power \u00b7 Distribution \u00b7 Safety',
     badge: { type: 'dots', content: '' },
@@ -42,7 +55,7 @@ const BANNER_CONFIG: Record<BannerVariant, {
     accentColor: '#00e5c8',
     subColor: 'rgba(0,200,170,.6)',
     ruleGradient: 'linear-gradient(90deg, #00b8a0, #00ffe0, #00b8a0)',
-    tag: '// SYS.MODULE \u2014 002',
+    tag: '// SYS.MODULE \u2014 03',
     title: ['Ste', 'am'],
     sub: 'Pressure \u00b7 Flow \u00b7 Thermodynamics',
     badge: { type: 'pill', content: 'PRESSURIZED SYSTEM' },
@@ -57,7 +70,7 @@ const BANNER_CONFIG: Record<BannerVariant, {
     accentColor: '#ff5520',
     subColor: 'rgba(255,130,80,.6)',
     ruleGradient: 'linear-gradient(90deg, #c83000, #ff8040, #c83000)',
-    tag: '// SYS.MODULE \u2014 003',
+    tag: '// SYS.MODULE \u2014 05',
     title: ['Boi', 'ler'],
     sub: 'Combustion \u00b7 Heat Transfer \u00b7 Control',
     badge: { type: 'temp', content: '185\u00b0' },
@@ -72,7 +85,7 @@ const BANNER_CONFIG: Record<BannerVariant, {
     accentColor: '#9060ff',
     subColor: 'rgba(160,120,255,.65)',
     ruleGradient: 'linear-gradient(90deg, #6020e0, #c090ff, #6020e0)',
-    tag: '// SYS.MODULE \u2014 004',
+    tag: '// SYS.MODULE \u2014 02',
     title: ['Sub', ' Station'],
     sub: 'HV \u00b7 Transformer \u00b7 Switchgear',
     badge: { type: 'pill', content: 'GRID ONLINE' },
@@ -87,7 +100,7 @@ const BANNER_CONFIG: Record<BannerVariant, {
     accentColor: '#20c070',
     subColor: 'rgba(40,200,110,.6)',
     ruleGradient: 'linear-gradient(90deg, #009050, #40ffaa, #009050)',
-    tag: '// SYS.MODULE \u2014 005',
+    tag: '// SYS.MODULE \u2014 04',
     title: ['Ta', 'nks'],
     sub: 'Storage \u00b7 Level \u00b7 Containment',
     badge: { type: 'count', content: '59' },
@@ -102,7 +115,7 @@ const BANNER_CONFIG: Record<BannerVariant, {
     accentColor: '#e8c030',
     subColor: 'rgba(210,170,40,.6)',
     ruleGradient: 'linear-gradient(90deg, #a07800, #f0d040, #a07800)',
-    tag: '// SYS.MODULE \u2014 006',
+    tag: '// SYS.MODULE \u2014 06',
     title: ['Pipe', 'line'],
     sub: 'Flow \u00b7 Routing \u00b7 Distribution',
     badge: { type: 'warning', content: 'ACTIVE FLOW' },
@@ -157,19 +170,34 @@ function BadgeElement({ config }: { config: typeof BANNER_CONFIG.electricity }) 
 }
 
 export default function PageBanner({ variant, children }: { variant: BannerVariant; children?: React.ReactNode }) {
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const c = BANNER_CONFIG[variant];
+  const isLight = mounted && theme === 'light';
+  const light = LIGHT_OVERRIDES[variant];
+
+  const bg = isLight ? light.bg : c.bg;
+  const titleColor = isLight ? light.titleColor : c.titleColor;
+  const subColor = isLight ? light.subColor : c.subColor;
+  const glowColor = isLight ? light.glowColor : c.glowColor;
+  const glow2Color = isLight ? light.glow2Color : c.glow2Color;
 
   return (
-    <div className="w-full h-[140px] sm:h-[160px] relative overflow-hidden rounded-lg mb-4 sm:mb-6" style={{ background: c.bg }}>
+    <div className="w-full h-[140px] sm:h-[160px] relative overflow-hidden rounded-lg mb-4 sm:mb-6" style={{ background: bg }}>
       {/* Grid background */}
       <div className="absolute inset-0" style={c.gridStyle} />
 
       {/* Glow effects */}
-      <div className="absolute w-[600px] h-[500px] -top-[200px] -right-[60px] rounded-full" style={{ background: `radial-gradient(ellipse, ${c.glowColor} 0%, transparent 65%)` }} />
-      <div className="absolute w-[300px] h-[300px] -bottom-[80px] left-[80px] rounded-full" style={{ background: `radial-gradient(circle, ${c.glow2Color} 0%, transparent 70%)` }} />
+      <div className="absolute w-[600px] h-[500px] -top-[200px] -right-[60px] rounded-full" style={{ background: `radial-gradient(ellipse, ${glowColor} 0%, transparent 65%)` }} />
+      <div className="absolute w-[300px] h-[300px] -bottom-[80px] left-[80px] rounded-full" style={{ background: `radial-gradient(circle, ${glow2Color} 0%, transparent 70%)` }} />
 
       {/* Scanlines */}
-      <div className="absolute inset-0" style={{ background: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.07) 3px, rgba(0,0,0,.07) 4px)' }} />
+      <div className="absolute inset-0" style={{ background: isLight
+        ? 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.03) 3px, rgba(0,0,0,.03) 4px)'
+        : 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.07) 3px, rgba(0,0,0,.07) 4px)'
+      }} />
 
       {/* Badge */}
       <BadgeElement config={c} />
@@ -177,10 +205,10 @@ export default function PageBanner({ variant, children }: { variant: BannerVaria
       {/* Content */}
       <div className="absolute inset-0 flex flex-col justify-end px-6 sm:px-10 pb-5 sm:pb-6 z-10">
         <div className="font-mono text-[10px] sm:text-[11px] tracking-[0.25em] uppercase mb-1" style={{ color: c.tagColor }}>{c.tag}</div>
-        <div className="text-4xl sm:text-5xl md:text-6xl font-black uppercase leading-[0.92] tracking-tight" style={{ color: c.titleColor }}>
+        <div className="text-4xl sm:text-5xl md:text-6xl font-black uppercase leading-[0.92] tracking-tight" style={{ color: titleColor }}>
           <span style={{ color: c.accentColor }}>{c.title[0]}</span>{c.title[1]}
         </div>
-        <div className="font-mono text-[12px] sm:text-[14px] tracking-[0.18em] uppercase mt-2" style={{ color: c.subColor }}>{c.sub}</div>
+        <div className="font-mono text-[12px] sm:text-[14px] tracking-[0.18em] uppercase mt-2" style={{ color: subColor }}>{c.sub}</div>
       </div>
 
       {/* Bottom rule */}
