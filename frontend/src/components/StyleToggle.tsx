@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Palette, Check, X } from 'lucide-react';
+import { Palette, Check, X, Layers } from 'lucide-react';
 import { useStyleTheme } from '@/lib/useStyleTheme';
 import { THEMES } from '@/lib/themes';
 import { cn } from '@/lib/utils';
@@ -13,11 +13,38 @@ function hexLightness(hex: string): number {
   return 0.299 * r + 0.587 * g + 0.114 * b;
 }
 
+const SURFACE_KEY = 'vopak_surface_mode';
+
+function useSurfaceMode() {
+  const [mode, setMode] = useState<'solid' | 'glass'>('solid');
+
+  useEffect(() => {
+    const stored = localStorage.getItem(SURFACE_KEY) as 'solid' | 'glass' | null;
+    const initial = stored || 'solid';
+    setMode(initial);
+    if (initial === 'glass') {
+      document.documentElement.setAttribute('data-style', 'glass');
+    }
+  }, []);
+
+  const toggle = (newMode: 'solid' | 'glass') => {
+    setMode(newMode);
+    localStorage.setItem(SURFACE_KEY, newMode);
+    if (newMode === 'glass') {
+      document.documentElement.setAttribute('data-style', 'glass');
+    } else {
+      document.documentElement.removeAttribute('data-style');
+    }
+  };
+
+  return { mode, toggle };
+}
+
 export default function StyleToggle() {
   const { themeId, setColorTheme, mounted } = useStyleTheme();
+  const { mode: surfaceMode, toggle: setSurfaceMode } = useSurfaceMode();
   const [open, setOpen] = useState(false);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
@@ -32,7 +59,7 @@ export default function StyleToggle() {
       <button
         onClick={() => setOpen(!open)}
         className="w-9 h-9 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors"
-        title="Color Theme"
+        title="Appearance"
       >
         <Palette size={16} className="text-foreground/70" />
       </button>
@@ -55,7 +82,7 @@ export default function StyleToggle() {
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
           <div className="flex items-center gap-2">
             <Palette size={16} className="text-foreground/70" />
-            <p className="text-sm font-bold text-foreground">Color Theme</p>
+            <p className="text-sm font-bold text-foreground">Appearance</p>
           </div>
           <button
             onClick={() => setOpen(false)}
@@ -65,44 +92,87 @@ export default function StyleToggle() {
           </button>
         </div>
 
-        {/* Current theme indicator */}
-        <div className="px-5 py-3 border-b border-border/30">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Active</p>
-          <p className="text-sm font-semibold text-foreground">
-            {THEMES.find(t => t.id === themeId)?.name || 'Default'}
-          </p>
-        </div>
+        <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 65px)' }}>
 
-        {/* Theme grid */}
-        <div className="p-4 grid grid-cols-2 gap-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
-          {[...THEMES].sort((a, b) => hexLightness(b.preview.accent) - hexLightness(a.preview.accent)).map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setColorTheme(t.id)}
-              className={cn(
-                'relative flex flex-col gap-1.5 p-2.5 rounded-lg border transition-all text-left',
-                t.id === themeId
-                  ? 'border-[var(--color-accent,#5CE5A0)] bg-[var(--color-accent,#5CE5A0)]/5 ring-1 ring-[var(--color-accent,#5CE5A0)]/30'
-                  : 'border-border/50 hover:border-border hover:bg-muted/50'
-              )}
-            >
-              <div className="flex gap-1">
-                <div className="w-6 h-6 rounded" style={{ background: t.preview.bg }} />
-                <div className="w-6 h-6 rounded" style={{ background: t.preview.accent }} />
-                <div className="w-6 h-6 rounded" style={{ background: t.preview.card }} />
-                <div className="w-6 h-6 rounded border" style={{ background: t.preview.border, borderColor: t.preview.border }} />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-foreground">{t.name}</p>
-                <p className="text-[9px] text-muted-foreground leading-tight">{t.description}</p>
-              </div>
-              {t.id === themeId && (
-                <div className="absolute top-2 right-2">
-                  <Check size={12} className="text-[var(--color-accent,#5CE5A0)]" />
+          {/* Surface Mode Section */}
+          <div className="px-5 py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Layers size={13} className="text-muted-foreground" />
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Surface</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSurfaceMode('solid')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all',
+                  surfaceMode === 'solid'
+                    ? 'border-[var(--color-accent,#5CE5A0)] bg-[var(--color-accent,#5CE5A0)]/10 text-foreground'
+                    : 'border-border/50 text-muted-foreground hover:border-border hover:bg-muted/50'
+                )}
+              >
+                {surfaceMode === 'solid' && <Check size={12} className="text-[var(--color-accent,#5CE5A0)]" />}
+                Solid
+              </button>
+              <button
+                onClick={() => setSurfaceMode('glass')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition-all',
+                  surfaceMode === 'glass'
+                    ? 'border-[var(--color-accent,#5CE5A0)] bg-[var(--color-accent,#5CE5A0)]/10 text-foreground'
+                    : 'border-border/50 text-muted-foreground hover:border-border hover:bg-muted/50'
+                )}
+              >
+                {surfaceMode === 'glass' && <Check size={12} className="text-[var(--color-accent,#5CE5A0)]" />}
+                Glass
+              </button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="mx-5 border-t border-border/30" />
+
+          {/* Color Theme Section */}
+          <div className="px-5 pt-4 pb-2">
+            <div className="flex items-center gap-2 mb-1">
+              <Palette size={13} className="text-muted-foreground" />
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Color Palette</p>
+            </div>
+            <p className="text-[10px] text-muted-foreground/60 mb-3">
+              Active: {THEMES.find(t => t.id === themeId)?.name || 'Default'}
+            </p>
+          </div>
+
+          {/* Theme grid */}
+          <div className="px-4 pb-4 grid grid-cols-2 gap-2">
+            {[...THEMES].sort((a, b) => hexLightness(b.preview.accent) - hexLightness(a.preview.accent)).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setColorTheme(t.id)}
+                className={cn(
+                  'relative flex flex-col gap-1.5 p-2.5 rounded-lg border transition-all text-left',
+                  t.id === themeId
+                    ? 'border-[var(--color-accent,#5CE5A0)] bg-[var(--color-accent,#5CE5A0)]/5 ring-1 ring-[var(--color-accent,#5CE5A0)]/30'
+                    : 'border-border/50 hover:border-border hover:bg-muted/50'
+                )}
+              >
+                <div className="flex gap-1">
+                  <div className="w-6 h-6 rounded" style={{ background: t.preview.bg }} />
+                  <div className="w-6 h-6 rounded" style={{ background: t.preview.accent }} />
+                  <div className="w-6 h-6 rounded" style={{ background: t.preview.card }} />
+                  <div className="w-6 h-6 rounded border" style={{ background: t.preview.border, borderColor: t.preview.border }} />
                 </div>
-              )}
-            </button>
-          ))}
+                <div>
+                  <p className="text-[11px] font-semibold text-foreground">{t.name}</p>
+                  <p className="text-[9px] text-muted-foreground leading-tight">{t.description}</p>
+                </div>
+                {t.id === themeId && (
+                  <div className="absolute top-2 right-2">
+                    <Check size={12} className="text-[var(--color-accent,#5CE5A0)]" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </>
