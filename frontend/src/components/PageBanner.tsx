@@ -2,6 +2,7 @@
 
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
+import { useThemeStore } from '@/lib/useStyleTheme';
 
 type BannerVariant = 'electricity' | 'steam' | 'boiler' | 'substation' | 'tank' | 'pipeline';
 
@@ -172,6 +173,8 @@ function BadgeElement({ config }: { config: typeof BANNER_CONFIG.electricity }) 
 export default function PageBanner({ variant, children }: { variant: BannerVariant; children?: React.ReactNode }) {
   const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  // Subscribe to color theme changes — triggers re-render when user picks new theme
+  const themeId = useThemeStore(s => s.themeId);
   useEffect(() => setMounted(true), []);
 
   const c = BANNER_CONFIG[variant];
@@ -183,6 +186,19 @@ export default function PageBanner({ variant, children }: { variant: BannerVaria
   const subColor = isLight ? light.subColor : c.subColor;
   const glowColor = isLight ? light.glowColor : c.glowColor;
   const glow2Color = isLight ? light.glow2Color : c.glow2Color;
+
+  // Read theme accent color from CSS variables (set by theme system)
+  const [themeAccent, setThemeAccent] = useState<string | null>(null);
+  useEffect(() => {
+    if (!mounted) return;
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim();
+    setThemeAccent(accent || null);
+  }, [mounted, themeId]);
+
+  // Rule gradient blends domain color with theme accent
+  const ruleGradient = themeAccent && themeId !== 'default'
+    ? `linear-gradient(90deg, ${c.accentColor}, ${themeAccent}, ${c.accentColor})`
+    : c.ruleGradient;
 
   return (
     <div className="w-full h-[140px] sm:h-[160px] relative overflow-hidden rounded-lg mb-4 sm:mb-6" style={{ background: bg }}>
@@ -211,8 +227,8 @@ export default function PageBanner({ variant, children }: { variant: BannerVaria
         <div className="font-mono text-[12px] sm:text-[14px] tracking-[0.18em] uppercase mt-2" style={{ color: subColor }}>{c.sub}</div>
       </div>
 
-      {/* Bottom rule */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 z-20" style={{ background: c.ruleGradient }} />
+      {/* Bottom rule — blends domain color with theme accent */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 z-20" style={{ background: ruleGradient }} />
 
       {/* Boiler warning stripe */}
       {variant === 'boiler' && (
