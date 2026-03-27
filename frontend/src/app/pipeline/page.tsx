@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import PipelineDAG from '@/components/PipelineDAG';
-import { GitBranch, Zap, Flame, Droplets, Gauge, Activity, TrendingUp, TrendingDown, Minus, ArrowRight } from 'lucide-react';
+import PageBanner from '@/components/PageBanner';
+import { Zap, Flame, Droplets, Gauge, Activity, TrendingUp, TrendingDown, Minus, ArrowRight } from 'lucide-react';
 import { API_BASE_URL, apiFetch } from '@/lib/config';
 
 const fmt = (v: number | undefined, d = 0) => v != null ? v.toLocaleString(undefined, { maximumFractionDigits: d }) : '—';
@@ -149,15 +150,7 @@ export default function PipelinePage() {
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-5">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg shadow-[var(--color-accent,#5CE5A0)]/20">
-            <GitBranch size={20} className="text-background" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold gradient-text">Data Pipeline</h1>
-            <p className="text-xs text-muted-foreground">Terminal operations dependency graph — hover nodes for details, click to navigate</p>
-          </div>
-        </div>
+        <PageBanner variant="pipeline" />
 
         {/* Flow summary bar */}
         <div className="theme-card rounded-xl p-3 flex items-center justify-between gap-2 overflow-x-auto">

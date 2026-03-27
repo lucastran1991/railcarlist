@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { type TankKPIs, type QueryParams } from '@/lib/api-dashboard';
 import FilterBar from '@/components/dashboard/FilterBar';
+import PageBanner from '@/components/PageBanner';
 import { useChartColors } from '@/lib/chartColors';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { ChartCard } from '@/components/dashboard/ChartCard';
@@ -63,10 +64,8 @@ export default function TankPage() {
   return (
     <div className="min-h-[calc(100vh-64px)] p-3 sm:p-4 md:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Tank Dashboard</h1>
-          <FilterBar onChange={handleFilterChange} />
-        </div>
+        <PageBanner variant="tank" />
+        <div className="flex justify-end mb-4"><FilterBar onChange={handleFilterChange} /></div>
 
         {/* KPI Cards */}
         {kpis ? (
