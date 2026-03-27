@@ -575,42 +575,13 @@ if [ "$INIT_DATA" = true ]; then
 
     if curl -s "http://localhost:${PORT}/health" > /dev/null 2>&1; then
         log_info "Backend is ready. Generating data for all terminals..."
-        HAS_ERROR=false
+        # Stream NDJSON progress — show each line with prefix
         curl -s -N -X POST "http://localhost:${PORT}/api/system/generate" \
             -H "Content-Type: application/json" \
             -d '{"clearExisting": true}' 2>&1 | while IFS= read -r line; do
-            # Parse NDJSON progress events
-            EVENT=$(echo "$line" | grep -o '"event":"[^"]*"' | cut -d'"' -f4)
-            MSG=$(echo "$line" | grep -o '"message":"[^"]*"' | cut -d'"' -f4)
-            TERMINAL=$(echo "$line" | grep -o '"terminal":"[^"]*"' | cut -d'"' -f4)
-            RECORDS=$(echo "$line" | grep -o '"records":[0-9]*' | grep -o '[0-9]*')
-
-            case "$EVENT" in
-                start)
-                    [ -n "$TERMINAL" ] && log_step "  [$TERMINAL] Starting data generation..."
-                    ;;
-                progress)
-                    [ -n "$MSG" ] && log_info "  [$TERMINAL] $MSG"
-                    ;;
-                complete)
-                    [ -n "$TERMINAL" ] && log_info "  [$TERMINAL] ✓ Complete (${RECORDS:-?} records)"
-                    ;;
-                done)
-                    log_info "✓ All terminals generated successfully"
-                    ;;
-                error)
-                    log_warn "  Error: $MSG"
-                    HAS_ERROR=true
-                    ;;
-                *)
-                    # Unknown event — show raw if non-empty
-                    [ -n "$line" ] && [ -n "$EVENT" ] && log_info "  $line"
-                    ;;
-            esac
+            [ -n "$line" ] && log_info "  $line"
         done
-        if [ "$HAS_ERROR" = true ]; then
-            log_warn "Data generation completed with some errors"
-        fi
+        log_info "✓ Data generation complete"
     else
         log_error "Backend not responding after 20s. Skipping data generation."
         log_info "You can generate data manually: curl -X POST http://localhost:${PORT}/api/system/generate"
