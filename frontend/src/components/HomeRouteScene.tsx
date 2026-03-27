@@ -5,6 +5,7 @@ import HomeThreeBackground from '@/components/HomeThreeBackground';
 import ScenePanel from '@/components/ScenePanel';
 import TankDetailPanel from '@/components/TankDetailPanel';
 import HomeBottomCharts from '@/components/HomeBottomCharts';
+import StatusLegend from '@/components/StatusLegend';
 import type { TerminalCameraApi } from '@/lib/three/types';
 
 export default function HomeRouteScene() {
@@ -25,6 +26,7 @@ export default function HomeRouteScene() {
         <HomeThreeBackground onCameraApiReady={onCameraApiReady} />
       </div>
       <ScenePanel cameraApi={cameraApi} mousePos={mousePos} />
+      <StatusLegend />
       <TankDetailPanel />
       <HomeBottomCharts />
     </>

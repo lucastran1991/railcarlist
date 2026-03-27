@@ -6,11 +6,9 @@ import {
   ChevronUp, ChevronDown, RefreshCw,
   PanelLeftClose, PanelLeftOpen, Activity,
   Box, Sparkles, Sun,
-  CheckCircle, ArrowDown, ArrowUp, PauseCircle,
-  Flame, AlertTriangle, AlertOctagon, Wrench,
 } from 'lucide-react';
 import type { TerminalCameraApi } from '@/lib/three/types';
-import { osmToTankId, TANK_STATUS_CONFIG, type TankStatus } from '@/lib/tankData';
+import { osmToTankId } from '@/lib/tankData';
 import { cn } from '@/lib/utils';
 import { useSceneStore } from '@/lib/sceneStore';
 
@@ -128,47 +126,6 @@ export default function ScenePanel({ cameraApi, mousePos }: ScenePanelProps) {
               </button>
             ))}
           </div>
-
-          {/* Status Legend — visible when effects ON */}
-          {statusEffects && (
-            <>
-              <div className="border-t border-border/20" />
-              <div className="px-3 py-2">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Status Legend</p>
-                <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                  {(Object.entries(TANK_STATUS_CONFIG) as [TankStatus, typeof TANK_STATUS_CONFIG[TankStatus]][]).map(([key, cfg]) => {
-                    const icons: Record<string, React.ReactNode> = {
-                      'check-circle': <CheckCircle size={9} />,
-                      'arrow-down': <ArrowDown size={9} />,
-                      'arrow-up': <ArrowUp size={9} />,
-                      'pause-circle': <PauseCircle size={9} />,
-                      'flame': <Flame size={9} />,
-                      'alert-triangle': <AlertTriangle size={9} />,
-                      'alert-octagon': <AlertOctagon size={9} />,
-                      'wrench': <Wrench size={9} />,
-                    };
-                    const hasParticle = ['heating', 'critical', 'receiving', 'discharging', 'warning'].includes(key);
-                    const hasGear = key === 'maintenance';
-                    const hasPulse = ['warning', 'critical', 'heating', 'receiving', 'discharging'].includes(key);
-                    return (
-                      <div key={key} className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: cfg.color, boxShadow: hasPulse ? `0 0 4px ${cfg.color}` : 'none' }} />
-                        <span style={{ color: cfg.color }} className="shrink-0">{icons[cfg.icon]}</span>
-                        <span className="text-[8px] text-muted-foreground truncate">{cfg.label}</span>
-                        {hasParticle && <span className="text-[7px] text-muted-foreground/40">✦</span>}
-                        {hasGear && <span className="text-[7px] text-muted-foreground/40">⚙</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex gap-3 mt-1.5 pt-1 border-t border-border/10">
-                  <span className="text-[7px] text-muted-foreground/50">✦ particles</span>
-                  <span className="text-[7px] text-muted-foreground/50">⚙ gear</span>
-                  <span className="text-[7px] text-muted-foreground/50">● glow = pulse</span>
-                </div>
-              </div>
-            </>
-          )}
 
           <div className="border-t border-border/20" />
 
