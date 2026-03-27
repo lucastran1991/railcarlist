@@ -145,11 +145,9 @@ body {
   --page-bg-glass: linear-gradient(135deg, #080a11 0%, #0d1117 25%, #111827 50%, #0a1628 75%, #080a11 100%);
 }
 
-/* ── Theme-aware card — always blurred, shadow from theme ── */
+/* ── Theme-aware card — solid by default, blur in glass mode ── */
 .theme-card {
-  background: hsl(var(--card) / 0.75);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: hsl(var(--card));
   border: 1px solid hsl(var(--border) / 0.5);
   border-radius: var(--radius);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0,0,0,0.08));
@@ -157,6 +155,13 @@ body {
 }
 .theme-card:hover {
   box-shadow: var(--shadow-card-hover, 0 4px 12px rgba(0,0,0,0.12));
+}
+[data-style="glass"] .theme-card {
+  background: var(--card-bg-glass);
+  backdrop-filter: blur(var(--card-blur, 24px)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--card-blur, 24px)) saturate(180%);
+  border-color: var(--card-border-glass);
+  box-shadow: var(--card-shadow-glass);
 }
 
 /* ── Glass nav bar ── */
@@ -245,13 +250,22 @@ body {
 }
 
 /* ── Surface classes for navbar + dropdowns — always blurred ── */
+/* Solid by default */
 .topbar-surface {
-  background: hsl(var(--background) / 0.78);
+  background: hsl(var(--background));
+}
+.dropdown-surface {
+  background: hsl(var(--popover));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+/* Glass mode — blur + transparency */
+[data-style="glass"] .topbar-surface {
+  background: var(--nav-bg-glass);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
-.dropdown-surface {
-  background: hsl(var(--popover) / 0.85);
+[data-style="glass"] .dropdown-surface {
+  background: var(--popover-bg-glass);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
