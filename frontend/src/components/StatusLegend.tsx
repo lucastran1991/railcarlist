@@ -27,7 +27,7 @@ export default function StatusLegend() {
   if (!statusEffects) return null;
 
   return (
-    <div className="fixed top-[52px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
+    <div className="fixed top-[72px] left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
       <div className="flex items-center gap-3 px-4 py-2 rounded-b-xl border border-t-0 border-border/30 bg-[hsl(var(--background)/0.85)] backdrop-blur-md shadow-lg">
         {(Object.entries(TANK_STATUS_CONFIG) as [TankStatus, typeof TANK_STATUS_CONFIG[TankStatus]][]).map(([key, cfg]) => {
           const hasPulse = PULSE_STATUSES.has(key);
