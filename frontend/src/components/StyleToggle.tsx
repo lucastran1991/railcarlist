@@ -20,7 +20,7 @@ function useSurfaceMode() {
 
   useEffect(() => {
     const stored = localStorage.getItem(SURFACE_KEY) as 'solid' | 'glass' | null;
-    const initial = stored || 'solid';
+    const initial = stored || 'glass';
     setMode(initial);
     if (initial === 'glass') {
       document.documentElement.setAttribute('data-style', 'glass');
